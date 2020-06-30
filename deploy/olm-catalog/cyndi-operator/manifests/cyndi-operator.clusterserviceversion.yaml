@@ -1,0 +1,166 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "cyndi.cloud.redhat.com/v1beta1",
+          "kind": "CyndiPipeline",
+          "metadata": {
+            "name": "example-cyndipipeline"
+          },
+          "spec": {
+            "size": 3
+          }
+        }
+      ]
+    capabilities: Basic Install
+  name: cyndi-operator.v0.0.1
+  namespace: default
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: CyndiPipeline is the Schema for the cyndipipelines API
+      kind: CyndiPipeline
+      name: cyndipipelines.cyndi.cloud.redhat.com
+      version: v1beta1
+  description: Pipeline to sync HBI hosts with an application database.
+  displayName: CyndiPipeline
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments:
+      - name: cyndi-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              name: cyndi-operator
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                name: cyndi-operator
+            spec:
+              containers:
+              - command:
+                - cyndi-operator
+                env:
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: OPERATOR_NAME
+                  value: cyndi-operator
+                image: image-registry.openshift-image-registry.svc:5000/default/cyndi-operator:v0.0.1
+                imagePullPolicy: Always
+                name: cyndi-operator
+                resources: {}
+              serviceAccountName: cyndi-operator
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - services
+          - services/finalizers
+          - endpoints
+          - persistentvolumeclaims
+          - events
+          - configmaps
+          - secrets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          - daemonsets
+          - replicasets
+          - statefulsets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - get
+          - create
+        - apiGroups:
+          - apps
+          resourceNames:
+          - cyndi-operator
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          verbs:
+          - get
+        - apiGroups:
+          - apps
+          resources:
+          - replicasets
+          - deployments
+          verbs:
+          - get
+        - apiGroups:
+          - cyndi.cloud.redhat.com
+          resources:
+          - '*'
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        serviceAccountName: cyndi-operator
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - hbi
+  - cyndi
+  - pipeline
+  links:
+  - name: Cyndi Operator
+    url: https://cyndi-operator.domain
+  maturity: alpha
+  provider:
+    name: Red Hat Cloud Platform
+    url: cloud.redhat.com
+  version: 0.0.1

@@ -1,0 +1,7 @@
+apiVersion: cyndi.cloud.redhat.com/v1beta1
+kind: CyndiPipeline
+metadata:
+  name: example-cyndipipeline
+spec:
+  # Add fields here
+  size: 3
