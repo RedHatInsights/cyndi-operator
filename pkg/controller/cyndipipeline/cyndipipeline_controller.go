@@ -88,86 +88,25 @@ func (r *ReconcileCyndiPipeline) Reconcile(request reconcile.Request) (reconcile
 		return reconcile.Result{}, err
 	}
 
-	//
-	// [CYNDI] Ensure DB table is created, view points to it
-	//
 	reqLogger.Info("Setting up database")
-	connStr := "host=inventory-db user=insights password=insights dbname=insights sslmode=disable"
-	config, err := pgx.ParseDSN(connStr)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	db, err := pgx.Connect(config)
+	db, err := connectToDB()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.Info("Database connection established")
-	rows, err := db.Query(`CREATE SCHEMA IF NOT EXISTS inventory`)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	rows.Close()
-
-	rows, err = db.Query(
-		`SELECT exists
-            (SELECT FROM information_schema.tables
-            WHERE table_schema = 'inventory'
-            AND table_name = 'hosts_v1_0')`)
+	err = createSchema(db)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	var (
-		exists bool
-	)
-	rows.Next()
-	err = rows.Scan(&exists)
+	exists, err := checkIfTableExists(db)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	rows.Close()
 
-	dbSchema := `
-        CREATE TABLE inventory.hosts_v1_0 (
-            id uuid PRIMARY KEY,
-            account character varying(10) NOT NULL,
-            display_name character varying(200) NOT NULL,
-            tags jsonb NOT NULL,
-            updated timestamp with time zone NOT NULL,
-            created timestamp with time zone NOT NULL,
-            stale_timestamp timestamp with time zone NOT NULL
-        );
-        CREATE INDEX hosts_v1_0_account_index ON inventory.hosts_v1_0 (account);
-        CREATE INDEX hosts_v1_0_display_name_index ON inventory.hosts_v1_0 (display_name);
-        CREATE INDEX hosts_v1_0_tags_index ON inventory.hosts_v1_0 USING GIN (tags JSONB_PATH_OPS);
-        CREATE INDEX hosts_v1_0_stale_timestamp_index ON inventory.hosts_v1_0 (stale_timestamp);`
-
-	reqLogger.Info("exists", exists)
 	if exists != true {
 		reqLogger.Info("Creating table")
-		/*
-			type DbParams struct {
-				MinorVersion uint
-			}
-			tableParams := DbParams{0}
-			tmpl, err := template.New("dbSchema").Parse(dbSchema)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-			buf := &bytes.Buffer{}
-			err = tmpl.Execute(buf, tableParams)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-			//reqLogger.Info(buf.String())
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-		*/
-		reqLogger.Info("asdflaksjdfasdf")
-		reqLogger.Info(dbSchema)
-		_, err = db.Exec(dbSchema)
+		err = createTable(db)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -175,41 +114,17 @@ func (r *ReconcileCyndiPipeline) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("Table exists")
 	}
 
-	_, err = db.Exec(`CREATE OR REPLACE view inventory.hosts as select * from inventory.hosts_v1_0`)
+	err = updateView(db)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	//
-	// [CYNDI] Ensure Kafka Connector is created, running
-	//
-	connector := newConnectorForCR(instance)
-	if err := controllerutil.SetControllerReference(instance, connector, r.scheme); err != nil {
+	err = createConnector(instance, r)
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	found := &unstructured.Unstructured{}
-	found.SetGroupVersionKind(schema.GroupVersionKind{
-		Kind:    "KafkaConnector",
-		Version: "kafka.strimzi.io/v1alpha1",
-	})
-
-	err = r.client.Get(context.TODO(), client.ObjectKey{Name: "my-source-connector", Namespace: "default"}, found)
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Connector", "Connector.Namespace", "default", "Connector.Name", "my-source-connector")
-		err = r.client.Create(context.TODO(), connector)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// Connector created successfully - don't requeue
-		return reconcile.Result{}, nil
-	} else if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// Pod already exists - don't requeue
-	reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", "default", "Pod.Name", "my-source-connector")
+	reqLogger.Info("Reconcile complete, don't requeue", "Pod.Namespace", "default", "Pod.Name", "my-source-connector")
 	return reconcile.Result{}, nil
 }
 
@@ -237,4 +152,78 @@ func newConnectorForCR(cr *cyndiv1beta1.CyndiPipeline) *unstructured.Unstructure
 		Version: "kafka.strimzi.io/v1alpha1",
 	})
 	return u
+}
+
+func createSchema(db *pgx.Conn) error {
+	rows, err := db.Query(`CREATE SCHEMA IF NOT EXISTS inventory`)
+	rows.Close()
+	return err
+}
+
+func connectToDB() (*pgx.Conn, error) {
+	connStr := "host=inventory-db user=insights password=insights dbname=insights sslmode=disable"
+	config, err := pgx.ParseDSN(connStr)
+	db, err := pgx.Connect(config)
+	return db, err
+}
+
+func checkIfTableExists(db *pgx.Conn) (bool, error) {
+	rows, err := db.Query(
+		`SELECT exists
+            (SELECT FROM information_schema.tables
+            WHERE table_schema = 'inventory'
+            AND table_name = 'hosts_v1_0')`)
+
+	var exists bool
+	rows.Next()
+	err = rows.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	rows.Close()
+
+	return exists, err
+}
+
+func createTable(db *pgx.Conn) error {
+	dbSchema := `
+        CREATE TABLE inventory.hosts_v1_0 (
+            id uuid PRIMARY KEY,
+            account character varying(10) NOT NULL,
+            display_name character varying(200) NOT NULL,
+            tags jsonb NOT NULL,
+            updated timestamp with time zone NOT NULL,
+            created timestamp with time zone NOT NULL,
+            stale_timestamp timestamp with time zone NOT NULL
+        );
+        CREATE INDEX hosts_v1_0_account_index ON inventory.hosts_v1_0 (account);
+        CREATE INDEX hosts_v1_0_display_name_index ON inventory.hosts_v1_0 (display_name);
+        CREATE INDEX hosts_v1_0_tags_index ON inventory.hosts_v1_0 USING GIN (tags JSONB_PATH_OPS);
+        CREATE INDEX hosts_v1_0_stale_timestamp_index ON inventory.hosts_v1_0 (stale_timestamp);`
+	_, err := db.Exec(dbSchema)
+	return err
+}
+
+func updateView(db *pgx.Conn) error {
+	_, err := db.Exec(`CREATE OR REPLACE view inventory.hosts as select * from inventory.hosts_v1_0`)
+	return err
+}
+
+func createConnector(cr *cyndiv1beta1.CyndiPipeline, r *ReconcileCyndiPipeline) error {
+	connector := newConnectorForCR(cr)
+	if err := controllerutil.SetControllerReference(cr, connector, r.scheme); err != nil {
+		return err
+	}
+
+	found := &unstructured.Unstructured{}
+	found.SetGroupVersionKind(schema.GroupVersionKind{
+		Kind:    "KafkaConnector",
+		Version: "kafka.strimzi.io/v1alpha1",
+	})
+
+	err := r.client.Get(context.TODO(), client.ObjectKey{Name: "my-source-connector", Namespace: "default"}, found)
+	if err != nil && errors.IsNotFound(err) {
+		err = r.client.Create(context.TODO(), connector)
+	}
+	return err
 }
