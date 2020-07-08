@@ -2,14 +2,13 @@ package cyndipipeline
 
 import (
 	"context"
-
 	cyndiv1beta1 "cyndi-operator/pkg/apis/cyndi/v1beta1"
-
+	pgx "github.com/jackc/pgx"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -21,11 +20,6 @@ import (
 )
 
 var log = logf.Log.WithName("controller_cyndipipeline")
-
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
 
 // Add creates a new CyndiPipeline Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -76,18 +70,11 @@ type ReconcileCyndiPipeline struct {
 	scheme *runtime.Scheme
 }
 
-// Reconcile reads that state of the cluster for a CyndiPipeline object and makes changes based on the state read
-// and what is in the CyndiPipeline.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
-// Note:
-// The Controller will requeue the Request to be processed again if the returned error is non-nil or
-// Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
+// Reconcile test
 func (r *ReconcileCyndiPipeline) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling CyndiPipeline")
 
-	// Fetch the CyndiPipeline instance
 	instance := &cyndiv1beta1.CyndiPipeline{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
@@ -101,54 +88,153 @@ func (r *ReconcileCyndiPipeline) Reconcile(request reconcile.Request) (reconcile
 		return reconcile.Result{}, err
 	}
 
-	// Define a new Pod object
-	pod := newPodForCR(instance)
-
-	// Set CyndiPipeline instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
+	//
+	// [CYNDI] Ensure DB table is created, view points to it
+	//
+	reqLogger.Info("Setting up database")
+	connStr := "host=inventory-db user=insights password=insights dbname=insights sslmode=disable"
+	config, err := pgx.ParseDSN(connStr)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	db, err := pgx.Connect(config)
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Check if this Pod already exists
-	found := &corev1.Pod{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, found)
+	reqLogger.Info("Database connection established")
+	rows, err := db.Query(`CREATE SCHEMA IF NOT EXISTS inventory`)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	rows.Close()
+
+	rows, err = db.Query(
+		`SELECT exists
+            (SELECT FROM information_schema.tables
+            WHERE table_schema = 'inventory'
+            AND table_name = 'hosts_v1_0')`)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	var (
+		exists bool
+	)
+	rows.Next()
+	err = rows.Scan(&exists)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	rows.Close()
+
+	dbSchema := `
+        CREATE TABLE inventory.hosts_v1_0 (
+            id uuid PRIMARY KEY,
+            account character varying(10) NOT NULL,
+            display_name character varying(200) NOT NULL,
+            tags jsonb NOT NULL,
+            updated timestamp with time zone NOT NULL,
+            created timestamp with time zone NOT NULL,
+            stale_timestamp timestamp with time zone NOT NULL
+        );
+        CREATE INDEX hosts_v1_0_account_index ON inventory.hosts_v1_0 (account);
+        CREATE INDEX hosts_v1_0_display_name_index ON inventory.hosts_v1_0 (display_name);
+        CREATE INDEX hosts_v1_0_tags_index ON inventory.hosts_v1_0 USING GIN (tags JSONB_PATH_OPS);
+        CREATE INDEX hosts_v1_0_stale_timestamp_index ON inventory.hosts_v1_0 (stale_timestamp);`
+
+	reqLogger.Info("exists", exists)
+	if exists != true {
+		reqLogger.Info("Creating table")
+		/*
+			type DbParams struct {
+				MinorVersion uint
+			}
+			tableParams := DbParams{0}
+			tmpl, err := template.New("dbSchema").Parse(dbSchema)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			buf := &bytes.Buffer{}
+			err = tmpl.Execute(buf, tableParams)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			//reqLogger.Info(buf.String())
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		*/
+		reqLogger.Info("asdflaksjdfasdf")
+		reqLogger.Info(dbSchema)
+		_, err = db.Exec(dbSchema)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	} else {
+		reqLogger.Info("Table exists")
+	}
+
+	_, err = db.Exec(`CREATE OR REPLACE view inventory.hosts as select * from inventory.hosts_v1_0`)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	//
+	// [CYNDI] Ensure Kafka Connector is created, running
+	//
+	connector := newConnectorForCR(instance)
+	if err := controllerutil.SetControllerReference(instance, connector, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	found := &unstructured.Unstructured{}
+	found.SetGroupVersionKind(schema.GroupVersionKind{
+		Kind:    "KafkaConnector",
+		Version: "kafka.strimzi.io/v1alpha1",
+	})
+
+	err = r.client.Get(context.TODO(), client.ObjectKey{Name: "my-source-connector", Namespace: "default"}, found)
 	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
-		err = r.client.Create(context.TODO(), pod)
+		reqLogger.Info("Creating a new Connector", "Connector.Namespace", "default", "Connector.Name", "my-source-connector")
+		err = r.client.Create(context.TODO(), connector)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
-		// Pod created successfully - don't requeue
+		// Connector created successfully - don't requeue
 		return reconcile.Result{}, nil
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// Pod already exists - don't requeue
-	reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", found.Namespace, "Pod.Name", found.Name)
+	reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", "default", "Pod.Name", "my-source-connector")
 	return reconcile.Result{}, nil
 }
 
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *cyndiv1beta1.CyndiPipeline) *corev1.Pod {
-	labels := map[string]string{
-		"app": cr.Name,
-	}
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
+func newConnectorForCR(cr *cyndiv1beta1.CyndiPipeline) *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.Object = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"name":      "my-source-connector",
+			"namespace": "default",
+			"labels": map[string]interface{}{
+				"strimzi.io/cluster": "my-connector-cluster",
 			},
 		},
+		"spec": map[string]interface{}{
+			"tasksMax": 2,
+			"config": map[string]interface{}{
+				"file":  "/opt/kafka/LICENSE",
+				"topic": "my-topic",
+			},
+			"class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+		},
 	}
+	u.SetGroupVersionKind(schema.GroupVersionKind{
+		Kind:    "KafkaConnector",
+		Version: "kafka.strimzi.io/v1alpha1",
+	})
+	return u
 }

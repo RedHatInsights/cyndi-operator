@@ -3,6 +3,7 @@ module cyndi-operator
 go 1.13
 
 require (
+	github.com/jackc/pgx v3.2.0+incompatible
 	github.com/operator-framework/operator-sdk v0.18.2
 	github.com/spf13/pflag v1.0.5
 	k8s.io/api v0.18.2
