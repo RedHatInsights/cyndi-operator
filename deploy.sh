@@ -21,6 +21,7 @@ then
     oc delete CyndiPipeline/example-cyndipipeline
     oc delete ClusterServiceVersion/cyndi-operator.v0.0.1
     oc apply -f deploy/olm-catalog/cyndi-operator/manifests/cyndi-operator.clusterserviceversion.yaml
+    oc apply -f deploy/crds/cyndi.cloud.redhat.com_cyndipipelines_crd.yaml
     oc create -f deploy/crds/cyndi.cloud.redhat.com_v1beta1_cyndipipeline_cr.yaml
     sleep 10
     oc logs -f Deployment/cyndi-operator

@@ -3,5 +3,19 @@ kind: CyndiPipeline
 metadata:
   name: example-cyndipipeline
 spec:
-  # Add fields here
-  size: 1
+  appDBHostname: advisor-db
+  appDBName: insightsapi
+  appDBPassword: insightsapi
+  appDBPort: 5432
+  appDBSSLMode: disable
+  appDBUser: insightsapi
+  appName: advisor
+  insightsOnly: false
+  inventoryDBHostname: inventory-db
+  inventoryDBName: insights
+  inventoryDBPassword: insights
+  inventoryDBPort: 5432
+  inventoryDBSSLMode: disable
+  inventoryDBUser: insights
+  kafkaConnectCluster: my-connect-cluster
+  pipelineVersion: 1
