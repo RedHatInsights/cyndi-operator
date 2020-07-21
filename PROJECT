@@ -1,0 +1,10 @@
+domain: cloud.redhat.com
+layout: go.kubebuilder.io/v2
+repo: cyndi-operator
+resources:
+- group: cyndi
+  kind: CyndiPipeline
+  version: v1beta1
+version: 3-alpha
+plugins:
+  go.operator-sdk.io/v2-alpha: {}
