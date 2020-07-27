@@ -18,24 +18,30 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
 )
 
+var log = logf.Log.WithName("controller_cyndipipeline")
+
 // CyndiPipelineReconciler reconciles a CyndiPipeline object
 type CyndiPipelineReconciler struct {
-	client client.Client
-	Log    logr.Logger
+	Client client.Client
 	Scheme *runtime.Scheme
+	Log    logr.Logger
 }
 
 // +kubebuilder:rbac:groups=cyndi.cloud.redhat.com,resources=cyndipipelines,verbs=get;list;watch;create;update;patch;delete
@@ -43,13 +49,13 @@ type CyndiPipelineReconciler struct {
 
 func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	reqLogger := r.Log.WithValues("cyndipipeline", request.NamespacedName)
+	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 
 	reqLogger.Info("Reconciling CyndiPipeline")
 
 	instance := &cyndiv1beta1.CyndiPipeline{}
 
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -62,24 +68,24 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	if instance.Status.PipelineVersion == "" {
-		log.Info("Setting pipeline version vars")
+		reqLogger.Info("Setting pipeline version vars")
 		instance.Status.PipelineVersion = fmt.Sprintf(
 			"1_%s",
 			strconv.FormatInt(time.Now().UnixNano(), 10))
 
-		log.Info(instance.Status.PipelineVersion)
+		reqLogger.Info(instance.Status.PipelineVersion)
 
 		instance.Status.ConnectorName = fmt.Sprintf(
 			"syndication-pipeline-%s-%s",
 			instance.Spec.AppName,
 			strings.Replace(instance.Status.PipelineVersion, "_", "-", 1))
 
-		log.Info(instance.Status.ConnectorName)
+		reqLogger.Info(instance.Status.ConnectorName)
 
 		instance.Status.TableName = fmt.Sprintf(
 			"hosts_v%s",
 			instance.Status.PipelineVersion)
-		log.Info(instance.Status.TableName)
+		reqLogger.Info(instance.Status.TableName)
 	}
 
 	dbSchema, connectorConfig, err := parseConfig(instance, r)
@@ -87,7 +93,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, err
 	}
 
-	err = r.client.Status().Update(context.TODO(), instance)
+	err = r.Client.Status().Update(context.TODO(), instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -135,12 +141,21 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	return reconcile.Result{RequeueAfter: time.Second * 15}, nil
-
-	return ctrl.Result{}, nil
 }
 
 func (r *CyndiPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cyndiv1beta1.CyndiPipeline{}).
 		Complete(r)
+}
+
+func parseConfig(instance *cyndiv1beta1.CyndiPipeline, r *CyndiPipelineReconciler) (string, string, error) {
+	cyndiConfig := &corev1.ConfigMap{}
+	err := r.Client.Get(context.TODO(), client.ObjectKey{Name: "cyndi", Namespace: instance.Namespace}, cyndiConfig)
+	if err != nil {
+		return "", "", err
+	}
+	connectorConfig := cyndiConfig.Data["connector.config"]
+	dbSchema := cyndiConfig.Data["db.schema"]
+	return dbSchema, connectorConfig, err
 }

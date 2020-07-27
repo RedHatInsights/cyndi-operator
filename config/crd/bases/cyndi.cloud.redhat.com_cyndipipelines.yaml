@@ -1,0 +1,135 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: cyndipipelines.cyndi.cloud.redhat.com
+spec:
+  group: cyndi.cloud.redhat.com
+  names:
+    kind: CyndiPipeline
+    listKind: CyndiPipelineList
+    plural: cyndipipelines
+    singular: cyndipipeline
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: CyndiPipeline is the Schema for the cyndipipelines API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: CyndiPipelineSpec defines the desired state of CyndiPipeline
+          properties:
+            appDBHostname:
+              type: string
+            appDBName:
+              type: string
+            appDBPassword:
+              type: string
+            appDBPort:
+              format: int64
+              type: integer
+            appDBSSLMode:
+              type: string
+            appDBUser:
+              type: string
+            appName:
+              type: string
+            insightsOnly:
+              type: boolean
+            inventoryDBHostname:
+              type: string
+            inventoryDBName:
+              type: string
+            inventoryDBPassword:
+              type: string
+            inventoryDBPort:
+              format: int64
+              type: integer
+            inventoryDBSSLMode:
+              type: string
+            inventoryDBUser:
+              type: string
+            kafkaConnectCluster:
+              type: string
+            pipelineVersion:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "operator-sdk generate k8s" to regenerate code after
+                modifying this file Add custom validation using kubebuilder tags:
+                https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
+              format: int64
+              type: integer
+            tasksMax:
+              format: int64
+              type: integer
+          required:
+          - appDBHostname
+          - appDBName
+          - appDBPassword
+          - appDBPort
+          - appDBSSLMode
+          - appDBUser
+          - appName
+          - insightsOnly
+          - inventoryDBHostname
+          - inventoryDBName
+          - inventoryDBPassword
+          - inventoryDBPort
+          - inventoryDBSSLMode
+          - inventoryDBUser
+          - kafkaConnectCluster
+          - pipelineVersion
+          - tasksMax
+          type: object
+        status:
+          description: CyndiPipelineStatus defines the observed state of CyndiPipeline
+          properties:
+            cyndiPipelineName:
+              type: string
+            pipelineVersion:
+              type: string
+            syndicatedDataIsValid:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "operator-sdk generate k8s" to regenerate
+                code after modifying this file Add custom validation using kubebuilder
+                tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
+              type: boolean
+            tableName:
+              type: string
+            validationFailedCount:
+              type: integer
+          required:
+          - cyndiPipelineName
+          - pipelineVersion
+          - syndicatedDataIsValid
+          - tableName
+          - validationFailedCount
+          type: object
+      type: object
+  version: v1beta1
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

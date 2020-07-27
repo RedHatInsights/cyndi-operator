@@ -65,7 +65,7 @@ var _ = BeforeSuite(func(done Done) {
 	err = cyndiv1beta1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	// +kubebuilder:scaffold:scheme
+	// +kubebuilder:scaffold:Scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())

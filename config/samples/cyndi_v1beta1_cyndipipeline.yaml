@@ -1,7 +1,22 @@
 apiVersion: cyndi.cloud.redhat.com/v1beta1
 kind: CyndiPipeline
 metadata:
-  name: cyndipipeline-sample
+  name: example-cyndipipeline
 spec:
-  # Add fields here
-  foo: bar
+  appDBHostname: advisor-db
+  appDBName: insightsapi
+  appDBPassword: insightsapi
+  appDBPort: 5432
+  appDBSSLMode: disable
+  appDBUser: insightsapi
+  appName: advisor
+  insightsOnly: false
+  inventoryDBHostname: inventory-db
+  inventoryDBName: insights
+  inventoryDBPassword: insights
+  inventoryDBPort: 5433
+  inventoryDBSSLMode: disable
+  inventoryDBUser: insights
+  kafkaConnectCluster: my-connect-cluster
+  pipelineVersion: 1
+  tasksMax: 1
