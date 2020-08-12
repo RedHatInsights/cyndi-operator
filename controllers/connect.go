@@ -19,13 +19,13 @@ func newConnectorForCR(instance *cyndiv1beta1.CyndiPipeline, connectorConfig str
 	m := make(map[string]string)
 	m["TableName"] = instance.Status.TableName
 	m["Topic"] = "platform.inventory.events"
-	m["DBPort"] = strconv.FormatInt(instance.Spec.InventoryDBPort, 10)
+	m["DBPort"] = strconv.FormatInt(instance.Spec.AppDBPort, 10)
 	m["DBHostname"] = instance.Spec.AppDBHostname
 	m["DBName"] = instance.Spec.AppDBName
 	m["DBUser"] = instance.Spec.AppDBUser
 	m["DBPassword"] = instance.Spec.AppDBPassword
 	m["BatchSize"] = "3000"
-	m["InsightsOnly"] = "true"
+	m["InsightsOnly"] = strconv.FormatBool(instance.Spec.InsightsOnly)
 	tmpl, err := template.New("connectorConfig").Parse(connectorConfig)
 	if err != nil {
 		return nil, err

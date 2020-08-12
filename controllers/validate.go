@@ -78,9 +78,9 @@ func validate(instance *cyndiv1beta1.CyndiPipeline, appDb *pgx.Conn) (bool, erro
 	}
 
 	diff := cmp.Diff(hbiHosts, appHosts)
-	newDiff := strings.ReplaceAll(diff, "\n", "")
-	newDiff = strings.ReplaceAll(diff, "\t", "")
-	log.Info(newDiff)
+	diff = strings.ReplaceAll(diff, "\n", "")
+	diff = strings.ReplaceAll(diff, "\t", "")
+	log.Info(diff)
 
 	return diff == "", err
 }
