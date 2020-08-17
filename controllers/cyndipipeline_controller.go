@@ -67,28 +67,51 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, err
 	}
 
+	//new pipeline
 	if instance.Status.PipelineVersion == "" {
-		reqLogger.Info("Setting pipeline version vars")
-		instance.Status.PipelineVersion = fmt.Sprintf(
-			"1_%s",
-			strconv.FormatInt(time.Now().UnixNano(), 10))
-
-		reqLogger.Info(instance.Status.PipelineVersion)
-
-		instance.Status.ConnectorName = fmt.Sprintf(
-			"syndication-pipeline-%s-%s",
-			instance.Spec.AppName,
-			strings.Replace(instance.Status.PipelineVersion, "_", "-", 1))
-
-		reqLogger.Info(instance.Status.ConnectorName)
-
-		instance.Status.TableName = fmt.Sprintf(
-			"hosts_v%s",
-			instance.Status.PipelineVersion)
-		reqLogger.Info(instance.Status.TableName)
+		refreshPipelineVersion(instance)
+		instance.Status.InitialSyncInProgress = true
 	}
 
 	dbSchema, connectorConfig, err := parseConfig(instance, r)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	appDb, err := connectToAppDB(instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	dbTableExists, err := checkIfTableExists(instance.Status.TableName, appDb)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	connectorExists, err := checkIfConnectorExists(instance.Status.ConnectorName, instance.Namespace, r)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	//part, or all, of the pipeline is missing, create a new pipeline
+	if dbTableExists != true || connectorExists != true {
+		if instance.Status.InitialSyncInProgress != true {
+			instance.Status.PreviousPipelineVersion = instance.Status.PipelineVersion
+			refreshPipelineVersion(instance)
+		}
+
+		err = createTable(instance.Status.TableName, appDb, dbSchema)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		err = createConnector(instance, r, connectorConfig)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	isValid, err := validate(instance, r, appDb)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -98,39 +121,30 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.Info("Setting up database")
-	appDb, err := connectToAppDB(instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	exists, err := checkIfTableExists(instance, appDb)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if exists != true {
-		reqLogger.Info("Creating table")
-		err = createTable(instance, appDb, dbSchema)
-		if err != nil {
-			return reconcile.Result{}, err
+	if isValid != true {
+		validationFailedCountThreshold := 10
+		if instance.Status.InitialSyncInProgress == true {
+			validationFailedCountThreshold = 60
 		}
-	} else {
-		reqLogger.Info("Table exists")
-	}
 
-	isValid, err := validate(instance, appDb)
-	if err != nil {
-		return reconcile.Result{}, err
+		if instance.Status.ValidationFailedCount == validationFailedCountThreshold {
+			err = deleteTable(instance.Status.TableName, appDb)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			err = deleteConnector(instance.Status.TableName, instance.Namespace, r)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			return reconcile.Result{RequeueAfter: time.Second * 1}, nil
+		} else {
+			return reconcile.Result{RequeueAfter: time.Second * 15}, nil
+		}
 	}
-	reqLogger.Info(strconv.FormatBool(isValid))
 
 	err = updateView(instance, appDb)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	err = createConnector(instance, r, connectorConfig)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -158,4 +172,19 @@ func parseConfig(instance *cyndiv1beta1.CyndiPipeline, r *CyndiPipelineReconcile
 	connectorConfig := cyndiConfig.Data["connector.config"]
 	dbSchema := cyndiConfig.Data["db.schema"]
 	return dbSchema, connectorConfig, err
+}
+
+func refreshPipelineVersion(instance *cyndiv1beta1.CyndiPipeline) {
+	instance.Status.PipelineVersion = fmt.Sprintf(
+		"1_%s",
+		strconv.FormatInt(time.Now().UnixNano(), 10))
+
+	instance.Status.ConnectorName = fmt.Sprintf(
+		"syndication-pipeline-%s-%s",
+		instance.Spec.AppName,
+		strings.Replace(instance.Status.PipelineVersion, "_", "-", 1))
+
+	instance.Status.TableName = fmt.Sprintf(
+		"hosts_v%s",
+		instance.Status.PipelineVersion)
 }

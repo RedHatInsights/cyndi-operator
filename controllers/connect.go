@@ -15,6 +15,28 @@ import (
 	"text/template"
 )
 
+func checkIfConnectorExists(connectorName string, namespace string, r *CyndiPipelineReconciler) (bool, error) {
+	if connectorName == "" {
+		return false, nil
+	}
+
+	found := &unstructured.Unstructured{}
+	found.SetGroupVersionKind(schema.GroupVersionKind{
+		Kind:    "KafkaConnector",
+		Version: "kafka.strimzi.io/v1alpha1",
+	})
+
+	err := r.Client.Get(context.TODO(), client.ObjectKey{Name: connectorName, Namespace: namespace}, found)
+
+	if err != nil && errors.IsNotFound(err) {
+		return false, nil
+	} else if err == nil {
+		return true, nil
+	} else {
+		return false, err
+	}
+}
+
 func newConnectorForCR(instance *cyndiv1beta1.CyndiPipeline, connectorConfig string) (*unstructured.Unstructured, error) {
 	m := make(map[string]string)
 	m["TableName"] = instance.Status.TableName
@@ -78,15 +100,27 @@ func createConnector(instance *cyndiv1beta1.CyndiPipeline, r *CyndiPipelineRecon
 		return err
 	}
 
-	found := &unstructured.Unstructured{}
-	found.SetGroupVersionKind(schema.GroupVersionKind{
+	err = r.Client.Create(context.TODO(), connector)
+	return err
+}
+
+func deleteConnector(connectorName string, namespace string, r *CyndiPipelineReconciler) error {
+	connectorExists, err := checkIfConnectorExists(connectorName, namespace, r)
+	if err != nil {
+		return err
+	} else if connectorExists != true {
+		return nil
+	}
+
+	u := &unstructured.Unstructured{}
+	u.SetName(connectorName)
+	u.SetNamespace(namespace)
+	u.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "apps",
 		Kind:    "KafkaConnector",
 		Version: "kafka.strimzi.io/v1alpha1",
 	})
-
-	err = r.Client.Get(context.TODO(), client.ObjectKey{Name: instance.Status.ConnectorName, Namespace: instance.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		err = r.Client.Create(context.TODO(), connector)
-	}
+	err = r.Client.Delete(context.Background(), u)
 	return err
+
 }

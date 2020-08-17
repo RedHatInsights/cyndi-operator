@@ -100,9 +100,15 @@ spec:
         status:
           description: CyndiPipelineStatus defines the observed state of CyndiPipeline
           properties:
+            cyndiConfigVersion:
+              type: string
             cyndiPipelineName:
               type: string
+            initialSyncInProgress:
+              type: boolean
             pipelineVersion:
+              type: string
+            previousPipelineVersion:
               type: string
             syndicatedDataIsValid:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
@@ -112,13 +118,19 @@ spec:
               type: boolean
             tableName:
               type: string
+            validationDelaySeconds:
+              type: integer
             validationFailedCount:
               type: integer
           required:
+          - cyndiConfigVersion
           - cyndiPipelineName
+          - initialSyncInProgress
           - pipelineVersion
+          - previousPipelineVersion
           - syndicatedDataIsValid
           - tableName
+          - validationDelaySeconds
           - validationFailedCount
           type: object
       type: object

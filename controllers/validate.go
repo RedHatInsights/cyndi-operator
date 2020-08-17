@@ -66,7 +66,7 @@ func getSystemsFromDB(db *pgx.Conn, query string) ([]host, error) {
 	return hostsParsed, nil
 }
 
-func validate(instance *cyndiv1beta1.CyndiPipeline, appDb *pgx.Conn) (bool, error) {
+func validate(instance *cyndiv1beta1.CyndiPipeline, r *CyndiPipelineReconciler, appDb *pgx.Conn) (bool, error) {
 	now := time.Now().Format(time.RFC3339)
 	hbiHosts, err := getSystemsFromHBIDB(instance, now)
 	if err != nil {
@@ -82,5 +82,13 @@ func validate(instance *cyndiv1beta1.CyndiPipeline, appDb *pgx.Conn) (bool, erro
 	diff = strings.ReplaceAll(diff, "\t", "")
 	log.Info(diff)
 
-	return diff == "", err
+	isValid, err := diff == "", err
+	if isValid == false {
+		instance.Status.ValidationFailedCount++
+	} else {
+		instance.Status.ValidationFailedCount = 0
+	}
+
+	instance.Status.SyndicatedDataIsValid = isValid
+	return isValid, err
 }

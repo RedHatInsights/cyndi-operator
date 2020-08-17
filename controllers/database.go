@@ -9,10 +9,14 @@ import (
 	"text/template"
 )
 
-func checkIfTableExists(instance *cyndiv1beta1.CyndiPipeline, db *pgx.Conn) (bool, error) {
+func checkIfTableExists(tableName string, db *pgx.Conn) (bool, error) {
+	if tableName == "" {
+		return false, nil
+	}
+
 	query := fmt.Sprintf(
 		"SELECT exists (SELECT FROM information_schema.tables WHERE table_schema = 'inventory' AND table_name = '%s')",
-		instance.Status.TableName)
+		tableName)
 	rows, err := db.Query(query)
 
 	var exists bool
@@ -26,9 +30,23 @@ func checkIfTableExists(instance *cyndiv1beta1.CyndiPipeline, db *pgx.Conn) (boo
 	return exists, err
 }
 
-func createTable(instance *cyndiv1beta1.CyndiPipeline, db *pgx.Conn, dbSchema string) error {
+func deleteTable(tableName string, db *pgx.Conn) error {
+	tableExists, err := checkIfTableExists(tableName, db)
+	if err != nil {
+		return err
+	} else if tableExists != true {
+		return nil
+	}
+
+	query := fmt.Sprintf(
+		"DROP table %s", tableName)
+	_, err = db.Query(query)
+	return err
+}
+
+func createTable(tableName string, db *pgx.Conn, dbSchema string) error {
 	m := make(map[string]string)
-	m["TableName"] = instance.Status.TableName
+	m["TableName"] = tableName
 	tmpl, err := template.New("dbSchema").Parse(dbSchema)
 	if err != nil {
 		return err
