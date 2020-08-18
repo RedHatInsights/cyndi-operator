@@ -147,7 +147,7 @@ func validate(instance *cyndiv1beta1.CyndiPipeline, appDb *pgx.Conn) (bool, erro
 	diff = strings.ReplaceAll(diff, "\t", "")
 	log.Info(diff)
 
-	isValid, err := diff == "", err
+	isValid := diff == ""
 	if isValid == false {
 		instance.Status.ValidationFailedCount++
 	} else {

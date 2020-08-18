@@ -113,7 +113,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		}
 	}
 
-	isValid, err := validate(instance, appDb)
+	pipelineIsValid, err := validate(instance, appDb)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -123,46 +123,36 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, err
 	}
 
-	if isValid != true {
-		validationFailedCountThreshold := 5
-		if instance.Status.InitialSyncInProgress == true {
-			validationFailedCountThreshold = 5
-		}
-
-		if instance.Status.ValidationFailedCount > validationFailedCountThreshold {
-			err = deleteTable(instance.Status.TableName, appDb)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-
-			err = deleteConnector(instance.Status.ConnectorName, instance.Namespace, r)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-
-			instance.Status.ValidationFailedCount = 0
-			instance.Status.PipelineVersion = ""
-			err = r.Client.Status().Update(context.TODO(), instance)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-			return requeue(time.Second*1, appDb, instance, r)
-		} else {
-			err = appDb.Close()
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-
-			return requeue(time.Second*15, appDb, instance, r)
-		}
+	validationFailedCountThreshold := 5
+	if instance.Status.InitialSyncInProgress == true {
+		validationFailedCountThreshold = 5
 	}
 
-	err = updateView(instance, appDb)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+	if pipelineIsValid != true && instance.Status.ValidationFailedCount > validationFailedCountThreshold {
+		err = deleteTable(instance.Status.TableName, appDb)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 
-	instance.Status.InitialSyncInProgress = false
+		err = deleteConnector(instance.Status.ConnectorName, instance.Namespace, r)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		instance.Status.ValidationFailedCount = 0
+		instance.Status.PipelineVersion = ""
+		err = r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	} else if pipelineIsValid == true {
+		err = updateView(instance, appDb)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		instance.Status.InitialSyncInProgress = false
+	}
 
 	return requeue(time.Second*15, appDb, instance, r)
 }
