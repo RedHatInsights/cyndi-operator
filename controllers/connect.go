@@ -116,7 +116,6 @@ func deleteConnector(connectorName string, namespace string, r *CyndiPipelineRec
 	u.SetName(connectorName)
 	u.SetNamespace(namespace)
 	u.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "apps",
 		Kind:    "KafkaConnector",
 		Version: "kafka.strimzi.io/v1alpha1",
 	})

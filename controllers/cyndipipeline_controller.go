@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
+	"github.com/jackc/pgx"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strconv"
 	"strings"
@@ -36,6 +37,7 @@ import (
 )
 
 var log = logf.Log.WithName("controller_cyndipipeline")
+var logger = log.WithValues()
 
 // CyndiPipelineReconciler reconciles a CyndiPipeline object
 type CyndiPipelineReconciler struct {
@@ -111,7 +113,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		}
 	}
 
-	isValid, err := validate(instance, r, appDb)
+	isValid, err := validate(instance, appDb)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -122,25 +124,36 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	if isValid != true {
-		validationFailedCountThreshold := 10
+		validationFailedCountThreshold := 5
 		if instance.Status.InitialSyncInProgress == true {
-			validationFailedCountThreshold = 60
+			validationFailedCountThreshold = 5
 		}
 
-		if instance.Status.ValidationFailedCount == validationFailedCountThreshold {
+		if instance.Status.ValidationFailedCount > validationFailedCountThreshold {
 			err = deleteTable(instance.Status.TableName, appDb)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
 
-			err = deleteConnector(instance.Status.TableName, instance.Namespace, r)
+			err = deleteConnector(instance.Status.ConnectorName, instance.Namespace, r)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
 
-			return reconcile.Result{RequeueAfter: time.Second * 1}, nil
+			instance.Status.ValidationFailedCount = 0
+			instance.Status.PipelineVersion = ""
+			err = r.Client.Status().Update(context.TODO(), instance)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			return requeue(time.Second*1, appDb, instance, r)
 		} else {
-			return reconcile.Result{RequeueAfter: time.Second * 15}, nil
+			err = appDb.Close()
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			return requeue(time.Second*15, appDb, instance, r)
 		}
 	}
 
@@ -149,12 +162,23 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, err
 	}
 
-	err = appDb.Close()
+	instance.Status.InitialSyncInProgress = false
+
+	return requeue(time.Second*15, appDb, instance, r)
+}
+
+func requeue(delay time.Duration, appDb *pgx.Conn, instance *cyndiv1beta1.CyndiPipeline, r *CyndiPipelineReconciler) (reconcile.Result, error) {
+	err := appDb.Close()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{RequeueAfter: time.Second * 15}, nil
+	err = r.Client.Status().Update(context.TODO(), instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{RequeueAfter: delay, Requeue: true}, nil
 }
 
 func (r *CyndiPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {

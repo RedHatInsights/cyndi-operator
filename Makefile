@@ -39,7 +39,7 @@ run: generate fmt vet manifests
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 delve: generate fmt vet manifests
-	dlv debug ./main.go --continue --headless --accept-multiclient --listen=:2345
+	dlv debug ./main.go --headless --accept-multiclient --listen=:2345 --api-version=2
 
 # Install CRDs into a cluster
 install: manifests kustomize

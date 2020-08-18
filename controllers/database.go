@@ -39,7 +39,7 @@ func deleteTable(tableName string, db *pgx.Conn) error {
 	}
 
 	query := fmt.Sprintf(
-		"DROP table %s", tableName)
+		"DROP table inventory.%s CASCADE", tableName)
 	_, err = db.Query(query)
 	return err
 }
