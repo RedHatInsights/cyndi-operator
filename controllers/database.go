@@ -2,14 +2,13 @@ package controllers
 
 import (
 	"bytes"
-	cyndiv1beta1 "cyndi-operator/api/v1beta1"
 	"fmt"
 	"github.com/jackc/pgx"
 	"strconv"
 	"text/template"
 )
 
-func checkIfTableExists(tableName string, db *pgx.Conn) (bool, error) {
+func (i *ReconcileIteration) checkIfTableExists(tableName string) (bool, error) {
 	if tableName == "" {
 		return false, nil
 	}
@@ -17,7 +16,11 @@ func checkIfTableExists(tableName string, db *pgx.Conn) (bool, error) {
 	query := fmt.Sprintf(
 		"SELECT exists (SELECT FROM information_schema.tables WHERE table_schema = 'inventory' AND table_name = '%s')",
 		tableName)
-	rows, err := db.Query(query)
+	rows, err := i.AppDb.Query(query)
+
+	if err != nil {
+		return false, err
+	}
 
 	var exists bool
 	rows.Next()
@@ -30,8 +33,8 @@ func checkIfTableExists(tableName string, db *pgx.Conn) (bool, error) {
 	return exists, err
 }
 
-func deleteTable(tableName string, db *pgx.Conn) error {
-	tableExists, err := checkIfTableExists(tableName, db)
+func (i *ReconcileIteration) deleteTable(tableName string) error {
+	tableExists, err := i.checkIfTableExists(tableName)
 	if err != nil {
 		return err
 	} else if tableExists != true {
@@ -40,11 +43,11 @@ func deleteTable(tableName string, db *pgx.Conn) error {
 
 	query := fmt.Sprintf(
 		"DROP table inventory.%s CASCADE", tableName)
-	_, err = db.Query(query)
+	_, err = i.AppDb.Query(query)
 	return err
 }
 
-func createTable(tableName string, db *pgx.Conn, dbSchema string) error {
+func (i *ReconcileIteration) createTable(tableName string, dbSchema string) error {
 	m := make(map[string]string)
 	m["TableName"] = tableName
 	tmpl, err := template.New("dbSchema").Parse(dbSchema)
@@ -58,39 +61,47 @@ func createTable(tableName string, db *pgx.Conn, dbSchema string) error {
 		return err
 	}
 	dbSchemaParsed := dbSchemaBuffer.String()
-	_, err = db.Exec(dbSchemaParsed)
+	_, err = i.AppDb.Exec(dbSchemaParsed)
 	return err
 }
 
-func updateView(instance *cyndiv1beta1.CyndiPipeline, db *pgx.Conn) error {
-	_, err := db.Exec(fmt.Sprintf(`CREATE OR REPLACE view inventory.hosts as select * from inventory.%s`, instance.Status.TableName))
+func (i *ReconcileIteration) updateView() error {
+	_, err := i.AppDb.Exec(fmt.Sprintf(`CREATE OR REPLACE view inventory.hosts as select * from inventory.%s`, i.Instance.Status.TableName))
 	return err
 }
 
-func connectToInventoryDB(instance *cyndiv1beta1.CyndiPipeline) (*pgx.Conn, error) {
+func (i *ReconcileIteration) connectToInventoryDB() (*pgx.Conn, error) {
 	connStr := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s sslmode=%s port=%s",
-		instance.Spec.InventoryDBHostname,
-		instance.Spec.InventoryDBUser,
-		instance.Spec.InventoryDBPassword,
-		instance.Spec.InventoryDBName,
-		instance.Spec.InventoryDBSSLMode,
-		strconv.FormatInt(instance.Spec.InventoryDBPort, 10))
+		i.Instance.Spec.InventoryDBHostname,
+		i.Instance.Spec.InventoryDBUser,
+		i.Instance.Spec.InventoryDBPassword,
+		i.Instance.Spec.InventoryDBName,
+		i.Instance.Spec.InventoryDBSSLMode,
+		strconv.FormatInt(i.Instance.Spec.InventoryDBPort, 10))
 	config, err := pgx.ParseDSN(connStr)
 	db, err := pgx.Connect(config)
 	return db, err
 }
 
-func connectToAppDB(instance *cyndiv1beta1.CyndiPipeline) (*pgx.Conn, error) {
+func (i *ReconcileIteration) connectToAppDB() error {
 	connStr := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s sslmode=%s port=%s",
-		instance.Spec.AppDBHostname,
-		instance.Spec.AppDBUser,
-		instance.Spec.AppDBPassword,
-		instance.Spec.AppDBName,
-		instance.Spec.AppDBSSLMode,
-		strconv.FormatInt(instance.Spec.AppDBPort, 10))
+		i.Instance.Spec.AppDBHostname,
+		i.Instance.Spec.AppDBUser,
+		i.Instance.Spec.AppDBPassword,
+		i.Instance.Spec.AppDBName,
+		i.Instance.Spec.AppDBSSLMode,
+		strconv.FormatInt(i.Instance.Spec.AppDBPort, 10))
 	config, err := pgx.ParseDSN(connStr)
 	db, err := pgx.Connect(config)
-	return db, err
+	i.AppDb = db
+	return err
+}
+
+func (i *ReconcileIteration) closeAppDB() {
+	err := i.AppDb.Close()
+	if err != nil {
+		i.Log.Error(err, "Failed to close App DB")
+	}
 }

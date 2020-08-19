@@ -15,7 +15,7 @@ import (
 	"text/template"
 )
 
-func checkIfConnectorExists(connectorName string, namespace string, r *CyndiPipelineReconciler) (bool, error) {
+func (i ReconcileIteration) checkIfConnectorExists(connectorName string) (bool, error) {
 	if connectorName == "" {
 		return false, nil
 	}
@@ -26,7 +26,7 @@ func checkIfConnectorExists(connectorName string, namespace string, r *CyndiPipe
 		Version: "kafka.strimzi.io/v1alpha1",
 	})
 
-	err := r.Client.Get(context.TODO(), client.ObjectKey{Name: connectorName, Namespace: namespace}, found)
+	err := i.Client.Get(context.TODO(), client.ObjectKey{Name: connectorName, Namespace: i.Instance.Namespace}, found)
 
 	if err != nil && errors.IsNotFound(err) {
 		return false, nil
@@ -90,22 +90,22 @@ func newConnectorForCR(instance *cyndiv1beta1.CyndiPipeline, connectorConfig str
 	return u, nil
 }
 
-func createConnector(instance *cyndiv1beta1.CyndiPipeline, r *CyndiPipelineReconciler, connectorConfig string) error {
-	connector, err := newConnectorForCR(instance, connectorConfig)
+func (i *ReconcileIteration) createConnector(connectorConfig string) error {
+	connector, err := newConnectorForCR(i.Instance, connectorConfig)
 	if err != nil {
 		return err
 	}
 
-	if err := controllerutil.SetControllerReference(instance, connector, r.Scheme); err != nil {
+	if err := controllerutil.SetControllerReference(i.Instance, connector, i.Scheme); err != nil {
 		return err
 	}
 
-	err = r.Client.Create(context.TODO(), connector)
+	err = i.Client.Create(context.TODO(), connector)
 	return err
 }
 
-func deleteConnector(connectorName string, namespace string, r *CyndiPipelineReconciler) error {
-	connectorExists, err := checkIfConnectorExists(connectorName, namespace, r)
+func (i *ReconcileIteration) deleteConnector(connectorName string) error {
+	connectorExists, err := i.checkIfConnectorExists(connectorName)
 	if err != nil {
 		return err
 	} else if connectorExists != true {
@@ -114,12 +114,12 @@ func deleteConnector(connectorName string, namespace string, r *CyndiPipelineRec
 
 	u := &unstructured.Unstructured{}
 	u.SetName(connectorName)
-	u.SetNamespace(namespace)
+	u.SetNamespace(i.Instance.Namespace)
 	u.SetGroupVersionKind(schema.GroupVersionKind{
 		Kind:    "KafkaConnector",
 		Version: "kafka.strimzi.io/v1alpha1",
 	})
-	err = r.Client.Delete(context.Background(), u)
+	err = i.Client.Delete(context.Background(), u)
 	return err
 
 }

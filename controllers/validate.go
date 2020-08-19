@@ -1,14 +1,12 @@
 package controllers
 
 import (
-	cyndiv1beta1 "cyndi-operator/api/v1beta1"
 	"encoding/json"
 	"fmt"
 	"github.com/gofrs/uuid"
 	"github.com/google/go-cmp/cmp"
 	"github.com/jackc/pgx"
 	"strings"
-	"time"
 )
 
 type tag struct {
@@ -24,70 +22,58 @@ type host struct {
 	Tags        string
 }
 
-func getSystemsFromAppDB(instance *cyndiv1beta1.CyndiPipeline, db *pgx.Conn, now string) ([]host, error) {
-	insightsOnlyQuery := ""
-	if instance.Spec.InsightsOnly == true {
-		insightsOnlyQuery = "AND canonical_facts ? 'insights_id'"
-	}
-
-	query := fmt.Sprintf(
-		"SELECT id, account, display_name, tags FROM inventory.%s WHERE updated < '%s' %s ORDER BY id LIMIT 10 OFFSET 0",
-		instance.Status.TableName, now, insightsOnlyQuery)
-	hosts, err := getSystemsFromDB(db, query, true)
-	return hosts, err
-}
-
-func parseTags(tags *string) error {
-	var tagsJson []tag
-	err := json.Unmarshal([]byte(*tags), &tagsJson)
+func (i *ReconcileIteration) validate() (bool, error) {
+	hbiHosts, err := i.getSystemsFromHBIDB()
 	if err != nil {
-		return err
+		return false, err
 	}
-	tagsMarshalled, err := json.Marshal(tagsJson)
-	*tags = string(tagsMarshalled)
-	return err
-}
-
-func flattenTags(tags *string) error {
-	var tagsFlat []tag
-	tagsMap := make(map[string]interface{})
-	err := json.Unmarshal([]byte(*tags), &tagsMap)
+	appHosts, err := i.getSystemsFromAppDB()
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	for namespace, keyValues := range tagsMap {
-		keyValuesMap := keyValues.(map[string]interface{})
+	diff := cmp.Diff(hbiHosts, appHosts)
+	diff = strings.ReplaceAll(diff, "\n", "")
+	diff = strings.ReplaceAll(diff, "\t", "")
+	log.Info(diff)
 
-		for key, values := range keyValuesMap {
-			valuesArray := values.([]interface{})
-			if values == nil || len(valuesArray) == 0 {
-				tagsFlat = append(tagsFlat, tag{Namespace: namespace, Key: "", Value: ""})
-			} else {
-				for _, value := range valuesArray {
-					tagsFlat = append(tagsFlat, tag{Namespace: namespace, Key: key, Value: value.(string)})
-				}
-			}
-		}
+	isValid := diff == ""
+	if isValid == false {
+		i.Instance.Status.ValidationFailedCount++
+	} else {
+		i.Instance.Status.ValidationFailedCount = 0
 	}
 
-	tagsMarshalled, err := json.Marshal(tagsFlat)
-	*tags = string(tagsMarshalled)
-	return err
+	i.Instance.Status.SyndicatedDataIsValid = isValid
+	return isValid, err
 }
 
-func getSystemsFromHBIDB(instance *cyndiv1beta1.CyndiPipeline, now string) ([]host, error) {
-	db, err := connectToInventoryDB(instance)
+func (i *ReconcileIteration) getSystemsFromHBIDB() ([]host, error) {
+	db, err := i.connectToInventoryDB()
 	if err != nil {
 		return nil, err
 	}
-	query := fmt.Sprintf("SELECT id, account, display_name, tags FROM hosts WHERE modified_on < '%s' ORDER BY id LIMIT 10 OFFSET 0", now)
+	query := fmt.Sprintf(
+		"SELECT id, account, display_name, tags FROM hosts WHERE modified_on < '%s' ORDER BY id LIMIT 10 OFFSET 0", i.Now)
 	hosts, err := getSystemsFromDB(db, query, false)
 	if err != nil {
 		return hosts, err
 	}
 
 	err = db.Close()
+	return hosts, err
+}
+
+func (i *ReconcileIteration) getSystemsFromAppDB() ([]host, error) {
+	insightsOnlyQuery := ""
+	if i.Instance.Spec.InsightsOnly == true {
+		insightsOnlyQuery = "AND canonical_facts ? 'insights_id'"
+	}
+
+	query := fmt.Sprintf(
+		"SELECT id, account, display_name, tags FROM inventory.%s WHERE updated < '%s' %s ORDER BY id LIMIT 10 OFFSET 0",
+		i.Instance.Status.TableName, i.Now, insightsOnlyQuery)
+	hosts, err := getSystemsFromDB(i.AppDb, query, true)
 	return hosts, err
 }
 
@@ -131,29 +117,41 @@ func getSystemsFromDB(db *pgx.Conn, query string, appDB bool) ([]host, error) {
 	return hostsParsed, nil
 }
 
-func validate(instance *cyndiv1beta1.CyndiPipeline, appDb *pgx.Conn) (bool, error) {
-	now := time.Now().Format(time.RFC3339)
-	hbiHosts, err := getSystemsFromHBIDB(instance, now)
+func parseTags(tags *string) error {
+	var tagsJson []tag
+	err := json.Unmarshal([]byte(*tags), &tagsJson)
 	if err != nil {
-		return false, err
+		return err
 	}
-	appHosts, err := getSystemsFromAppDB(instance, appDb, now)
+	tagsMarshalled, err := json.Marshal(tagsJson)
+	*tags = string(tagsMarshalled)
+	return err
+}
+
+func flattenTags(tags *string) error {
+	var tagsFlat []tag
+	tagsMap := make(map[string]interface{})
+	err := json.Unmarshal([]byte(*tags), &tagsMap)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	diff := cmp.Diff(hbiHosts, appHosts)
-	diff = strings.ReplaceAll(diff, "\n", "")
-	diff = strings.ReplaceAll(diff, "\t", "")
-	log.Info(diff)
+	for namespace, keyValues := range tagsMap {
+		keyValuesMap := keyValues.(map[string]interface{})
 
-	isValid := diff == ""
-	if isValid == false {
-		instance.Status.ValidationFailedCount++
-	} else {
-		instance.Status.ValidationFailedCount = 0
+		for key, values := range keyValuesMap {
+			valuesArray := values.([]interface{})
+			if values == nil || len(valuesArray) == 0 {
+				tagsFlat = append(tagsFlat, tag{Namespace: namespace, Key: "", Value: ""})
+			} else {
+				for _, value := range valuesArray {
+					tagsFlat = append(tagsFlat, tag{Namespace: namespace, Key: key, Value: value.(string)})
+				}
+			}
+		}
 	}
 
-	instance.Status.SyndicatedDataIsValid = isValid
-	return isValid, err
+	tagsMarshalled, err := json.Marshal(tagsFlat)
+	*tags = string(tagsMarshalled)
+	return err
 }

@@ -38,13 +38,21 @@ import (
 )
 
 var log = logf.Log.WithName("controller_cyndipipeline")
-var logger = log.WithValues()
 
 // CyndiPipelineReconciler reconciles a CyndiPipeline object
 type CyndiPipelineReconciler struct {
 	Client client.Client
 	Scheme *runtime.Scheme
 	Log    logr.Logger
+}
+
+type ReconcileIteration struct {
+	Instance *cyndiv1beta1.CyndiPipeline
+	Log      logr.Logger
+	AppDb    *pgx.Conn
+	Client   client.Client
+	Scheme   *runtime.Scheme
+	Now      string
 }
 
 const cyndipipelineFinalizer = "finalizer.cyndi.cloud.redhat.com"
@@ -72,15 +80,23 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, err
 	}
 
-	appDb, err := connectToAppDB(instance)
+	i := ReconcileIteration{
+		Instance: instance,
+		Log:      reqLogger,
+		Client:   r.Client,
+		Scheme:   r.Scheme,
+		Now:      time.Now().Format(time.RFC3339)}
+
+	err = i.connectToAppDB()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	defer i.closeAppDB()
 
 	// delete pipeline
-	if instance.GetDeletionTimestamp() != nil {
-		if contains(instance.GetFinalizers(), cyndipipelineFinalizer) {
-			if err := r.finalizeCyndiPipeline(reqLogger, instance, appDb); err != nil {
+	if i.Instance.GetDeletionTimestamp() != nil {
+		if contains(i.Instance.GetFinalizers(), cyndipipelineFinalizer) {
+			if err := i.finalizeCyndiPipeline(); err != nil {
 				return reconcile.Result{}, err
 			}
 
@@ -94,28 +110,28 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	if !contains(instance.GetFinalizers(), cyndipipelineFinalizer) {
-		if err := r.addFinalizer(reqLogger, instance); err != nil {
+		if err := i.addFinalizer(); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
 	//new pipeline
 	if instance.Status.PipelineVersion == "" {
-		refreshPipelineVersion(instance)
+		i.refreshPipelineVersion()
 		instance.Status.InitialSyncInProgress = true
 	}
 
-	dbSchema, connectorConfig, err := parseConfig(instance, r)
+	dbSchema, connectorConfig, err := i.parseConfig()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	dbTableExists, err := checkIfTableExists(instance.Status.TableName, appDb)
+	dbTableExists, err := i.checkIfTableExists(i.Instance.Status.TableName)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	connectorExists, err := checkIfConnectorExists(instance.Status.ConnectorName, instance.Namespace, r)
+	connectorExists, err := i.checkIfConnectorExists(i.Instance.Status.ConnectorName)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -124,21 +140,21 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	if dbTableExists != true || connectorExists != true {
 		if instance.Status.InitialSyncInProgress != true {
 			instance.Status.PreviousPipelineVersion = instance.Status.PipelineVersion
-			refreshPipelineVersion(instance)
+			i.refreshPipelineVersion()
 		}
 
-		err = createTable(instance.Status.TableName, appDb, dbSchema)
+		err = i.createTable(i.Instance.Status.TableName, dbSchema)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
-		err = createConnector(instance, r, connectorConfig)
+		err = i.createConnector(connectorConfig)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
-	pipelineIsValid, err := validate(instance, appDb)
+	pipelineIsValid, err := i.validate()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -163,22 +179,18 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 			return reconcile.Result{}, err
 		}
 	} else if pipelineIsValid == true {
-		err = updateView(instance, appDb)
+		err = i.updateView()
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
 		if instance.Status.PreviousPipelineVersion != "" {
-			err = deleteTable(tableName(instance.Status.PreviousPipelineVersion), appDb)
+			err = i.deleteTable(tableName(instance.Status.PreviousPipelineVersion))
 			if err != nil {
 				return reconcile.Result{}, err
 			}
 
-			err = deleteConnector(
-				connectorName(instance.Status.PreviousPipelineVersion, instance.Spec.AppName),
-				instance.Namespace,
-				r)
-
+			err = i.deleteConnector(connectorName(instance.Status.PreviousPipelineVersion, instance.Spec.AppName))
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -197,16 +209,11 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		time.Sleep(time.Second * 15)
 	}
 
-	return requeue(time.Second*15, appDb, instance, r)
+	return i.requeue(time.Second*15, r)
 }
 
-func requeue(delay time.Duration, appDb *pgx.Conn, instance *cyndiv1beta1.CyndiPipeline, r *CyndiPipelineReconciler) (reconcile.Result, error) {
-	err := appDb.Close()
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	err = r.Client.Status().Update(context.TODO(), instance)
+func (i *ReconcileIteration) requeue(delay time.Duration, r *CyndiPipelineReconciler) (reconcile.Result, error) {
+	err := r.Client.Status().Update(context.TODO(), i.Instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -220,9 +227,9 @@ func (r *CyndiPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func parseConfig(instance *cyndiv1beta1.CyndiPipeline, r *CyndiPipelineReconciler) (string, string, error) {
+func (i *ReconcileIteration) parseConfig() (string, string, error) {
 	cyndiConfig := &corev1.ConfigMap{}
-	err := r.Client.Get(context.TODO(), client.ObjectKey{Name: "cyndi", Namespace: instance.Namespace}, cyndiConfig)
+	err := i.Client.Get(context.TODO(), client.ObjectKey{Name: "cyndi", Namespace: i.Instance.Namespace}, cyndiConfig)
 	if err != nil {
 		return "", "", err
 	}
@@ -231,12 +238,12 @@ func parseConfig(instance *cyndiv1beta1.CyndiPipeline, r *CyndiPipelineReconcile
 	return dbSchema, connectorConfig, err
 }
 
-func refreshPipelineVersion(instance *cyndiv1beta1.CyndiPipeline) {
-	instance.Status.PipelineVersion = fmt.Sprintf(
+func (i *ReconcileIteration) refreshPipelineVersion() {
+	i.Instance.Status.PipelineVersion = fmt.Sprintf(
 		"1_%s",
 		strconv.FormatInt(time.Now().UnixNano(), 10))
-	instance.Status.ConnectorName = connectorName(instance.Status.PipelineVersion, instance.Spec.AppName)
-	instance.Status.TableName = tableName(instance.Status.PipelineVersion)
+	i.Instance.Status.ConnectorName = connectorName(i.Instance.Status.PipelineVersion, i.Instance.Spec.AppName)
+	i.Instance.Status.TableName = tableName(i.Instance.Status.PipelineVersion)
 }
 
 func tableName(pipelineVersion string) string {
@@ -258,22 +265,22 @@ func contains(list []string, s string) bool {
 	return false
 }
 
-func (r *CyndiPipelineReconciler) finalizeCyndiPipeline(reqLogger logr.Logger, instance *cyndiv1beta1.CyndiPipeline, appDb *pgx.Conn) error {
-	err := deleteTable(instance.Status.TableName, appDb)
+func (i *ReconcileIteration) finalizeCyndiPipeline() error {
+	err := i.deleteTable(i.Instance.Status.TableName)
 	if err != nil {
 		return err
 	}
-	reqLogger.Info("Successfully finalized CyndiPipeline")
+	i.Log.Info("Successfully finalized CyndiPipeline")
 	return nil
 }
 
-func (r *CyndiPipelineReconciler) addFinalizer(reqLogger logr.Logger, instance *cyndiv1beta1.CyndiPipeline) error {
-	reqLogger.Info("Adding Finalizer for the CyndiPipeline")
-	controllerutil.AddFinalizer(instance, cyndipipelineFinalizer)
+func (i *ReconcileIteration) addFinalizer() error {
+	i.Log.Info("Adding Finalizer for the CyndiPipeline")
+	controllerutil.AddFinalizer(i.Instance, cyndipipelineFinalizer)
 
-	err := r.Client.Update(context.TODO(), instance)
+	err := i.Client.Update(context.TODO(), i.Instance)
 	if err != nil {
-		reqLogger.Error(err, "Failed to update CyndiPipeline with finalizer")
+		i.Log.Error(err, "Failed to update CyndiPipeline with finalizer")
 		return err
 	}
 	return nil
