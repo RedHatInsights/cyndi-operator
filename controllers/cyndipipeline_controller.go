@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	"github.com/jackc/pgx"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strconv"
 	"strings"
@@ -46,6 +47,8 @@ type CyndiPipelineReconciler struct {
 	Log    logr.Logger
 }
 
+const cyndipipelineFinalizer = "finalizer.cyndi.cloud.redhat.com"
+
 // +kubebuilder:rbac:groups=cyndi.cloud.redhat.com,resources=cyndipipelines,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cyndi.cloud.redhat.com,resources=cyndipipelines/status,verbs=get;update;patch
 
@@ -69,6 +72,33 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, err
 	}
 
+	appDb, err := connectToAppDB(instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// delete pipeline
+	if instance.GetDeletionTimestamp() != nil {
+		if contains(instance.GetFinalizers(), cyndipipelineFinalizer) {
+			if err := r.finalizeCyndiPipeline(reqLogger, instance, appDb); err != nil {
+				return reconcile.Result{}, err
+			}
+
+			controllerutil.RemoveFinalizer(instance, cyndipipelineFinalizer)
+			err := r.Client.Update(context.TODO(), instance)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		return reconcile.Result{}, nil
+	}
+
+	if !contains(instance.GetFinalizers(), cyndipipelineFinalizer) {
+		if err := r.addFinalizer(reqLogger, instance); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	//new pipeline
 	if instance.Status.PipelineVersion == "" {
 		refreshPipelineVersion(instance)
@@ -76,11 +106,6 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	dbSchema, connectorConfig, err := parseConfig(instance, r)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	appDb, err := connectToAppDB(instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -222,4 +247,34 @@ func connectorName(pipelineVersion string, appName string) string {
 	return fmt.Sprintf("syndication-pipeline-%s-%s",
 		appName,
 		strings.Replace(pipelineVersion, "_", "-", 1))
+}
+
+func contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *CyndiPipelineReconciler) finalizeCyndiPipeline(reqLogger logr.Logger, instance *cyndiv1beta1.CyndiPipeline, appDb *pgx.Conn) error {
+	err := deleteTable(instance.Status.TableName, appDb)
+	if err != nil {
+		return err
+	}
+	reqLogger.Info("Successfully finalized CyndiPipeline")
+	return nil
+}
+
+func (r *CyndiPipelineReconciler) addFinalizer(reqLogger logr.Logger, instance *cyndiv1beta1.CyndiPipeline) error {
+	reqLogger.Info("Adding Finalizer for the CyndiPipeline")
+	controllerutil.AddFinalizer(instance, cyndipipelineFinalizer)
+
+	err := r.Client.Update(context.TODO(), instance)
+	if err != nil {
+		reqLogger.Error(err, "Failed to update CyndiPipeline with finalizer")
+		return err
+	}
+	return nil
 }
