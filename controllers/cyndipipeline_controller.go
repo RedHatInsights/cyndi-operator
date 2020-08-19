@@ -129,18 +129,10 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	if pipelineIsValid != true && instance.Status.ValidationFailedCount > validationFailedCountThreshold {
-		err = deleteTable(instance.Status.TableName, appDb)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		err = deleteConnector(instance.Status.ConnectorName, instance.Namespace, r)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
+		instance.Status.PreviousPipelineVersion = instance.Status.PipelineVersion
 		instance.Status.ValidationFailedCount = 0
 		instance.Status.PipelineVersion = ""
+
 		err = r.Client.Status().Update(context.TODO(), instance)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -149,6 +141,24 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		err = updateView(instance, appDb)
 		if err != nil {
 			return reconcile.Result{}, err
+		}
+
+		if instance.Status.PreviousPipelineVersion != "" {
+			err = deleteTable(tableName(instance.Status.PreviousPipelineVersion), appDb)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			err = deleteConnector(
+				connectorName(instance.Status.PreviousPipelineVersion, instance.Spec.AppName),
+				instance.Namespace,
+				r)
+
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			instance.Status.PreviousPipelineVersion = ""
 		}
 
 		instance.Status.InitialSyncInProgress = false
@@ -200,13 +210,16 @@ func refreshPipelineVersion(instance *cyndiv1beta1.CyndiPipeline) {
 	instance.Status.PipelineVersion = fmt.Sprintf(
 		"1_%s",
 		strconv.FormatInt(time.Now().UnixNano(), 10))
+	instance.Status.ConnectorName = connectorName(instance.Status.PipelineVersion, instance.Spec.AppName)
+	instance.Status.TableName = tableName(instance.Status.PipelineVersion)
+}
 
-	instance.Status.ConnectorName = fmt.Sprintf(
-		"syndication-pipeline-%s-%s",
-		instance.Spec.AppName,
-		strings.Replace(instance.Status.PipelineVersion, "_", "-", 1))
+func tableName(pipelineVersion string) string {
+	return fmt.Sprintf("hosts_v%s", pipelineVersion)
+}
 
-	instance.Status.TableName = fmt.Sprintf(
-		"hosts_v%s",
-		instance.Status.PipelineVersion)
+func connectorName(pipelineVersion string, appName string) string {
+	return fmt.Sprintf("syndication-pipeline-%s-%s",
+		appName,
+		strings.Replace(pipelineVersion, "_", "-", 1))
 }
