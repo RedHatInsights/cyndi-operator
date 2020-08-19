@@ -152,6 +152,14 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		}
 
 		instance.Status.InitialSyncInProgress = false
+	} else if pipelineIsValid != true {
+		//need to sleep here. Updating the validationFailedCount in the status causes an immediate requeue of Reconcile.
+		//So, setting a RequeueAfter delay will not delay the Reconcile loop.
+		//https://github.com/operator-framework/operator-sdk/issues/1164#issuecomment-469485711
+		//A better solution might be to create a separate controller to perform the validation. When the
+		//validation_controller fails n times and needs to recreate the pipeline, it can set the status of this operator
+		//to trigger a refresh.
+		time.Sleep(time.Second * 15)
 	}
 
 	return requeue(time.Second*15, appDb, instance, r)
