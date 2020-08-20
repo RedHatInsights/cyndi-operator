@@ -8,13 +8,40 @@ and DB table, validating the data is syndicated correctly, and automatically ref
 becomes out of sync.
 
 ## Development 
-`TODO`
+[This is general info on building and running the operator.](https://v0-19-x.sdk.operatorframework.io/docs/golang/quickstart/#build-and-run-the-operator)
+ 
+I've been using
+[CodeReady Containers](https://developers.redhat.com/products/codeready-containers/overview) as a Kubernetes cluster.
+It requires a ton of RAM (over 20 GB on my machine).
+[MiniKube](https://github.com/kubernetes/minikube/releases) is a less resource hungry option.
+
+[The Strimzi operator,](https://strimzi.io/docs/operators/latest/quickstart.html) HBI, and an
+Application DB needs to be installed in the cluster. The Application DB can just be an empty Postgres DB. Execute steps
+3 and 4 of the 
+[onboarding process](https://platform-docs.cloud.paas.psi.redhat.com/backend/inventory.html#onboarding-process)
+in the Application DB.
+
+Create secrets for the HBI DB, App DB, and a config map for the Cyndi Operator. See the examples folder.
+
+As mentioned in the quickstart, run `make generate` any time a change is made to `cyndipipeline_types.go`.
+Similarly, run `make manifests` any time a change is made which needs to regenerate the CRD manifests. Finally, run
+`make install` to install/update the CRD in the Kubernetes cluster.
+
+I find it easiest to run the operator locally. This allows the use of a debugger. Use `make delve` to start the 
+operator in debug mode. Then connect to it with a debugger on port 2345. It can also be run locally with
+`make run ENABLE_WEBHOOKS=false`.
+
+After everything is running, create a new Custom Resource via
+`kubectl apply -f config/samples/cyndi_v1beta1_cyndipipeline.yaml`. Then, the CR can be managed via Kubernetes commands
+like normal.
 
 ## Typical Flows
 
+These are high level descriptions of the steps taken within the reconcile loop during typical scenarios.
+
 #### Create a new pipeline
 
-1. Set the PipelineVersion to the current timestamp
+1. Update the CR's status with the pipeline version (uses the current timestamp)
 1. Create a new table in AppDB (e.g. inventory.hosts_v1_1597073300783716678)
 1. Create a new Kafka Sink Connector pointing to the new table
 1. Attempt to validate the data is in sync. Each time the validation fails, it will requeue the reconcile loop until
@@ -24,10 +51,17 @@ existing table and connector will be deleted, and the pipeline will be recreated
 1. The reconcile loop will be re-queued to run periodically to validate the data is in sync.
 
 #### Delete a pipeline
-`TODO`
+1. The Kafka Sink Connector is deleted automatically because it is a child of the Cyndi Pipeline
+1. The table is deleted via the finalizer: finalizeCyndiPipeline
 
 #### Refresh an out of sync pipeline
-`TODO`
+1. When the validation failure count reaches the configured limit, the pipeline will be refreshed.
+1. This is triggered by setting Status.PreviousPipelineVersion = Status.PipelineVersion, Status.PipelineVersion = ""
+1. The following execution of the reconcile loop will create a new pipeline version (table, connector)
+1. Validation will happen the same as when creating a new pipeline
+1. After the validation succeeds, the DB view will point to the new table, and the old pipeline (table, connector)
+   is deleted
+1. The reconcile loop will be re-queued to run periodically to validate the data is in sync.
 
 #### Migrate an existing pipeline to a new schema
 `TODO`
