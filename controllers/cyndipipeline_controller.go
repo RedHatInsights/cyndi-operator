@@ -87,6 +87,11 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		Scheme:   r.Scheme,
 		Now:      time.Now().Format(time.RFC3339)}
 
+	dbSchema, connectorConfig, err := i.parseConfig()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	err = i.connectToAppDB()
 	if err != nil {
 		return reconcile.Result{}, err
@@ -119,11 +124,6 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	if instance.Status.PipelineVersion == "" {
 		i.refreshPipelineVersion()
 		instance.Status.InitialSyncInProgress = true
-	}
-
-	dbSchema, connectorConfig, err := i.parseConfig()
-	if err != nil {
-		return reconcile.Result{}, err
 	}
 
 	dbTableExists, err := i.checkIfTableExists(i.Instance.Status.TableName)
@@ -209,11 +209,11 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		time.Sleep(time.Second * 15)
 	}
 
-	return i.requeue(time.Second*15, r)
+	return i.requeue(time.Second*15)
 }
 
-func (i *ReconcileIteration) requeue(delay time.Duration, r *CyndiPipelineReconciler) (reconcile.Result, error) {
-	err := r.Client.Status().Update(context.TODO(), i.Instance)
+func (i *ReconcileIteration) requeue(delay time.Duration) (reconcile.Result, error) {
+	err := i.Client.Status().Update(context.TODO(), i.Instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
