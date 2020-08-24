@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/go-logr/logr"
 	"github.com/jackc/pgx"
@@ -28,8 +29,12 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -53,6 +58,7 @@ type ReconcileIteration struct {
 	Client   client.Client
 	Scheme   *runtime.Scheme
 	Now      string
+	Recorder record.EventRecorder
 }
 
 const cyndipipelineFinalizer = "finalizer.cyndi.cloud.redhat.com"
@@ -70,7 +76,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -87,14 +93,18 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		Scheme:   r.Scheme,
 		Now:      time.Now().Format(time.RFC3339)}
 
+	if err = i.setupEventRecorder(); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	dbSchema, connectorConfig, err := i.parseConfig()
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, i.errorWithEvent("Error while reading cyndi configmap.", err)
 	}
 
 	err = i.connectToAppDB()
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, i.errorWithEvent("Error while connecting to app DB.", err)
 	}
 	defer i.closeAppDB()
 
@@ -102,13 +112,13 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	if i.Instance.GetDeletionTimestamp() != nil {
 		if contains(i.Instance.GetFinalizers(), cyndipipelineFinalizer) {
 			if err := i.finalizeCyndiPipeline(); err != nil {
-				return reconcile.Result{}, err
+				return reconcile.Result{}, i.errorWithEvent("Error running finalizer.", err)
 			}
 
 			controllerutil.RemoveFinalizer(instance, cyndipipelineFinalizer)
 			err := r.Client.Update(context.TODO(), instance)
 			if err != nil {
-				return reconcile.Result{}, err
+				return reconcile.Result{}, i.errorWithEvent("Error updating resource after finalizer.", err)
 			}
 		}
 		return reconcile.Result{}, nil
@@ -116,7 +126,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 	if !contains(instance.GetFinalizers(), cyndipipelineFinalizer) {
 		if err := i.addFinalizer(); err != nil {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, i.errorWithEvent("Error adding finalizer to resource", err)
 		}
 	}
 
@@ -128,12 +138,12 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 	dbTableExists, err := i.checkIfTableExists(i.Instance.Status.TableName)
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, i.errorWithEvent("Error checking if table exists.", err)
 	}
 
 	connectorExists, err := i.checkIfConnectorExists(i.Instance.Status.ConnectorName)
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, i.errorWithEvent("Error checking if connector exists", err)
 	}
 
 	//part, or all, of the pipeline is missing, create a new pipeline
@@ -145,23 +155,23 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 		err = i.createTable(i.Instance.Status.TableName, dbSchema)
 		if err != nil {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, i.errorWithEvent("Error creating table", err)
 		}
 
 		err = i.createConnector(connectorConfig)
 		if err != nil {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, i.errorWithEvent("Error creating connector", err)
 		}
 	}
 
 	pipelineIsValid, err := i.validate()
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, i.errorWithEvent("Error validating pipeline", err)
 	}
 
 	err = r.Client.Status().Update(context.TODO(), instance)
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, i.errorWithEvent("Error updating status", err)
 	}
 
 	validationFailedCountThreshold := 5
@@ -176,23 +186,23 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 		err = r.Client.Status().Update(context.TODO(), instance)
 		if err != nil {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, i.errorWithEvent("Error updating status", err)
 		}
 	} else if pipelineIsValid == true {
 		err = i.updateView()
 		if err != nil {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, i.errorWithEvent("Error updating database view", err)
 		}
 
 		if instance.Status.PreviousPipelineVersion != "" {
 			err = i.deleteTable(tableName(instance.Status.PreviousPipelineVersion))
 			if err != nil {
-				return reconcile.Result{}, err
+				return reconcile.Result{}, i.errorWithEvent("Error deleting table", err)
 			}
 
 			err = i.deleteConnector(connectorName(instance.Status.PreviousPipelineVersion, instance.Spec.AppName))
 			if err != nil {
-				return reconcile.Result{}, err
+				return reconcile.Result{}, i.errorWithEvent("Error deleting connector", err)
 			}
 
 			instance.Status.PreviousPipelineVersion = ""
@@ -209,7 +219,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		time.Sleep(time.Second * 15)
 	}
 
-	return i.requeue(time.Second*15)
+	return i.requeue(time.Second * 15)
 }
 
 func (i *ReconcileIteration) requeue(delay time.Duration) (reconcile.Result, error) {
@@ -233,9 +243,17 @@ func (i *ReconcileIteration) parseConfig() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
+
 	connectorConfig := cyndiConfig.Data["connector.config"]
+	if connectorConfig == "" {
+		return "", "", errors.New("connector.config is missing from cyndi configmap")
+	}
+
 	dbSchema := cyndiConfig.Data["db.schema"]
-	return dbSchema, connectorConfig, err
+	if dbSchema == "" {
+		return "", "", errors.New("db.schema is missing from cyndi configmap")
+	}
+	return dbSchema, connectorConfig, nil
 }
 
 func (i *ReconcileIteration) refreshPipelineVersion() {
@@ -244,6 +262,15 @@ func (i *ReconcileIteration) refreshPipelineVersion() {
 		strconv.FormatInt(time.Now().UnixNano(), 10))
 	i.Instance.Status.ConnectorName = connectorName(i.Instance.Status.PipelineVersion, i.Instance.Spec.AppName)
 	i.Instance.Status.TableName = tableName(i.Instance.Status.PipelineVersion)
+}
+
+func (i *ReconcileIteration) errorWithEvent(message string, err error) error {
+	i.Recorder.Event(
+		i.Instance,
+		corev1.EventTypeWarning,
+		message,
+		err.Error())
+	return err
 }
 
 func tableName(pipelineVersion string) string {
@@ -265,6 +292,30 @@ func contains(list []string, s string) bool {
 	return false
 }
 
+func (i *ReconcileIteration) setupEventRecorder() error {
+	kubeConfig, err := ctrl.GetConfig()
+	if err != nil {
+		return err
+	}
+
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return err
+	}
+
+	eventBroadcaster := record.NewBroadcaster()
+	//eventBroadcaster.StartLogging(i.Log.Info)
+	eventBroadcaster.StartRecordingToSink(
+		&typedcorev1.EventSinkImpl{
+			Interface: kubeClient.CoreV1().Events(i.Instance.Namespace)})
+	recorder := eventBroadcaster.NewRecorder(
+		scheme.Scheme,
+		corev1.EventSource{Component: "cyndipipeline"})
+
+	i.Recorder = recorder
+	return nil
+}
+
 func (i *ReconcileIteration) finalizeCyndiPipeline() error {
 	err := i.deleteTable(i.Instance.Status.TableName)
 	if err != nil {
@@ -280,8 +331,7 @@ func (i *ReconcileIteration) addFinalizer() error {
 
 	err := i.Client.Update(context.TODO(), i.Instance)
 	if err != nil {
-		i.Log.Error(err, "Failed to update CyndiPipeline with finalizer")
-		return err
+		return i.errorWithEvent("Failed to update CyndiPipeline with finalizer", err)
 	}
 	return nil
 }
