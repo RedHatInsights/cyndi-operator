@@ -51,14 +51,23 @@ type CyndiPipelineReconciler struct {
 	Log    logr.Logger
 }
 
+type HBIDBParams struct {
+	Name     string
+	Host     string
+	Port     string
+	User     string
+	Password string
+}
+
 type ReconcileIteration struct {
-	Instance *cyndiv1beta1.CyndiPipeline
-	Log      logr.Logger
-	AppDb    *pgx.Conn
-	Client   client.Client
-	Scheme   *runtime.Scheme
-	Now      string
-	Recorder record.EventRecorder
+	Instance    *cyndiv1beta1.CyndiPipeline
+	Log         logr.Logger
+	AppDb       *pgx.Conn
+	Client      client.Client
+	Scheme      *runtime.Scheme
+	Now         string
+	Recorder    record.EventRecorder
+	HBIDBParams HBIDBParams
 }
 
 const cyndipipelineFinalizer = "finalizer.cyndi.cloud.redhat.com"
@@ -100,6 +109,10 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	dbSchema, connectorConfig, err := i.parseConfig()
 	if err != nil {
 		return reconcile.Result{}, i.errorWithEvent("Error while reading cyndi configmap.", err)
+	}
+
+	if err := i.parseHBIDBSecret(); err != nil {
+		return reconcile.Result{}, i.errorWithEvent("Error while reading HBI DB secret.", err)
 	}
 
 	err = i.connectToAppDB()

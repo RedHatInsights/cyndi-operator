@@ -36,12 +36,6 @@ type CyndiPipelineSpec struct {
 	AppDBUser           string `json:"appDBUser"`
 	AppDBPassword       string `json:"appDBPassword"`
 	AppDBSSLMode        string `json:"appDBSSLMode"`
-	InventoryDBHostname string `json:"inventoryDBHostname"`
-	InventoryDBPort     int64  `json:"inventoryDBPort"`
-	InventoryDBUser     string `json:"inventoryDBUser"`
-	InventoryDBName     string `json:"inventoryDBName"`
-	InventoryDBPassword string `json:"inventoryDBPassword"`
-	InventoryDBSSLMode  string `json:"inventoryDBSSLMode"`
 	KafkaConnectCluster string `json:"kafkaConnectCluster"`
 	InsightsOnly        bool   `json:"insightsOnly"`
 	TasksMax            int64  `json:"tasksMax"`

@@ -53,19 +53,6 @@ spec:
               type: string
             insightsOnly:
               type: boolean
-            inventoryDBHostname:
-              type: string
-            inventoryDBName:
-              type: string
-            inventoryDBPassword:
-              type: string
-            inventoryDBPort:
-              format: int64
-              type: integer
-            inventoryDBSSLMode:
-              type: string
-            inventoryDBUser:
-              type: string
             kafkaConnectCluster:
               type: string
             pipelineVersion:
@@ -87,12 +74,6 @@ spec:
           - appDBUser
           - appName
           - insightsOnly
-          - inventoryDBHostname
-          - inventoryDBName
-          - inventoryDBPassword
-          - inventoryDBPort
-          - inventoryDBSSLMode
-          - inventoryDBUser
           - kafkaConnectCluster
           - pipelineVersion
           - tasksMax

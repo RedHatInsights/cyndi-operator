@@ -2,8 +2,12 @@ package controllers
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/jackc/pgx"
+	"golang.org/x/net/context"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 	"text/template"
 )
@@ -70,15 +74,63 @@ func (i *ReconcileIteration) updateView() error {
 	return err
 }
 
+func readHBISecretValue(hbiSecret *corev1.Secret, key string) (string, error) {
+	value := hbiSecret.Data[key]
+	if value == nil || string(value) == "" {
+		errorMsg := fmt.Sprintf("%s missing from host-inventory-db secret", key)
+		return "", errors.New(errorMsg)
+	} else {
+		return string(value), nil
+	}
+}
+
+func (i *ReconcileIteration) parseHBIDBSecret() error {
+	hbiSecret := &corev1.Secret{}
+	err := i.Client.Get(context.TODO(), client.ObjectKey{Name: "host-inventory-db", Namespace: i.Instance.Namespace}, hbiSecret)
+
+	host, err := readHBISecretValue(hbiSecret, "db.host")
+	if err != nil {
+		return err
+	}
+
+	user, err := readHBISecretValue(hbiSecret, "db.user")
+	if err != nil {
+		return err
+	}
+
+	password, err := readHBISecretValue(hbiSecret, "db.password")
+	if err != nil {
+		return err
+	}
+
+	name, err := readHBISecretValue(hbiSecret, "db.name")
+	if err != nil {
+		return err
+	}
+
+	port, err := readHBISecretValue(hbiSecret, "db.port")
+	if err != nil {
+		return err
+	}
+
+	i.HBIDBParams = HBIDBParams{
+		Host:     host,
+		User:     user,
+		Password: password,
+		Name:     name,
+		Port:     port}
+
+	return nil
+}
+
 func (i *ReconcileIteration) connectToInventoryDB() (*pgx.Conn, error) {
 	connStr := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s sslmode=%s port=%s",
-		i.Instance.Spec.InventoryDBHostname,
-		i.Instance.Spec.InventoryDBUser,
-		i.Instance.Spec.InventoryDBPassword,
-		i.Instance.Spec.InventoryDBName,
-		i.Instance.Spec.InventoryDBSSLMode,
-		strconv.FormatInt(i.Instance.Spec.InventoryDBPort, 10))
+		"host=%s user=%s password=%s dbname=%s port=%s",
+		i.HBIDBParams.Host,
+		i.HBIDBParams.User,
+		i.HBIDBParams.Password,
+		i.HBIDBParams.Name,
+		i.HBIDBParams.Port)
 	config, err := pgx.ParseDSN(connStr)
 	db, err := pgx.Connect(config)
 	return db, err
