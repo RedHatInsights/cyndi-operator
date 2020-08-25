@@ -207,13 +207,10 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	if pipelineIsValid != true && instance.Status.ValidationFailedCount > validationFailedCountThreshold {
-		instance.Status.PreviousPipelineVersion = instance.Status.PipelineVersion
-		instance.Status.ValidationFailedCount = 0
-		instance.Status.PipelineVersion = ""
+		err = i.triggerRefresh()
 
-		err = r.Client.Status().Update(context.TODO(), instance)
 		if err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error updating status", err)
+			return reconcile.Result{}, i.errorWithEvent("Error triggering refresh", err)
 		}
 	} else if pipelineIsValid == true {
 		err = i.updateView()
@@ -247,6 +244,16 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	return i.requeue(time.Second * time.Duration(validationInterval))
+}
+
+func (i *ReconcileIteration) triggerRefresh() error {
+
+	i.Instance.Status.PreviousPipelineVersion = i.Instance.Status.PipelineVersion
+	i.Instance.Status.ValidationFailedCount = 0
+	i.Instance.Status.PipelineVersion = ""
+
+	err := i.Client.Status().Update(context.TODO(), i.Instance)
+	return err
 }
 
 func (i *ReconcileIteration) requeue(delay time.Duration) (reconcile.Result, error) {
@@ -284,6 +291,16 @@ func (i *ReconcileIteration) parseConfig() error {
 	i.ConnectCluster = cyndiConfig.Data["connect.cluster"]
 	if i.ConnectCluster == "" {
 		return errors.New("connect.cluster is missing from cyndi configmap")
+	}
+
+	if i.Instance.Status.CyndiConfigVersion == "" {
+		i.Instance.Status.CyndiConfigVersion = cyndiConfig.ResourceVersion
+	} else if i.Instance.Status.CyndiConfigVersion != cyndiConfig.ResourceVersion {
+		//cyndi configmap changed, perform a refresh to use latest values
+		i.Instance.Status.CyndiConfigVersion = cyndiConfig.ResourceVersion
+		if err = i.triggerRefresh(); err != nil {
+			return err
+		}
 	}
 
 	i.ValidationParams = ValidationParams{}
@@ -375,7 +392,6 @@ func (i *ReconcileIteration) setupEventRecorder() error {
 	}
 
 	eventBroadcaster := record.NewBroadcaster()
-	//eventBroadcaster.StartLogging(i.Log.Info)
 	eventBroadcaster.StartRecordingToSink(
 		&typedcorev1.EventSinkImpl{
 			Interface: kubeClient.CoreV1().Events(i.Instance.Namespace)})
