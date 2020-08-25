@@ -11,5 +11,4 @@ spec:
   appDBUser: insightsapi
   appName: advisor
   insightsOnly: false
-  kafkaConnectCluster: my-connect-cluster
   tasksMax: 1

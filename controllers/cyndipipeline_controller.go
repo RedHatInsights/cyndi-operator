@@ -80,6 +80,7 @@ type ReconcileIteration struct {
 	DBSchema         string
 	ConnectorConfig  string
 	ValidationParams ValidationParams
+	ConnectCluster   string
 }
 
 const cyndipipelineFinalizer = "finalizer.cyndi.cloud.redhat.com"
@@ -278,6 +279,11 @@ func (i *ReconcileIteration) parseConfig() error {
 	i.DBSchema = cyndiConfig.Data["db.schema"]
 	if i.DBSchema == "" {
 		return errors.New("db.schema is missing from cyndi configmap")
+	}
+
+	i.ConnectCluster = cyndiConfig.Data["connect.cluster"]
+	if i.ConnectCluster == "" {
+		return errors.New("connect.cluster is missing from cyndi configmap")
 	}
 
 	i.ValidationParams = ValidationParams{}

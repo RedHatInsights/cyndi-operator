@@ -37,7 +37,7 @@ func (i ReconcileIteration) checkIfConnectorExists(connectorName string) (bool, 
 	}
 }
 
-func newConnectorForCR(instance *cyndiv1beta1.CyndiPipeline, connectorConfig string) (*unstructured.Unstructured, error) {
+func newConnectorForCR(instance *cyndiv1beta1.CyndiPipeline, connectorConfig string, connectCluster string) (*unstructured.Unstructured, error) {
 	m := make(map[string]string)
 	m["TableName"] = instance.Status.TableName
 	m["Topic"] = "platform.inventory.events"
@@ -73,7 +73,7 @@ func newConnectorForCR(instance *cyndiv1beta1.CyndiPipeline, connectorConfig str
 			"name":      instance.Status.ConnectorName,
 			"namespace": instance.Namespace,
 			"labels": map[string]interface{}{
-				"strimzi.io/cluster": instance.Spec.KafkaConnectCluster,
+				"strimzi.io/cluster": connectCluster,
 			},
 		},
 		"spec": map[string]interface{}{
@@ -91,7 +91,7 @@ func newConnectorForCR(instance *cyndiv1beta1.CyndiPipeline, connectorConfig str
 }
 
 func (i *ReconcileIteration) createConnector() error {
-	connector, err := newConnectorForCR(i.Instance, i.ConnectorConfig)
+	connector, err := newConnectorForCR(i.Instance, i.ConnectorConfig, i.ConnectCluster)
 	if err != nil {
 		return err
 	}

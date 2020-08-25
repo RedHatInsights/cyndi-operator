@@ -35,7 +35,6 @@ type CyndiPipelineSpec struct {
 	AppDBUser           string `json:"appDBUser"`
 	AppDBPassword       string `json:"appDBPassword"`
 	AppDBSSLMode        string `json:"appDBSSLMode"`
-	KafkaConnectCluster string `json:"kafkaConnectCluster"`
 	InsightsOnly        bool   `json:"insightsOnly"`
 	TasksMax            int64  `json:"tasksMax"`
 }
