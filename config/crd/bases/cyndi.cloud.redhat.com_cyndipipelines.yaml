@@ -50,18 +50,15 @@ spec:
             appDBUser:
               type: string
             appName:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "operator-sdk generate k8s" to regenerate code after
+                modifying this file Add custom validation using kubebuilder tags:
+                https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
               type: string
             insightsOnly:
               type: boolean
             kafkaConnectCluster:
               type: string
-            pipelineVersion:
-              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                Important: Run "operator-sdk generate k8s" to regenerate code after
-                modifying this file Add custom validation using kubebuilder tags:
-                https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
-              format: int64
-              type: integer
             tasksMax:
               format: int64
               type: integer
@@ -75,7 +72,6 @@ spec:
           - appName
           - insightsOnly
           - kafkaConnectCluster
-          - pipelineVersion
           - tasksMax
           type: object
         status:
@@ -100,8 +96,10 @@ spec:
             tableName:
               type: string
             validationDelaySeconds:
+              format: int64
               type: integer
             validationFailedCount:
+              format: int64
               type: integer
           required:
           - cyndiConfigVersion

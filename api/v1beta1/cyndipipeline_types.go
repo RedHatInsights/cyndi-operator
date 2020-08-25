@@ -28,7 +28,6 @@ type CyndiPipelineSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	PipelineVersion     int64  `json:"pipelineVersion"`
 	AppName             string `json:"appName"`
 	AppDBHostname       string `json:"appDBHostname"`
 	AppDBPort           int64  `json:"appDBPort"`
@@ -47,12 +46,12 @@ type CyndiPipelineStatus struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
 	SyndicatedDataIsValid   bool   `json:"syndicatedDataIsValid"`
-	ValidationFailedCount   int    `json:"validationFailedCount"`
+	ValidationFailedCount   int64  `json:"validationFailedCount"`
 	ConnectorName           string `json:"cyndiPipelineName"`
 	TableName               string `json:"tableName"`
 	PipelineVersion         string `json:"pipelineVersion"`
 	CyndiConfigVersion      string `json:"cyndiConfigVersion"`
-	ValidationDelaySeconds  int    `json:"validationDelaySeconds"`
+	ValidationDelaySeconds  int64  `json:"validationDelaySeconds"`
 	PreviousPipelineVersion string `json:"previousPipelineVersion"`
 	InitialSyncInProgress   bool   `json:"initialSyncInProgress"`
 }

@@ -90,8 +90,8 @@ func newConnectorForCR(instance *cyndiv1beta1.CyndiPipeline, connectorConfig str
 	return u, nil
 }
 
-func (i *ReconcileIteration) createConnector(connectorConfig string) error {
-	connector, err := newConnectorForCR(i.Instance, connectorConfig)
+func (i *ReconcileIteration) createConnector() error {
+	connector, err := newConnectorForCR(i.Instance, i.ConnectorConfig)
 	if err != nil {
 		return err
 	}

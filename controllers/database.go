@@ -51,10 +51,10 @@ func (i *ReconcileIteration) deleteTable(tableName string) error {
 	return err
 }
 
-func (i *ReconcileIteration) createTable(tableName string, dbSchema string) error {
+func (i *ReconcileIteration) createTable(tableName string) error {
 	m := make(map[string]string)
 	m["TableName"] = tableName
-	tmpl, err := template.New("dbSchema").Parse(dbSchema)
+	tmpl, err := template.New("dbSchema").Parse(i.DBSchema)
 	if err != nil {
 		return err
 	}
