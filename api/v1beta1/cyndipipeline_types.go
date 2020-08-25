@@ -28,15 +28,15 @@ type CyndiPipelineSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	AppName             string `json:"appName"`
-	AppDBHostname       string `json:"appDBHostname"`
-	AppDBPort           int64  `json:"appDBPort"`
-	AppDBName           string `json:"appDBName"`
-	AppDBUser           string `json:"appDBUser"`
-	AppDBPassword       string `json:"appDBPassword"`
-	AppDBSSLMode        string `json:"appDBSSLMode"`
-	InsightsOnly        bool   `json:"insightsOnly"`
-	TasksMax            int64  `json:"tasksMax"`
+	AppName       string `json:"appName"`
+	AppDBHostname string `json:"appDBHostname"`
+	AppDBPort     int64  `json:"appDBPort"`
+	AppDBName     string `json:"appDBName"`
+	AppDBUser     string `json:"appDBUser"`
+	AppDBPassword string `json:"appDBPassword"`
+	AppDBSSLMode  string `json:"appDBSSLMode"`
+	InsightsOnly  bool   `json:"insightsOnly"`
+	TasksMax      int64  `json:"tasksMax"`
 }
 
 // CyndiPipelineStatus defines the observed state of CyndiPipeline

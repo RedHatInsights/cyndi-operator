@@ -57,8 +57,6 @@ spec:
               type: string
             insightsOnly:
               type: boolean
-            kafkaConnectCluster:
-              type: string
             tasksMax:
               format: int64
               type: integer
@@ -71,7 +69,6 @@ spec:
           - appDBUser
           - appName
           - insightsOnly
-          - kafkaConnectCluster
           - tasksMax
           type: object
         status:
