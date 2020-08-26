@@ -39,18 +39,18 @@ type host struct {
 	Tags        string
 }
 
-func (i *ReconcileIteration) validate() (bool, error) {
+func (i *ReconcileIteration) validate() error {
 	hbiHosts, err := i.getSystemsFromHBIDB()
 	if err != nil {
-		return false, err
+		return err
 	}
 	appHosts, err := i.getSystemsFromAppDB()
 	if err != nil {
-		return false, err
+		return err
 	}
 	totalHosts, err := i.countSystemsInHBIDB()
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	var r DiffReporter
@@ -72,7 +72,7 @@ func (i *ReconcileIteration) validate() (bool, error) {
 	}
 
 	i.Instance.Status.SyndicatedDataIsValid = isValid
-	return isValid, err
+	return err
 }
 
 func (i *ReconcileIteration) countSystemsInHBIDB() (int64, error) {

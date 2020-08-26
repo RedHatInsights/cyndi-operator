@@ -152,8 +152,10 @@ func (i *ReconcileIteration) connectToAppDB() error {
 }
 
 func (i *ReconcileIteration) closeAppDB() {
-	err := i.AppDb.Close()
-	if err != nil {
-		i.Log.Error(err, "Failed to close App DB")
+	if i.AppDb != nil {
+		err := i.AppDb.Close()
+		if err != nil {
+			i.Log.Error(err, "Failed to close App DB")
+		}
 	}
 }

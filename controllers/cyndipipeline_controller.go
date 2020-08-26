@@ -42,8 +42,6 @@ import (
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
 )
 
-var log = logf.Log.WithName("controller_cyndipipeline")
-
 // CyndiPipelineReconciler reconciles a CyndiPipeline object
 type CyndiPipelineReconciler struct {
 	Client client.Client
@@ -85,53 +83,70 @@ type ReconcileIteration struct {
 
 const cyndipipelineFinalizer = "finalizer.cyndi.cloud.redhat.com"
 
+var log = logf.Log.WithName("controller_cyndipipeline")
+
+func setup(client client.Client, scheme *runtime.Scheme, reqLogger logr.Logger, request ctrl.Request) (ReconcileIteration, error) {
+
+	instance := &cyndiv1beta1.CyndiPipeline{}
+
+	i := ReconcileIteration{}
+
+	err := client.Get(context.TODO(), request.NamespacedName, instance)
+	if err != nil {
+		if k8errors.IsNotFound(err) {
+			// Request object not found, could have been deleted after reconcile request.
+			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+			// Return and don't requeue
+			return i, nil
+		}
+		// Error reading the object - requeue the request.
+		return i, err
+	}
+
+	i = ReconcileIteration{
+		Instance: instance,
+		Client:   client,
+		Scheme:   scheme,
+		Log:      reqLogger,
+		Now:      time.Now().Format(time.RFC3339)}
+
+	if err = i.setupEventRecorder(); err != nil {
+		return i, err
+	}
+
+	if err = i.parseConfig(); err != nil {
+		return i, i.errorWithEvent("Error while reading cyndi configmap.", err)
+	}
+
+	if err = i.parseHBIDBSecret(); err != nil {
+		return i, i.errorWithEvent("Error while reading HBI DB secret.", err)
+	}
+
+	if err = i.connectToAppDB(); err != nil {
+		return i, i.errorWithEvent("Error while connecting to app DB.", err)
+	}
+
+	return i, nil
+}
+
 // +kubebuilder:rbac:groups=cyndi.cloud.redhat.com,resources=cyndipipelines,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cyndi.cloud.redhat.com,resources=cyndipipelines/status,verbs=get;update;patch
 
 func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-
 	reqLogger.Info("Reconciling CyndiPipeline")
 
-	instance := &cyndiv1beta1.CyndiPipeline{}
-
-	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
-	if err != nil {
-		if k8errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return reconcile.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
-	}
-
-	i := ReconcileIteration{
-		Instance: instance,
-		Log:      reqLogger,
-		Client:   r.Client,
-		Scheme:   r.Scheme,
-		Now:      time.Now().Format(time.RFC3339)}
-
-	if err = i.setupEventRecorder(); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if err = i.parseConfig(); err != nil {
-		return reconcile.Result{}, i.errorWithEvent("Error while reading cyndi configmap.", err)
-	}
-
-	if err = i.parseHBIDBSecret(); err != nil {
-		return reconcile.Result{}, i.errorWithEvent("Error while reading HBI DB secret.", err)
-	}
-
-	if err = i.connectToAppDB(); err != nil {
-		return reconcile.Result{}, i.errorWithEvent("Error while connecting to app DB.", err)
-	}
-
+	i, err := setup(r.Client, r.Scheme, reqLogger, request)
 	defer i.closeAppDB()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Request object not found, could have been deleted after reconcile request.
+	if i.Instance == nil {
+		return reconcile.Result{}, nil
+	}
 
 	// delete pipeline
 	if i.Instance.GetDeletionTimestamp() != nil {
@@ -140,8 +155,8 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 				return reconcile.Result{}, i.errorWithEvent("Error running finalizer.", err)
 			}
 
-			controllerutil.RemoveFinalizer(instance, cyndipipelineFinalizer)
-			err := r.Client.Update(context.TODO(), instance)
+			controllerutil.RemoveFinalizer(i.Instance, cyndipipelineFinalizer)
+			err := r.Client.Update(context.TODO(), i.Instance)
 			if err != nil {
 				return reconcile.Result{}, i.errorWithEvent("Error updating resource after finalizer.", err)
 			}
@@ -149,16 +164,16 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, nil
 	}
 
-	if !contains(instance.GetFinalizers(), cyndipipelineFinalizer) {
+	if !contains(i.Instance.GetFinalizers(), cyndipipelineFinalizer) {
 		if err := i.addFinalizer(); err != nil {
 			return reconcile.Result{}, i.errorWithEvent("Error adding finalizer to resource", err)
 		}
 	}
 
 	//new pipeline
-	if instance.Status.PipelineVersion == "" {
+	if i.Instance.Status.PipelineVersion == "" {
 		i.refreshPipelineVersion()
-		instance.Status.InitialSyncInProgress = true
+		i.Instance.Status.InitialSyncInProgress = true
 	}
 
 	dbTableExists, err := i.checkIfTableExists(i.Instance.Status.TableName)
@@ -173,8 +188,8 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 	//part, or all, of the pipeline is missing, create a new pipeline
 	if dbTableExists != true || connectorExists != true {
-		if instance.Status.InitialSyncInProgress != true {
-			instance.Status.PreviousPipelineVersion = instance.Status.PipelineVersion
+		if i.Instance.Status.InitialSyncInProgress != true {
+			i.Instance.Status.PreviousPipelineVersion = i.Instance.Status.PipelineVersion
 			i.refreshPipelineVersion()
 		}
 
@@ -189,64 +204,54 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		}
 	}
 
-	pipelineIsValid, err := i.validate()
-	if err != nil {
-		return reconcile.Result{}, i.errorWithEvent("Error validating pipeline", err)
-	}
-
-	err = r.Client.Status().Update(context.TODO(), instance)
+	err = r.Client.Status().Update(context.TODO(), i.Instance)
 	if err != nil {
 		return reconcile.Result{}, i.errorWithEvent("Error updating status", err)
 	}
 
 	validationFailedCountThreshold := i.ValidationParams.AttemptsThreshold
-	validationInterval := i.ValidationParams.Interval
-	if instance.Status.InitialSyncInProgress == true {
+	if i.Instance.Status.InitialSyncInProgress == true {
 		validationFailedCountThreshold = i.ValidationParams.InitAttemptsThreshold
-		validationInterval = i.ValidationParams.InitInterval
 	}
 
-	if pipelineIsValid != true && instance.Status.ValidationFailedCount > validationFailedCountThreshold {
+	if i.Instance.Status.SyndicatedDataIsValid != true && i.Instance.Status.ValidationFailedCount > validationFailedCountThreshold {
 		err = i.triggerRefresh()
 
 		if err != nil {
 			return reconcile.Result{}, i.errorWithEvent("Error triggering refresh", err)
 		}
-	} else if pipelineIsValid == true {
+	} else if i.Instance.Status.SyndicatedDataIsValid == true {
 		err = i.updateView()
 		if err != nil {
 			return reconcile.Result{}, i.errorWithEvent("Error updating database view", err)
 		}
 
-		if instance.Status.PreviousPipelineVersion != "" {
-			err = i.deleteTable(tableName(instance.Status.PreviousPipelineVersion))
+		if i.Instance.Status.PreviousPipelineVersion != "" {
+			err = i.deleteTable(tableName(i.Instance.Status.PreviousPipelineVersion))
 			if err != nil {
 				return reconcile.Result{}, i.errorWithEvent("Error deleting table", err)
 			}
 
-			err = i.deleteConnector(connectorName(instance.Status.PreviousPipelineVersion, instance.Spec.AppName))
+			err = i.deleteConnector(connectorName(i.Instance.Status.PreviousPipelineVersion, i.Instance.Spec.AppName))
 			if err != nil {
 				return reconcile.Result{}, i.errorWithEvent("Error deleting connector", err)
 			}
 
-			instance.Status.PreviousPipelineVersion = ""
+			i.Instance.Status.PreviousPipelineVersion = ""
 		}
 
-		instance.Status.InitialSyncInProgress = false
-	} else if pipelineIsValid != true {
-		//need to sleep here. Updating the validationFailedCount in the status causes an immediate requeue of Reconcile.
-		//So, setting a RequeueAfter delay will not delay the Reconcile loop.
-		//https://github.com/operator-framework/operator-sdk/issues/1164#issuecomment-469485711
-		//A better solution might be to create a separate controller to perform the validation. When the
-		//validation_controller fails n times and needs to recreate the pipeline, it can set the status of this operator
-		//to trigger a refresh.
-		time.Sleep(time.Second * time.Duration(validationInterval))
+		i.Instance.Status.InitialSyncInProgress = false
+		err = i.Client.Status().Update(context.TODO(), i.Instance)
+		if err != nil {
+			return reconcile.Result{}, i.errorWithEvent("Error updating status", err)
+		}
 	}
 
-	return i.requeue(time.Second * time.Duration(validationInterval))
+	return reconcile.Result{}, nil
 }
 
 func (i *ReconcileIteration) triggerRefresh() error {
+	i.Log.Info("Refreshing CyndiPipeline")
 
 	i.Instance.Status.PreviousPipelineVersion = i.Instance.Status.PipelineVersion
 	i.Instance.Status.ValidationFailedCount = 0
@@ -254,15 +259,6 @@ func (i *ReconcileIteration) triggerRefresh() error {
 
 	err := i.Client.Status().Update(context.TODO(), i.Instance)
 	return err
-}
-
-func (i *ReconcileIteration) requeue(delay time.Duration) (reconcile.Result, error) {
-	err := i.Client.Status().Update(context.TODO(), i.Instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	return reconcile.Result{RequeueAfter: delay, Requeue: true}, nil
 }
 
 func (r *CyndiPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
