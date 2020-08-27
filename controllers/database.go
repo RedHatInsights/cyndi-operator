@@ -8,7 +8,6 @@ import (
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
 	"text/template"
 )
 
@@ -74,7 +73,7 @@ func (i *ReconcileIteration) updateView() error {
 	return err
 }
 
-func readHBISecretValue(hbiSecret *corev1.Secret, key string) (string, error) {
+func readSecretValue(hbiSecret *corev1.Secret, key string) (string, error) {
 	value := hbiSecret.Data[key]
 	if value == nil || string(value) == "" {
 		errorMsg := fmt.Sprintf("%s missing from host-inventory-db secret", key)
@@ -84,36 +83,75 @@ func readHBISecretValue(hbiSecret *corev1.Secret, key string) (string, error) {
 	}
 }
 
+func (i *ReconcileIteration) parseAppDBSecret() error {
+	appSecret := &corev1.Secret{}
+	err := i.Client.Get(context.TODO(), client.ObjectKey{Name: i.Instance.Spec.AppName + "-db", Namespace: i.Instance.Namespace}, appSecret)
+
+	host, err := readSecretValue(appSecret, "db.host")
+	if err != nil {
+		return err
+	}
+
+	user, err := readSecretValue(appSecret, "db.user")
+	if err != nil {
+		return err
+	}
+
+	password, err := readSecretValue(appSecret, "db.password")
+	if err != nil {
+		return err
+	}
+
+	name, err := readSecretValue(appSecret, "db.name")
+	if err != nil {
+		return err
+	}
+
+	port, err := readSecretValue(appSecret, "db.port")
+	if err != nil {
+		return err
+	}
+
+	i.AppDBParams = DBParams{
+		Host:     host,
+		User:     user,
+		Password: password,
+		Name:     name,
+		Port:     port}
+
+	return nil
+}
+
 func (i *ReconcileIteration) parseHBIDBSecret() error {
 	hbiSecret := &corev1.Secret{}
 	err := i.Client.Get(context.TODO(), client.ObjectKey{Name: "host-inventory-db", Namespace: i.Instance.Namespace}, hbiSecret)
 
-	host, err := readHBISecretValue(hbiSecret, "db.host")
+	host, err := readSecretValue(hbiSecret, "db.host")
 	if err != nil {
 		return err
 	}
 
-	user, err := readHBISecretValue(hbiSecret, "db.user")
+	user, err := readSecretValue(hbiSecret, "db.user")
 	if err != nil {
 		return err
 	}
 
-	password, err := readHBISecretValue(hbiSecret, "db.password")
+	password, err := readSecretValue(hbiSecret, "db.password")
 	if err != nil {
 		return err
 	}
 
-	name, err := readHBISecretValue(hbiSecret, "db.name")
+	name, err := readSecretValue(hbiSecret, "db.name")
 	if err != nil {
 		return err
 	}
 
-	port, err := readHBISecretValue(hbiSecret, "db.port")
+	port, err := readSecretValue(hbiSecret, "db.port")
 	if err != nil {
 		return err
 	}
 
-	i.HBIDBParams = HBIDBParams{
+	i.HBIDBParams = DBParams{
 		Host:     host,
 		User:     user,
 		Password: password,
@@ -138,13 +176,12 @@ func (i *ReconcileIteration) connectToInventoryDB() (*pgx.Conn, error) {
 
 func (i *ReconcileIteration) connectToAppDB() error {
 	connStr := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s sslmode=%s port=%s",
-		i.Instance.Spec.AppDBHostname,
-		i.Instance.Spec.AppDBUser,
-		i.Instance.Spec.AppDBPassword,
-		i.Instance.Spec.AppDBName,
-		i.Instance.Spec.AppDBSSLMode,
-		strconv.FormatInt(i.Instance.Spec.AppDBPort, 10))
+		"host=%s user=%s password=%s dbname=%s port=%s",
+		i.AppDBParams.Host,
+		i.AppDBParams.User,
+		i.AppDBParams.Password,
+		i.AppDBParams.Name,
+		i.AppDBParams.Port)
 	config, err := pgx.ParseDSN(connStr)
 	db, err := pgx.Connect(config)
 	i.AppDb = db

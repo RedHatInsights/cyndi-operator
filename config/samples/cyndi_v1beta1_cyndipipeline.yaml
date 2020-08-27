@@ -3,12 +3,6 @@ kind: CyndiPipeline
 metadata:
   name: example-cyndipipeline
 spec:
-  appDBHostname: advisor-db
-  appDBName: insightsapi
-  appDBPassword: insightsapi
-  appDBPort: 5432
-  appDBSSLMode: disable
-  appDBUser: insightsapi
   appName: advisor
   insightsOnly: false
   tasksMax: 1

@@ -49,7 +49,7 @@ type CyndiPipelineReconciler struct {
 	Log    logr.Logger
 }
 
-type HBIDBParams struct {
+type DBParams struct {
 	Name     string
 	Host     string
 	Port     string
@@ -74,7 +74,8 @@ type ReconcileIteration struct {
 	Scheme           *runtime.Scheme
 	Now              string
 	Recorder         record.EventRecorder
-	HBIDBParams      HBIDBParams
+	HBIDBParams      DBParams
+	AppDBParams      DBParams
 	DBSchema         string
 	ConnectorConfig  string
 	ValidationParams ValidationParams
@@ -119,6 +120,10 @@ func setup(client client.Client, scheme *runtime.Scheme, reqLogger logr.Logger, 
 	}
 
 	if err = i.parseHBIDBSecret(); err != nil {
+		return i, i.errorWithEvent("Error while reading HBI DB secret.", err)
+	}
+
+	if err = i.parseAppDBSecret(); err != nil {
 		return i, i.errorWithEvent("Error while reading HBI DB secret.", err)
 	}
 

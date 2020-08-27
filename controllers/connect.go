@@ -3,7 +3,6 @@ package controllers
 import (
 	"bytes"
 	"context"
-	cyndiv1beta1 "cyndi-operator/api/v1beta1"
 	"encoding/json"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -37,18 +36,18 @@ func (i ReconcileIteration) checkIfConnectorExists(connectorName string) (bool, 
 	}
 }
 
-func newConnectorForCR(instance *cyndiv1beta1.CyndiPipeline, connectorConfig string, connectCluster string) (*unstructured.Unstructured, error) {
+func (i *ReconcileIteration) newConnectorForCR() (*unstructured.Unstructured, error) {
 	m := make(map[string]string)
-	m["TableName"] = instance.Status.TableName
+	m["TableName"] = i.Instance.Status.TableName
 	m["Topic"] = "platform.inventory.events"
-	m["DBPort"] = strconv.FormatInt(instance.Spec.AppDBPort, 10)
-	m["DBHostname"] = instance.Spec.AppDBHostname
-	m["DBName"] = instance.Spec.AppDBName
-	m["DBUser"] = instance.Spec.AppDBUser
-	m["DBPassword"] = instance.Spec.AppDBPassword
+	m["DBPort"] = i.AppDBParams.Port
+	m["DBHostname"] = i.AppDBParams.Host
+	m["DBName"] = i.AppDBParams.Name
+	m["DBUser"] = i.AppDBParams.User
+	m["DBPassword"] = i.AppDBParams.Password
 	m["BatchSize"] = "3000"
-	m["InsightsOnly"] = strconv.FormatBool(instance.Spec.InsightsOnly)
-	tmpl, err := template.New("connectorConfig").Parse(connectorConfig)
+	m["InsightsOnly"] = strconv.FormatBool(i.Instance.Spec.InsightsOnly)
+	tmpl, err := template.New("connectorConfig").Parse(i.ConnectorConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -70,14 +69,14 @@ func newConnectorForCR(instance *cyndiv1beta1.CyndiPipeline, connectorConfig str
 	u := &unstructured.Unstructured{}
 	u.Object = map[string]interface{}{
 		"metadata": map[string]interface{}{
-			"name":      instance.Status.ConnectorName,
-			"namespace": instance.Namespace,
+			"name":      i.Instance.Status.ConnectorName,
+			"namespace": i.Instance.Namespace,
 			"labels": map[string]interface{}{
-				"strimzi.io/cluster": connectCluster,
+				"strimzi.io/cluster": i.ConnectCluster,
 			},
 		},
 		"spec": map[string]interface{}{
-			"tasksMax": instance.Spec.TasksMax,
+			"tasksMax": i.Instance.Spec.TasksMax,
 			"class":    "io.confluent.connect.jdbc.JdbcSinkConnector",
 			"config":   connectorConfigInterface,
 		},
@@ -91,7 +90,7 @@ func newConnectorForCR(instance *cyndiv1beta1.CyndiPipeline, connectorConfig str
 }
 
 func (i *ReconcileIteration) createConnector() error {
-	connector, err := newConnectorForCR(i.Instance, i.ConnectorConfig, i.ConnectCluster)
+	connector, err := i.newConnectorForCR()
 	if err != nil {
 		return err
 	}
