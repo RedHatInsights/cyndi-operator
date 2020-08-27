@@ -67,19 +67,20 @@ type ValidationParams struct {
 }
 
 type ReconcileIteration struct {
-	Instance         *cyndiv1beta1.CyndiPipeline
-	Log              logr.Logger
-	AppDb            *pgx.Conn
-	Client           client.Client
-	Scheme           *runtime.Scheme
-	Now              string
-	Recorder         record.EventRecorder
-	HBIDBParams      DBParams
-	AppDBParams      DBParams
-	DBSchema         string
-	ConnectorConfig  string
-	ValidationParams ValidationParams
-	ConnectCluster   string
+	Instance          *cyndiv1beta1.CyndiPipeline
+	Log               logr.Logger
+	AppDb             *pgx.Conn
+	Client            client.Client
+	Scheme            *runtime.Scheme
+	Now               string
+	Recorder          record.EventRecorder
+	HBIDBParams       DBParams
+	AppDBParams       DBParams
+	DBSchema          string
+	ConnectorConfig   string
+	ValidationParams  ValidationParams
+	ConnectCluster    string
+	ConnectorTasksMax int64
 }
 
 const cyndipipelineFinalizer = "finalizer.cyndi.cloud.redhat.com"
@@ -292,6 +293,11 @@ func (i *ReconcileIteration) parseConfig() error {
 	i.ConnectCluster = cyndiConfig.Data["connect.cluster"]
 	if i.ConnectCluster == "" {
 		return errors.New("connect.cluster is missing from cyndi configmap")
+	}
+
+	i.ConnectorTasksMax, err = strconv.ParseInt(cyndiConfig.Data["connector.tasks.max"], 10, 64)
+	if i.ConnectCluster == "" || err != nil {
+		return errors.New("connect.cluster is missing from cyndi configmap or it is malformed")
 	}
 
 	if i.Instance.Status.CyndiConfigVersion == "" {

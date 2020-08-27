@@ -93,7 +93,8 @@ data:
   init.validation.interval: '5'
   init.validation.attempts.threshold: '10'
   init.validation.percentage.threshold: '95'
-  connect.cluster: my-connect-cluster
+  connect.cluster: 'my-connect-cluster'
+  connector.tasks.max: '1'
 kind: ConfigMap
 metadata:
   name: cyndi2

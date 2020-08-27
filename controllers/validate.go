@@ -55,7 +55,7 @@ func (i *ReconcileIteration) validate() error {
 
 	var r DiffReporter
 	diff := cmp.Diff(hbiHosts, appHosts, cmp.Reporter(&r))
-	log.Info(diff)
+	i.Log.Info(diff)
 
 	percentageThreshold := float64(i.ValidationParams.PercentageThreshold)
 	if i.Instance.Status.InitialSyncInProgress == true {

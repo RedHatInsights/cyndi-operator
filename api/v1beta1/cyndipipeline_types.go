@@ -30,7 +30,6 @@ type CyndiPipelineSpec struct {
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
 	AppName      string `json:"appName"`
 	InsightsOnly bool   `json:"insightsOnly"`
-	TasksMax     int64  `json:"tasksMax"`
 }
 
 // CyndiPipelineStatus defines the observed state of CyndiPipeline

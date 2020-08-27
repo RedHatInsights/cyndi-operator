@@ -44,13 +44,9 @@ spec:
               type: string
             insightsOnly:
               type: boolean
-            tasksMax:
-              format: int64
-              type: integer
           required:
           - appName
           - insightsOnly
-          - tasksMax
           type: object
         status:
           description: CyndiPipelineStatus defines the observed state of CyndiPipeline

@@ -76,7 +76,7 @@ func (i *ReconcileIteration) newConnectorForCR() (*unstructured.Unstructured, er
 			},
 		},
 		"spec": map[string]interface{}{
-			"tasksMax": i.Instance.Spec.TasksMax,
+			"tasksMax": i.ConnectorTasksMax,
 			"class":    "io.confluent.connect.jdbc.JdbcSinkConnector",
 			"config":   connectorConfigInterface,
 		},
