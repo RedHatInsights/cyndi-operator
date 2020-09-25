@@ -31,13 +31,7 @@ oc apply -f advisor-db.yaml -n my-kafka-project
 oc wait deployment/advisor-db --for=condition=Available --timeout=300s -n my-kafka-project
 
 oc apply -f kafka-connect.yaml -n my-kafka-project
-oc wait deployment/my-connect-cluster-connect --for=condition=Ready --timeout=300s -n my-kafka-project
-
-
-#oc adm policy add-role-to-user admin developer -n my-kafka-project
-
-#oc create -f jharting-secret.yml --namespace=my-kafka-project
-# TODO: maybe not needed?
+oc wait kafkaconnect/my-connect-cluster --for=condition=Ready --timeout=300s -n my-kafka-project
 
 
 
