@@ -76,11 +76,19 @@ spec:
           privileged: false
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
+        volumeMounts:
+          - name: init-script
+            mountPath: /opt/app-root/src/postgresql-start
+            readOnly: true
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
+      volumes:
+        - name: init-script
+          configMap:
+            name: advisor-db-init
 
 ---
 apiVersion: v1

@@ -1,0 +1,18 @@
+apiVersion: v1
+data:
+  setUpUsers.sh: |
+    psql insightsapi < /opt/app-root/src/postgresql-start/setUpUsers.sql
+  setUpUsers.sql: |+
+    CREATE SCHEMA IF NOT EXISTS inventory;
+
+    CREATE ROLE cyndi_reader;
+    GRANT USAGE ON SCHEMA inventory TO cyndi_reader;
+
+    CREATE ROLE cyndi_admin;
+    GRANT ALL PRIVILEGES ON SCHEMA inventory TO cyndi_admin;
+
+    GRANT cyndi_admin to insightsapi;
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: advisor-db-init
