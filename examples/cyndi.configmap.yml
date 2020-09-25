@@ -97,4 +97,4 @@ data:
   connector.tasks.max: '1'
 kind: ConfigMap
 metadata:
-  name: cyndi2
+  name: cyndi
