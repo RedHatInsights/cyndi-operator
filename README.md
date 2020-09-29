@@ -35,18 +35,23 @@ The rest of this document assumes CodeReady Containers.
 1. Log in to the cluster as kubeadmin (oc login -u kubeadmin -p ...)
    You'll find the exact command to use in the CRC startup log
 
+1. Create a `my-kafka-project` namespace
+    ```
+    oc create ns my-kafka-project
+    ```
+
 1. Log in to https://quay.io/
    From Account settings download a kubernetes secret.
    This secret is used to pull quay.io/cloudservices images
 
 1. Install the quay secret to the cluster
     ```
-    oc apply -f <secret name>.yml
+    oc apply -n my-kafka-project -f <secret name>.yml
     ```
 
 1. Link the secret to the default serviceaccount
     ```
-    oc secrets link default <secret name> --for=pull
+    oc secrets link -n my-kafka-project default <secret name> --for=pull
     ```
 
 1. In the `dev` folder run

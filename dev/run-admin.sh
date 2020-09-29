@@ -1,7 +1,6 @@
 oc whoami || exit 1
 
 oc create ns kafka
-oc create ns my-kafka-project
 
 oc apply -f install/cluster-operator/ -n kafka
 
