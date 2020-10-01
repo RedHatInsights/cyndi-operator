@@ -49,14 +49,9 @@ The rest of this document assumes CodeReady Containers.
     oc apply -n my-kafka-project -f <secret name>.yml
     ```
 
-1. Link the secret to the default serviceaccount
-    ```
-    oc secrets link -n my-kafka-project default <secret name> --for=pull
-    ```
-
 1. In the `dev` folder run
     ```
-    ./run-admin.sh
+    ./run-admin.sh <secret name>
     ```
    and wait for it to finish
 
