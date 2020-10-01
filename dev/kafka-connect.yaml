@@ -10,7 +10,7 @@ metadata:
 spec:
   image: quay.io/cloudservices/xjoin-kafka-connect-strimzi:c06acd0
   version: 2.5.0
-  replicas: 1
+  replicas: 0
   bootstrapServers: my-cluster-kafka-bootstrap:9093
   tls:
     trustedCertificates:

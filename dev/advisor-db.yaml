@@ -99,8 +99,12 @@ metadata:
   name: advisor-db
 spec:
   ports:
-  - name: postgres
+  - name: port1
     port: 5432
+    protocol: TCP
+    targetPort: 5432
+  - name: port2
+    port: 5433
     protocol: TCP
     targetPort: 5432
   selector:

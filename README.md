@@ -20,6 +20,11 @@ The rest of this document assumes CodeReady Containers.
 
 1. Download an unpack [CodeReady Containers](https://developers.redhat.com/products/codeready-containers/overview)
 
+1. Append the following line into `/etc/hosts`
+    ```
+    127.0.0.1 advisor-db inventory-db
+    ```
+
 1. Configure CRC to use 16G of memory
     ```
     ./crc config set memory 16384
@@ -55,19 +60,56 @@ The rest of this document assumes CodeReady Containers.
     ```
    and wait for it to finish
 
+1. Set up port-forwarding to database pods
+    ```
+    oc port-forward svc/inventory-db 5432:5432 -n my-kafka-project &
+    oc port-forward svc/advisor-db 5433:5432 -n my-kafka-project &
+    ```
+
+1. Install CRDs
+    ```
+    make install
+    ```
+
+1. Run the operator
+    ```
+    make run ENABLE_WEBHOOKS=false
+    ```
+
+1. Finally, create a new pipeline
+    ```
+    oc apply -f config/samples/cyndi_v1beta1_cyndipipeline.yaml
+    ```
+
 ### Useful commands
 
 Create a host
-
 ```
 KAFKA_BOOTSTRAP_SERVERS=192.168.130.11:$(oc get service my-cluster-kafka-external-bootstrap -n my-kafka-project -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}') python utils/kafka_producer.py
 ```
 
 List hosts
-
 ```
 curl -H 'x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjAwMDAwMDEiLCAidHlwZSI6IlVzZXIifX0K' http://api.crc.testing:$(oc get service insights-inventory-public -n my-kafka-project -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}')/api/inventory/v1/hosts
 ```
+
+Inspect Kafka Connect cluster
+```
+oc port-forward svc/my-connect-cluster-connect-api 8083:8083 -n my-kafka-project
+```
+then access the kafka connect API at http://localhost:8083/connectors
+
+Connect to inventory db
+```
+pgcli -h localhost -p 5432 -u insights insights
+```
+
+Connect to advisor db
+```
+pgcli -h localhost -p 5433 -u insights insights
+```
+
+## More info
 
 [The Strimzi operator,](https://strimzi.io/docs/operators/latest/quickstart.html) HBI, and an
 Application DB needs to be installed in the cluster. The Application DB can just be an empty Postgres DB. Execute steps

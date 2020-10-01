@@ -46,11 +46,12 @@ oc apply -f kafka-connect.yaml -n my-kafka-project
 sleep 1
 
 oc secrets link my-connect-cluster-connect $PULL_SECRET --for=pull -n my-kafka-project
-# delete the deployment for the pull secret change to take effect
-# the deployment will be re-created by the operator
-oc delete deployment my-connect-cluster-connect
 
-oc wait kafkaconnect/my-connect-cluster --for=condition=Ready --timeout=600s -n my-kafka-project
+oc scale --replicas=1 kafkaconnect my-connect-cluster
+oc wait kafkaconnect/my-connect-cluster --for=condition=Ready --timeout=300s -n my-kafka-project
+
+# TODO: get rid of this step
+oc apply -f ../examples/cyndi.configmap.yml -n my-kafka-project
 
 
 

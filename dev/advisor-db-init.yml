@@ -1,7 +1,7 @@
 apiVersion: v1
 data:
   setUpUsers.sh: |
-    psql insightsapi < /opt/app-root/src/postgresql-start/setUpUsers.sql
+    psql insights < /opt/app-root/src/postgresql-start/setUpUsers.sql
   setUpUsers.sql: |+
     CREATE SCHEMA IF NOT EXISTS inventory;
 
@@ -11,7 +11,7 @@ data:
     CREATE ROLE cyndi_admin;
     GRANT ALL PRIVILEGES ON SCHEMA inventory TO cyndi_admin;
 
-    GRANT cyndi_admin to insightsapi;
+    GRANT cyndi_admin to insights;
 kind: ConfigMap
 metadata:
   creationTimestamp: null
