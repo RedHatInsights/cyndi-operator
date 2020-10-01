@@ -7,6 +7,28 @@ it manages the Kafka Connector and DB table for an application's Cyndi pipeline.
 and DB table, validating the data is syndicated correctly, and automatically refreshing the pipeline when the data
 becomes out of sync.
 
+## General info
+
+[The Strimzi operator,](https://strimzi.io/docs/operators/latest/quickstart.html) HBI, and an
+Application DB needs to be installed in the cluster. The Application DB can just be an empty Postgres DB. Execute steps
+3 and 4 of the
+[onboarding process](https://platform-docs.cloud.paas.psi.redhat.com/backend/inventory.html#onboarding-process)
+in the Application DB.
+
+Create secrets for the HBI DB, App DB, and a config map for the Cyndi Operator. See the examples folder.
+
+As mentioned in the quickstart, run `make generate` any time a change is made to `cyndipipeline_types.go`.
+Similarly, run `make manifests` any time a change is made which needs to regenerate the CRD manifests. Finally, run
+`make install` to install/update the CRD in the Kubernetes cluster.
+
+I find it easiest to run the operator locally. This allows the use of a debugger. Use `make delve` to start the
+operator in debug mode. Then connect to it with a debugger on port 2345. It can also be run locally with
+`make run ENABLE_WEBHOOKS=false`.
+
+After everything is running, create a new Custom Resource via
+`kubectl apply -f config/samples/cyndi_v1beta1_cyndipipeline.yaml`. Then, the CR can be managed via Kubernetes commands
+like normal.
+
 ## Development
 [This is general info on building and running the operator.](https://v0-19-x.sdk.operatorframework.io/docs/golang/quickstart/#build-and-run-the-operator)
 
@@ -78,8 +100,10 @@ The rest of this document assumes CodeReady Containers.
 
 1. Finally, create a new pipeline
     ```
-    oc apply -f config/samples/cyndi_v1beta1_cyndipipeline.yaml
+    oc apply -f ../config/samples/cyndi_v1beta1_cyndipipeline.yaml
     ```
+
+1.
 
 ### Useful commands
 
@@ -108,28 +132,6 @@ Connect to advisor db
 ```
 pgcli -h localhost -p 5433 -u insights insights
 ```
-
-## More info
-
-[The Strimzi operator,](https://strimzi.io/docs/operators/latest/quickstart.html) HBI, and an
-Application DB needs to be installed in the cluster. The Application DB can just be an empty Postgres DB. Execute steps
-3 and 4 of the
-[onboarding process](https://platform-docs.cloud.paas.psi.redhat.com/backend/inventory.html#onboarding-process)
-in the Application DB.
-
-Create secrets for the HBI DB, App DB, and a config map for the Cyndi Operator. See the examples folder.
-
-As mentioned in the quickstart, run `make generate` any time a change is made to `cyndipipeline_types.go`.
-Similarly, run `make manifests` any time a change is made which needs to regenerate the CRD manifests. Finally, run
-`make install` to install/update the CRD in the Kubernetes cluster.
-
-I find it easiest to run the operator locally. This allows the use of a debugger. Use `make delve` to start the
-operator in debug mode. Then connect to it with a debugger on port 2345. It can also be run locally with
-`make run ENABLE_WEBHOOKS=false`.
-
-After everything is running, create a new Custom Resource via
-`kubectl apply -f config/samples/cyndi_v1beta1_cyndipipeline.yaml`. Then, the CR can be managed via Kubernetes commands
-like normal.
 
 ## Typical Flows
 
