@@ -1,87 +1,83 @@
 package controllers
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/gofrs/uuid"
+	"strings"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/jackc/pgx"
-	"sort"
-	"strings"
 )
 
-type tag struct {
-	Namespace string
-	Key       string
-	Value     string
-}
+const inventoryTableName = "hosts" // TODO: move
+const countMismatchThreshold = 0.5
 
-type sortedTag []tag
-
-func (a sortedTag) Len() int { return len(a) }
-func (a sortedTag) Less(i, j int) bool {
-	if a[i].Namespace == a[j].Namespace {
-		if a[i].Key == a[j].Key {
-			return a[i].Value < a[j].Value
-		} else {
-			return a[i].Key < a[j].Key
-		}
-	} else {
-		return a[i].Namespace < a[j].Namespace
-	}
-}
-func (a sortedTag) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-
-type host struct {
-	ID          string
-	Account     string
-	DisplayName string
-	Tags        string
-}
-
-func (i *ReconcileIteration) validate() error {
-	hbiHosts, err := i.getSystemsFromHBIDB()
+func (i *ReconcileIteration) validate() (bool, error) {
+	// TODO
+	db, err := i.connectToInventoryDB()
 	if err != nil {
-		return err
+		return false, err
 	}
-	appHosts, err := i.getSystemsFromAppDB()
+
+	defer db.Close()
+
+	hbiHostCount, err := i.countSystems(db, inventoryTableName)
 	if err != nil {
-		return err
+		return false, err
 	}
-	totalHosts, err := i.countSystemsInHBIDB()
+
+	appTable := fmt.Sprintf("inventory.%s", i.Instance.Status.TableName)
+
+	appHostCount, err := i.countSystems(i.AppDb, appTable)
 	if err != nil {
-		return err
+		return false, err
+	}
+
+	countMismatchRatio := float64(abs(hbiHostCount-appHostCount) / hbiHostCount)
+
+	log.Info("Fetched host counts", "hbi", hbiHostCount, "app", appHostCount, "countMismatchRatio", countMismatchRatio)
+
+	// if the counts are way off don't even bother comparing ids
+	if countMismatchRatio > countMismatchThreshold {
+		log.Info("Count mismatch ratio is above threashold, exiting early", "countMismatchRatio", countMismatchRatio)
+		return false, nil
+	}
+
+	hbiIds, err := i.getHostIds(db, inventoryTableName)
+	if err != nil {
+		return false, err
+	}
+
+	appIds, err := i.getHostIds(i.AppDb, appTable)
+	if err != nil {
+		return false, err
 	}
 
 	var r DiffReporter
-	diff := cmp.Diff(hbiHosts, appHosts, cmp.Reporter(&r))
-	i.Log.Info(diff)
 
-	percentageThreshold := float64(i.ValidationParams.PercentageThreshold)
+	log.Info("Fetched host ids")
+	diff := cmp.Diff(hbiIds, appIds, cmp.Reporter(&r))
+	log.Info(diff) // TODO
+
+	validationThresholdPercent := float64(i.ValidationParams.PercentageThreshold)
 	if i.Instance.Status.InitialSyncInProgress == true {
-		percentageThreshold = float64(i.ValidationParams.InitPercentageThreshold)
-	}
-	percentageThreshold = percentageThreshold / 100
-
-	isValid := diff == ""
-	percentageValid := 1 - float64(len(r.diffs))/float64(totalHosts)
-	if isValid == false && percentageValid < percentageThreshold {
-		i.Instance.Status.ValidationFailedCount++
-	} else {
-		i.Instance.Status.ValidationFailedCount = 0
+		validationThresholdPercent = float64(i.ValidationParams.InitPercentageThreshold)
 	}
 
-	i.Instance.Status.SyndicatedDataIsValid = isValid
-	return err
+	idMismatchRatio := float64(len(r.diffs)) / float64(len(hbiIds))
+
+	log.Info("Validation results", "validationThresholdPercent", validationThresholdPercent, "idMismatchRatio", idMismatchRatio)
+	return (idMismatchRatio * 100) <= validationThresholdPercent, nil
 }
 
-func (i *ReconcileIteration) countSystemsInHBIDB() (int64, error) {
-	db, err := i.connectToInventoryDB()
-	if err != nil {
-		return -1, err
-	}
+// TODO move to database
+func (i *ReconcileIteration) countSystems(db *pgx.Conn, table string) (int64, error) {
+
+	// TODO: add modified_on filter
+	//query := fmt.Sprintf(
+	//	"SELECT count(*) FROM %s WHERE modified_on < '%s'", table, i.Now)
+	// also add "AND canonical_facts ? 'insights_id'"
 	query := fmt.Sprintf(
-		"SELECT count(*) FROM hosts WHERE modified_on < '%s'", i.Now)
+		"SELECT count(*) FROM %s", table)
 	rows, err := db.Query(query)
 
 	defer rows.Close()
@@ -103,114 +99,31 @@ func (i *ReconcileIteration) countSystemsInHBIDB() (int64, error) {
 	return response, err
 }
 
-func (i *ReconcileIteration) getSystemsFromHBIDB() ([]host, error) {
-	db, err := i.connectToInventoryDB()
-	if err != nil {
-		return nil, err
-	}
-	query := fmt.Sprintf(
-		"SELECT id, account, display_name, tags FROM hosts WHERE modified_on < '%s' ORDER BY id", i.Now)
-	hosts, err := getSystemsFromDB(db, query, false)
-	if err != nil {
-		return hosts, err
-	}
+// TODO move to database
+func (i *ReconcileIteration) getHostIds(db *pgx.Conn, table string) ([]string, error) {
+	query := fmt.Sprintf("SELECT id FROM %s ORDER BY id", table)
+	rows, err := db.Query(query)
 
-	err = db.Close()
-	return hosts, err
-}
-
-func (i *ReconcileIteration) getSystemsFromAppDB() ([]host, error) {
-	insightsOnlyQuery := ""
-	if i.Instance.Spec.InsightsOnly == true {
-		insightsOnlyQuery = "AND canonical_facts ? 'insights_id'"
-	}
-
-	query := fmt.Sprintf(
-		"SELECT id, account, display_name, tags FROM inventory.%s WHERE updated < '%s' %s ORDER BY id LIMIT 10 OFFSET 0",
-		i.Instance.Status.TableName, i.Now, insightsOnlyQuery)
-	hosts, err := getSystemsFromDB(i.AppDb, query, true)
-	return hosts, err
-}
-
-func getSystemsFromDB(db *pgx.Conn, query string, appDB bool) ([]host, error) {
-	hosts, err := db.Query(query)
-	var hostsParsed []host
+	var ids []string
 
 	if err != nil {
-		return hostsParsed, err
+		return ids, err
 	}
 
-	defer hosts.Close()
+	defer rows.Close()
 
-	for hosts.Next() {
-		var (
-			id          uuid.UUID
-			account     string
-			displayName string
-			tags        string
-		)
-		err = hosts.Scan(&id, &account, &displayName, &tags)
-		if err != nil {
-			return hostsParsed, err
-		}
-
-		if appDB == true {
-			err = parseTags(&tags)
-		} else {
-			err = flattenTags(&tags)
-		}
+	for rows.Next() {
+		var id string
+		err = rows.Scan(&id)
 
 		if err != nil {
-			return hostsParsed, err
+			return ids, err
 		}
 
-		hostsParsed = append(
-			hostsParsed,
-			host{ID: fmt.Sprintf("%x", id), Account: account, DisplayName: displayName, Tags: tags})
+		ids = append(ids, id)
 	}
 
-	return hostsParsed, nil
-}
-
-func parseTags(tags *string) error {
-	var tagsJson []tag
-	err := json.Unmarshal([]byte(*tags), &tagsJson)
-	if err != nil {
-		return err
-	}
-	sort.Sort(sortedTag(tagsJson))
-	tagsMarshalled, err := json.Marshal(tagsJson)
-	*tags = string(tagsMarshalled)
-	return err
-}
-
-func flattenTags(tags *string) error {
-	var tagsFlat []tag
-	tagsMap := make(map[string]interface{})
-	err := json.Unmarshal([]byte(*tags), &tagsMap)
-	if err != nil {
-		return err
-	}
-
-	for namespace, keyValues := range tagsMap {
-		keyValuesMap := keyValues.(map[string]interface{})
-
-		for key, values := range keyValuesMap {
-			valuesArray := values.([]interface{})
-			if values == nil || len(valuesArray) == 0 {
-				tagsFlat = append(tagsFlat, tag{Namespace: namespace, Key: "", Value: ""})
-			} else {
-				for _, value := range valuesArray {
-					tagsFlat = append(tagsFlat, tag{Namespace: namespace, Key: key, Value: value.(string)})
-				}
-			}
-		}
-	}
-
-	sort.Sort(sortedTag(tagsFlat))
-	tagsMarshalled, err := json.Marshal(tagsFlat)
-	*tags = string(tagsMarshalled)
-	return err
+	return ids, nil
 }
 
 type DiffReporter struct {
@@ -235,4 +148,13 @@ func (r *DiffReporter) PopStep() {
 
 func (r *DiffReporter) String() string {
 	return strings.Join(r.diffs, "\n")
+}
+
+// seriously golang?
+func abs(x int64) int64 {
+	if x < 0 {
+		return -x
+	}
+
+	return x
 }

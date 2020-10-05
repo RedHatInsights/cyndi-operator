@@ -87,12 +87,12 @@ data:
     CREATE INDEX {{.TableName}}_system_profile_index ON inventory.{{.TableName}}
     USING GIN (system_profile JSONB_PATH_OPS);
 
-  validation.interval: '2'
+  validation.interval: '60'
   validation.attempts.threshold: '5'
-  validation.percentage.threshold: '95'
-  init.validation.interval: '5'
+  validation.percentage.threshold: '5'
+  init.validation.interval: '15'
   init.validation.attempts.threshold: '10'
-  init.validation.percentage.threshold: '95'
+  init.validation.percentage.threshold: '5'
   connect.cluster: 'my-connect-cluster'
   connector.tasks.max: '1'
 kind: ConfigMap
