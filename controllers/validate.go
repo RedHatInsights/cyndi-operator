@@ -20,14 +20,14 @@ func (i *ReconcileIteration) validate() (bool, error) {
 
 	defer db.Close()
 
-	hbiHostCount, err := i.countSystems(db, inventoryTableName)
+	hbiHostCount, err := i.countSystems(db, inventoryTableName, false)
 	if err != nil {
 		return false, err
 	}
 
 	appTable := fmt.Sprintf("inventory.%s", i.Instance.Status.TableName)
 
-	appHostCount, err := i.countSystems(i.AppDb, appTable)
+	appHostCount, err := i.countSystems(i.AppDb, appTable, true)
 	if err != nil {
 		return false, err
 	}
@@ -42,12 +42,12 @@ func (i *ReconcileIteration) validate() (bool, error) {
 		return false, nil
 	}
 
-	hbiIds, err := i.getHostIds(db, inventoryTableName)
+	hbiIds, err := i.getHostIds(db, inventoryTableName, false)
 	if err != nil {
 		return false, err
 	}
 
-	appIds, err := i.getHostIds(i.AppDb, appTable)
+	appIds, err := i.getHostIds(i.AppDb, appTable, true)
 	if err != nil {
 		return false, err
 	}
@@ -70,14 +70,14 @@ func (i *ReconcileIteration) validate() (bool, error) {
 }
 
 // TODO move to database
-func (i *ReconcileIteration) countSystems(db *pgx.Conn, table string) (int64, error) {
+func (i *ReconcileIteration) countSystems(db *pgx.Conn, table string, view bool) (int64, error) {
 
 	// TODO: add modified_on filter
 	//query := fmt.Sprintf(
 	//	"SELECT count(*) FROM %s WHERE modified_on < '%s'", table, i.Now)
 	// also add "AND canonical_facts ? 'insights_id'"
-	query := fmt.Sprintf(
-		"SELECT count(*) FROM %s", table)
+	// waiting on https://issues.redhat.com/browse/RHCLOUD-9545
+	query := fmt.Sprintf("SELECT count(*) FROM %s", table)
 	rows, err := db.Query(query)
 
 	defer rows.Close()
@@ -100,7 +100,8 @@ func (i *ReconcileIteration) countSystems(db *pgx.Conn, table string) (int64, er
 }
 
 // TODO move to database
-func (i *ReconcileIteration) getHostIds(db *pgx.Conn, table string) ([]string, error) {
+func (i *ReconcileIteration) getHostIds(db *pgx.Conn, table string, view bool) ([]string, error) {
+	// TODO" "AND canonical_facts ? 'insights_id'" when !view and insightsOnly
 	query := fmt.Sprintf("SELECT id FROM %s ORDER BY id", table)
 	rows, err := db.Query(query)
 

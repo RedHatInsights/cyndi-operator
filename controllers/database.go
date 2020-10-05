@@ -4,12 +4,30 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"text/template"
+
 	"github.com/jackc/pgx"
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"text/template"
 )
+
+const viewTemplate = `CREATE OR REPLACE VIEW inventory.hosts AS SELECT
+	id,
+	account,
+	display_name,
+	created,
+	updated,
+	stale_timestamp,
+	stale_timestamp + INTERVAL '1' DAY * '%[2]s' AS stale_warning_timestamp,
+	stale_timestamp + INTERVAL '1' DAY * '%[3]s' AS culled_timestamp,
+	tags,
+	system_profile
+FROM inventory.%[1]s`
+
+// TODO: make configurable
+const cullingStaleWarningOffset = "7"
+const cullingCulledOffset = "14"
 
 func (i *ReconcileIteration) checkIfTableExists(tableName string) (bool, error) {
 	if tableName == "" {
@@ -69,7 +87,7 @@ func (i *ReconcileIteration) createTable(tableName string) error {
 }
 
 func (i *ReconcileIteration) updateView() error {
-	_, err := i.AppDb.Exec(fmt.Sprintf(`CREATE OR REPLACE view inventory.hosts as select * from inventory.%s`, i.Instance.Status.TableName))
+	_, err := i.AppDb.Exec(fmt.Sprintf(viewTemplate, i.Instance.Status.TableName, cullingStaleWarningOffset, cullingCulledOffset))
 	return err
 }
 

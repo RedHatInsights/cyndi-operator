@@ -40,6 +40,7 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		return reconcile.Result{}, i.errorWithEvent("Error validating pipeline", err)
 	}
 
+	i.Instance.Status.SyndicatedDataIsValid = isValid
 	reqLogger.Info("Validation finished", "isValid", isValid)
 
 	return i.requeue(i.getValidationInterval())
