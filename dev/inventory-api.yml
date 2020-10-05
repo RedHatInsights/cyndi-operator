@@ -1,0 +1,159 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: insights-inventory
+  name: insights-inventory
+spec:
+  minReadySeconds: 15
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 9
+  selector:
+    matchLabels:
+      app: insights-inventory
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        openshift.io/generated-by: OpenShiftWebConsole
+        prometheus.io/path: /metrics
+        prometheus.io/port: '8080'
+        prometheus.io/scrape: 'true'
+      creationTimestamp: null
+      labels:
+        app: insights-inventory
+    spec:
+      containers:
+      - command:
+        - gunicorn
+        - --workers=1
+        - --threads=1
+        - --worker-tmp-dir=/tmp
+        - -c
+        - gunicorn.conf.py
+        - -b
+        - 0.0.0.0:8080
+        - -t
+        - '60'
+        - run
+        env:
+        - name: INVENTORY_DB_HOST
+          valueFrom:
+            secretKeyRef:
+              key: db.host
+              name: host-inventory-db
+        - name: INVENTORY_DB_USER
+          valueFrom:
+            secretKeyRef:
+              key: db.user
+              name: host-inventory-db
+        - name: INVENTORY_DB_PASS
+          valueFrom:
+            secretKeyRef:
+              key: db.password
+              name: host-inventory-db
+        - name: INVENTORY_DB_NAME
+          value: insights
+        - name: APP_NAME
+          value: inventory
+        - name: PATH_PREFIX
+          value: api
+        - name: INVENTORY_LEGACY_API_URL
+          value: /r/insights/platform/inventory/v1/
+        - name: prometheus_multiproc_dir
+          value: /tmp
+        - name: INVENTORY_LOG_LEVEL
+          value: DEBUG
+        - name: URLLIB3_LOG_LEVEL
+          value: INFO
+        - name: KAFKA_TOPIC
+          value: platform.system-profile
+        - name: KAFKA_GROUP
+          value: inventory
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: my-cluster-kafka-bootstrap:9092
+        - name: BULK_QUERY_SOURCE
+          value: db
+        - name: RBAC_ENFORCED
+          value: "false"
+        image: quay.io/cloudservices/insights-inventory:635f6d4
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 60
+        name: insights-inventory
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 60
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+        securityContext: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: insights-inventory
+  name: insights-inventory
+spec:
+  ports:
+  - name: port-8080
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: insights-inventory
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: insights-inventory-public
+spec:
+  selector:
+    app: insights-inventory
+  ports:
+    - name: port-8080
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: LoadBalancer
