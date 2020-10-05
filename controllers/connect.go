@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"strconv"
+	"strings"
+	"text/template"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strconv"
-	"strings"
-	"text/template"
 )
 
 func (i ReconcileIteration) checkIfConnectorExists(connectorName string) (bool, error) {
@@ -45,7 +46,8 @@ func (i *ReconcileIteration) newConnectorForCR() (*unstructured.Unstructured, er
 	m["DBName"] = i.AppDBParams.Name
 	m["DBUser"] = i.AppDBParams.User
 	m["DBPassword"] = i.AppDBParams.Password
-	m["BatchSize"] = "3000"
+	m["TasksMax"] = strconv.FormatInt(i.ConnectorTasksMax, 10) // TODO: why int64?
+	m["BatchSize"] = "3000"                                    // TODO
 	m["InsightsOnly"] = strconv.FormatBool(i.Instance.Spec.InsightsOnly)
 	tmpl, err := template.New("connectorConfig").Parse(i.ConnectorConfig)
 	if err != nil {
