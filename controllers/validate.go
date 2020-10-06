@@ -12,13 +12,12 @@ const inventoryTableName = "hosts" // TODO: move
 const countMismatchThreshold = 0.5
 
 func (i *ReconcileIteration) validate() (bool, error) {
-	// TODO
-	db, err := i.connectToInventoryDB()
+	db, err := connectToDB(i.HBIDBParams)
 	if err != nil {
 		return false, err
 	}
 
-	defer db.Close()
+	defer i.closeDB(db)
 
 	hbiHostCount, err := i.countSystems(db, inventoryTableName, false)
 	if err != nil {
