@@ -30,9 +30,14 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		return reconcile.Result{}, err
 	}
 
-	// Request object not found, could have been deleted after reconcile request.
-	if i.Instance == nil {
+	// nothing to validate
+	if i.Instance == nil || i.Instance.GetDeletionTimestamp() != nil {
 		return reconcile.Result{}, nil
+	}
+
+	// new pipeline, nothing to validate yet
+	if i.Instance.Status.PipelineVersion == "" {
+		return reconcile.Result{Requeue: true}, nil
 	}
 
 	isValid, err := i.validate()

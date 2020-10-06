@@ -35,7 +35,7 @@ func (i *ReconcileIteration) checkIfTableExists(tableName string) (bool, error) 
 	query := fmt.Sprintf(
 		"SELECT exists (SELECT FROM information_schema.tables WHERE table_schema = 'inventory' AND table_name = '%s')",
 		tableName)
-	rows, err := i.AppDb.Query(query)
+	rows, err := i.runQuery(i.AppDb, query)
 
 	if err != nil {
 		return false, err
@@ -62,7 +62,7 @@ func (i *ReconcileIteration) deleteTable(tableName string) error {
 
 	query := fmt.Sprintf(
 		"DROP table inventory.%s CASCADE", tableName)
-	_, err = i.AppDb.Query(query)
+	_, err = i.runQuery(i.AppDb, query)
 	return err
 }
 
@@ -85,6 +85,7 @@ func (i *ReconcileIteration) createTable(tableName string) error {
 }
 
 func (i *ReconcileIteration) updateView() error {
+	i.Log.Info("Updating view", "table", i.Instance.Status.TableName)
 	_, err := i.AppDb.Exec(fmt.Sprintf(viewTemplate, i.Instance.Status.TableName, cullingStaleWarningOffset, cullingCulledOffset))
 	return err
 }
@@ -111,4 +112,15 @@ func (i *ReconcileIteration) closeDB(db *pgx.Conn) {
 			i.Log.Error(err, "Failed to close App DB")
 		}
 	}
+}
+
+func (i *ReconcileIteration) runQuery(db *pgx.Conn, query string) (*pgx.Rows, error) {
+	rows, err := db.Query(query)
+
+	if err != nil {
+		i.Log.Error(err, "Error executing query", "query", query)
+		return nil, err
+	}
+
+	return rows, nil
 }
