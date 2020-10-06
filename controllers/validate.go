@@ -149,12 +149,3 @@ func (r *DiffReporter) PopStep() {
 func (r *DiffReporter) String() string {
 	return strings.Join(r.diffs, "\n")
 }
-
-// seriously golang?
-func abs(x int64) int64 {
-	if x < 0 {
-		return -x
-	}
-
-	return x
-}
