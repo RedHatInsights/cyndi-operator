@@ -229,7 +229,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 			return reconcile.Result{}, i.errorWithEvent("Error triggering refresh", err)
 		}
 	} else if i.Instance.Status.SyndicatedDataIsValid == true {
-		err = i.updateView()
+		err = i.updateView() // TODO: only update when outdated?
 		if err != nil {
 			return reconcile.Result{}, i.errorWithEvent("Error updating database view", err)
 		}
@@ -300,15 +300,6 @@ func connectorName(pipelineVersion string, appName string) string {
 	return fmt.Sprintf("syndication-pipeline-%s-%s",
 		appName,
 		strings.Replace(pipelineVersion, "_", "-", 1))
-}
-
-func contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
 
 func (i *ReconcileIteration) setupEventRecorder() error {
