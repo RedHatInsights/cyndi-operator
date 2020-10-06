@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -121,16 +120,18 @@ func setup(client client.Client, scheme *runtime.Scheme, reqLogger logr.Logger, 
 		return i, i.errorWithEvent("Error while reading cyndi configmap.", err)
 	}
 
-	if err = i.parseHBIDBSecret(); err != nil {
+	if err = i.loadHBIDBSecret(); err != nil {
 		return i, i.errorWithEvent("Error while reading HBI DB secret.", err)
 	}
 
-	if err = i.parseAppDBSecret(); err != nil {
+	if err = i.loadAppDBSecret(); err != nil {
 		return i, i.errorWithEvent("Error while reading HBI DB secret.", err)
 	}
 
-	if err = i.connectToAppDB(); err != nil {
+	if db, err := connectToDB(i.AppDBParams); err != nil {
 		return i, i.errorWithEvent("Error while connecting to app DB.", err)
+	} else {
+		i.AppDb = db
 	}
 
 	return i, nil
@@ -145,7 +146,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	reqLogger.Info("Reconciling CyndiPipeline")
 
 	i, err := setup(r.Client, r.Scheme, reqLogger, request)
-	defer i.closeAppDB()
+	defer i.closeDB(i.AppDb)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -272,84 +273,6 @@ func (r *CyndiPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cyndiv1beta1.CyndiPipeline{}).
 		Complete(r)
-}
-
-func (i *ReconcileIteration) parseConfig() error {
-	cyndiConfig := &corev1.ConfigMap{}
-	err := i.Client.Get(context.TODO(), client.ObjectKey{Name: "cyndi", Namespace: i.Instance.Namespace}, cyndiConfig)
-	if err != nil {
-		return err
-	}
-
-	i.ConnectorConfig = cyndiConfig.Data["connector.config"]
-	if i.ConnectorConfig == "" {
-		return errors.New("connector.config is missing from cyndi configmap")
-	}
-
-	i.DBSchema = cyndiConfig.Data["db.schema"]
-	if i.DBSchema == "" {
-		return errors.New("db.schema is missing from cyndi configmap")
-	}
-
-	i.ConnectCluster = cyndiConfig.Data["connect.cluster"]
-	if i.ConnectCluster == "" {
-		return errors.New("connect.cluster is missing from cyndi configmap")
-	}
-
-	i.ConnectorTasksMax, err = strconv.ParseInt(cyndiConfig.Data["connector.tasks.max"], 10, 64)
-	if i.ConnectCluster == "" || err != nil {
-		return errors.New("connect.cluster is missing from cyndi configmap or it is malformed")
-	}
-
-	if i.Instance.Status.CyndiConfigVersion == "" {
-		i.Instance.Status.CyndiConfigVersion = cyndiConfig.ResourceVersion
-	} else if i.Instance.Status.CyndiConfigVersion != cyndiConfig.ResourceVersion {
-		//cyndi configmap changed, perform a refresh to use latest values
-		i.Instance.Status.CyndiConfigVersion = cyndiConfig.ResourceVersion
-		if err = i.triggerRefresh(); err != nil {
-			return err
-		}
-	}
-
-	i.ValidationParams = ValidationParams{}
-
-	i.ValidationParams.Interval, err =
-		strconv.ParseInt(cyndiConfig.Data["validation.interval"], 10, 64)
-	if err != nil || i.ValidationParams.Interval <= 0 {
-		return errors.New("unable to parse validation.interval from cyndi configmap")
-	}
-
-	i.ValidationParams.AttemptsThreshold, err =
-		strconv.ParseInt(cyndiConfig.Data["validation.attempts.threshold"], 10, 64)
-	if err != nil || i.ValidationParams.AttemptsThreshold <= 0 {
-		return errors.New("unable to parse validation.attempts.threshold from cyndi configmap")
-	}
-
-	i.ValidationParams.PercentageThreshold, err =
-		strconv.ParseInt(cyndiConfig.Data["validation.percentage.threshold"], 10, 64)
-	if err != nil || i.ValidationParams.PercentageThreshold <= 0 {
-		return errors.New("unable to parse validation.percentage.threshold from cyndi configmap")
-	}
-
-	i.ValidationParams.InitInterval, err =
-		strconv.ParseInt(cyndiConfig.Data["init.validation.interval"], 10, 64)
-	if err != nil || i.ValidationParams.InitInterval <= 0 {
-		return errors.New("unable to parse init.validation.interval from cyndi configmap")
-	}
-
-	i.ValidationParams.InitAttemptsThreshold, err =
-		strconv.ParseInt(cyndiConfig.Data["init.validation.attempts.threshold"], 10, 64)
-	if err != nil || i.ValidationParams.InitAttemptsThreshold <= 0 {
-		return errors.New("unable to parse init.validation.attempts.threshold from cyndi configmap")
-	}
-
-	i.ValidationParams.InitPercentageThreshold, err =
-		strconv.ParseInt(cyndiConfig.Data["init.validation.percentage.threshold"], 10, 64)
-	if err != nil || i.ValidationParams.InitPercentageThreshold <= 0 {
-		return errors.New("unable to parse init.validation.percentage.threshold from cyndi configmap")
-	}
-
-	return nil
 }
 
 func (i *ReconcileIteration) refreshPipelineVersion() {
