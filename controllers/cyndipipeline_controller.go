@@ -234,6 +234,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 			return reconcile.Result{}, i.errorWithEvent("Error updating database view", err)
 		}
 
+		// remove previous pipeline artifacts
 		if i.Instance.Status.PreviousPipelineVersion != "" {
 			err = i.deleteTable(tableName(i.Instance.Status.PreviousPipelineVersion))
 			if err != nil {
@@ -284,6 +285,8 @@ func (i *ReconcileIteration) refreshPipelineVersion() {
 }
 
 func (i *ReconcileIteration) errorWithEvent(message string, err error) error {
+	i.Log.Error(err, "Caught error")
+
 	i.Recorder.Event(
 		i.Instance,
 		corev1.EventTypeWarning,

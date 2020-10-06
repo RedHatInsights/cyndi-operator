@@ -33,11 +33,11 @@ func (i *ReconcileIteration) validate() (bool, error) {
 
 	countMismatchRatio := float64(abs(hbiHostCount-appHostCount) / hbiHostCount)
 
-	log.Info("Fetched host counts", "hbi", hbiHostCount, "app", appHostCount, "countMismatchRatio", countMismatchRatio)
+	i.Log.Info("Fetched host counts", "hbi", hbiHostCount, "app", appHostCount, "countMismatchRatio", countMismatchRatio)
 
 	// if the counts are way off don't even bother comparing ids
 	if countMismatchRatio > countMismatchThreshold {
-		log.Info("Count mismatch ratio is above threashold, exiting early", "countMismatchRatio", countMismatchRatio)
+		i.Log.Info("Count mismatch ratio is above threashold, exiting early", "countMismatchRatio", countMismatchRatio)
 		return false, nil
 	}
 
@@ -53,9 +53,9 @@ func (i *ReconcileIteration) validate() (bool, error) {
 
 	var r DiffReporter
 
-	log.Info("Fetched host ids")
+	i.Log.Info("Fetched host ids")
 	diff := cmp.Diff(hbiIds, appIds, cmp.Reporter(&r))
-	log.Info(diff) // TODO
+	i.Log.Info(diff) // TODO
 
 	validationThresholdPercent := float64(i.ValidationParams.PercentageThreshold)
 	if i.Instance.Status.InitialSyncInProgress == true {
@@ -64,7 +64,7 @@ func (i *ReconcileIteration) validate() (bool, error) {
 
 	idMismatchRatio := float64(len(r.diffs)) / float64(len(hbiIds))
 
-	log.Info("Validation results", "validationThresholdPercent", validationThresholdPercent, "idMismatchRatio", idMismatchRatio)
+	i.Log.Info("Validation results", "validationThresholdPercent", validationThresholdPercent, "idMismatchRatio", idMismatchRatio)
 	return (idMismatchRatio * 100) <= validationThresholdPercent, nil
 }
 
@@ -77,7 +77,12 @@ func (i *ReconcileIteration) countSystems(db *pgx.Conn, table string, view bool)
 	// also add "AND canonical_facts ? 'insights_id'"
 	// waiting on https://issues.redhat.com/browse/RHCLOUD-9545
 	query := fmt.Sprintf("SELECT count(*) FROM %s", table)
-	rows, err := db.Query(query)
+
+	rows, err := i.runQuery(db, query)
+
+	if err != nil {
+		return -1, err
+	}
 
 	defer rows.Close()
 
@@ -102,7 +107,7 @@ func (i *ReconcileIteration) countSystems(db *pgx.Conn, table string, view bool)
 func (i *ReconcileIteration) getHostIds(db *pgx.Conn, table string, view bool) ([]string, error) {
 	// TODO" "AND canonical_facts ? 'insights_id'" when !view and insightsOnly
 	query := fmt.Sprintf("SELECT id FROM %s ORDER BY id", table)
-	rows, err := db.Query(query)
+	rows, err := i.runQuery(db, query)
 
 	var ids []string
 
