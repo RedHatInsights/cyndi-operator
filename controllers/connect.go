@@ -75,6 +75,7 @@ func (i *ReconcileIteration) newConnectorForCR() (*unstructured.Unstructured, er
 			"namespace": i.Instance.Namespace,
 			"labels": map[string]interface{}{
 				"strimzi.io/cluster": i.ConnectCluster,
+				"cyndi/appName":      i.Instance.Spec.AppName,
 			},
 		},
 		"spec": map[string]interface{}{
