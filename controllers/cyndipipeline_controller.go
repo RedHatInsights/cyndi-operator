@@ -295,6 +295,10 @@ func (i *ReconcileIteration) errorWithEvent(message string, err error) error {
 	return err
 }
 
+func (i *ReconcileIteration) debug(message string) {
+	i.Log.V(1).Info(message)
+}
+
 func tableName(pipelineVersion string) string {
 	return fmt.Sprintf("hosts_v%s", pipelineVersion)
 }
