@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -31,6 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -79,3 +82,67 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
 })
+
+var _ = Describe("Pipeline provisioning", func() {
+	Context("Basic", func() {
+		It("Should create a Kafka Connector", func() {
+			const (
+				name      = "test01"
+				namespace = "default"
+			)
+
+			err := createPipeline(namespace, name)
+			Expect(err).ToNot(HaveOccurred())
+
+			/*
+				This is just a basic skeleton. For this to be useful the test needs to be finished.
+
+				TODO:
+				 - configmap
+				 - mock db access
+
+				 _, err = r.Reconcile(req)
+
+
+				r := &CyndiPipelineReconciler{Client: k8sClient, Scheme: scheme.Scheme, Log: logf.Log.WithName("test")}
+
+				req := reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      name,
+						Namespace: namespace,
+					},
+				}
+
+				Expect(err).ToNot(HaveOccurred())
+			*/
+		})
+	})
+})
+
+func createPipeline(namespace string, name string) error {
+	ctx := context.Background()
+
+	pipeline := cyndiv1beta1.CyndiPipeline{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: cyndiv1beta1.CyndiPipelineSpec{
+			AppName: name,
+		},
+	}
+
+	err := k8sClient.Create(ctx, &pipeline)
+
+	if err != nil {
+		return err
+	}
+
+	err = k8sClient.Status().Update(ctx, &pipeline)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
