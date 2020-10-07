@@ -1,0 +1,23 @@
+---
+name: Run Tests
+
+on:
+  - pull_request
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  testing:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install package and dependencies
+        run: |
+          sudo apt-get install golang-1.13
+          make
+
+      - name: Run Tests
+        run: make test
