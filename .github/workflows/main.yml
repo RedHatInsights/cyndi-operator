@@ -7,13 +7,22 @@ on:
 jobs:
   testing:
     runs-on: ubuntu-20.04
+    container: golang:1.13
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install package and dependencies
-        run: |
-          sudo apt-get install golang-1.13
-          make
-
       - name: Run Tests
+        env:
+          DBHOST: postgres
         run: make test

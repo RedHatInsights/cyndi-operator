@@ -23,6 +23,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/spf13/viper"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,6 +44,14 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+
+type Config struct {
+	DBHost string
+	DBPort string
+	DBPass string
+	DBUser string
+	DBName string
+}
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -93,29 +102,43 @@ var _ = Describe("Pipeline provisioning", func() {
 
 			err := createPipeline(namespace, name)
 			Expect(err).ToNot(HaveOccurred())
-
-			/*
-				This is just a basic skeleton. For this to be useful the test needs to be finished.
-
-				TODO:
-				 - configmap
-				 - mock db access
-
-				 _, err = r.Reconcile(req)
-
-
-				r := &CyndiPipelineReconciler{Client: k8sClient, Scheme: scheme.Scheme, Log: logf.Log.WithName("test")}
-
-				req := reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      name,
-						Namespace: namespace,
-					},
-				}
-
-				Expect(err).ToNot(HaveOccurred())
-			*/
 		})
+
+		It("Should connect to the DB", func() {
+			cfg := getTestConfig()
+			params := DBParams{
+				Host:     cfg.DBHost,
+				Port:     cfg.DBPort,
+				Name:     cfg.DBName,
+				User:     cfg.DBUser,
+				Password: cfg.DBPass,
+			}
+
+			_, err := connectToDB(params)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		/*
+			This is just a basic skeleton. For this to be useful the test needs to be finished.
+
+			TODO:
+			 - configmap
+			 - mock db access
+
+			 _, err = r.Reconcile(req)
+
+
+			r := &CyndiPipelineReconciler{Client: k8sClient, Scheme: scheme.Scheme, Log: logf.Log.WithName("test")}
+
+			req := reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      name,
+					Namespace: namespace,
+				},
+			}
+
+			Expect(err).ToNot(HaveOccurred())
+		*/
 	})
 })
 
@@ -145,4 +168,22 @@ func createPipeline(namespace string, name string) error {
 	}
 
 	return nil
+}
+
+func getTestConfig() *Config {
+	options := viper.New()
+	options.SetDefault("DBHost", "localhost")
+	options.SetDefault("DBPort", "5432")
+	options.SetDefault("DBUser", "postgres")
+	options.SetDefault("DBPass", "postgres")
+	options.SetDefault("DBName", "test")
+	options.AutomaticEnv()
+
+	return &Config{
+		DBHost: options.GetString("DBHost"),
+		DBPort: options.GetString("DBPort"),
+		DBUser: options.GetString("DBUser"),
+		DBPass: options.GetString("DBPass"),
+		DBName: options.GetString("DBName"),
+	}
 }

@@ -11,6 +11,7 @@ require (
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
 	github.com/shirou/gopsutil v2.20.6+incompatible // indirect
+	github.com/spf13/viper v1.3.2
 	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
 	golang.org/x/sys v0.0.0-20200724161237-0e2f3a69832c // indirect
 	k8s.io/api v0.18.2

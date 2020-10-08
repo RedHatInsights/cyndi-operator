@@ -83,6 +83,14 @@ docker-build: test
 docker-push:
 	docker push ${IMG}
 
+# Test locally with a test DB
+test-local: generate fmt vet manifests
+	docker run --rm --name cyndi-test -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=test -d postgres
+	mkdir -p ${ENVTEST_ASSETS_DIR}
+	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/master/hack/setup-envtest.sh
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./controllers/... -coverprofile cover.out
+	docker stop cyndi-test
+
 # find or download controller-gen
 # download controller-gen if necessary
 controller-gen:
