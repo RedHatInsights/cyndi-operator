@@ -18,12 +18,14 @@ package controllers
 
 import (
 	"context"
+	"io/ioutil"
 	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,11 +48,46 @@ var k8sClient client.Client
 var testEnv *envtest.Environment
 
 type Config struct {
-	DBHost string
-	DBPort string
-	DBPass string
-	DBUser string
-	DBName string
+	DBHostHBI string
+	DBHostAPP string
+	DBPort    string
+	DBPass    string
+	DBUser    string
+	DBName    string
+}
+
+type ConfigMap struct {
+	APIVersion string `yaml:"apiVersion"`
+	Data       struct {
+		ConnConfig                        string `yaml:"connector.config"`
+		DBSchema                          string `yaml:"db.schema"`
+		ValidationInterval                string `yaml:"validation.interval"`
+		ValidationAttemptsThreshold       string `yaml:"validation.attempts.threshold"`
+		ValidationPercentageThreshold     string `yaml:"validation.percentage.threshold"`
+		InitValidationInterval            string `yaml:"init.validation.interval"`
+		InitValidationAttemptsThreshold   string `yaml:"init.validation.attempts.threshold"`
+		InitValidationPrecentageThreshold string `yaml:"init.validation.percentage.threshold"`
+		ConnectCluster                    string `yaml:"connect.cluster"`
+		ConnectorTasksMax                 string `yaml:"connector.tasks.max"`
+	} `yaml:"data"`
+	Kind     string `yaml:"kind"`
+	Metadata struct {
+		Name string `yaml:"name"`
+	} `yaml:"metadata"`
+}
+
+func (c *ConfigMap) getConfigMap() (*ConfigMap, error) {
+
+	yamlFile, err := ioutil.ReadFile("../examples/cyndi.configmap.yml")
+	if err != nil {
+		return nil, err
+	}
+	err = yaml.Unmarshal(yamlFile, &c)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
 
 func TestAPIs(t *testing.T) {
@@ -59,6 +96,65 @@ func TestAPIs(t *testing.T) {
 	RunSpecsWithDefaultAndCustomReporters(t,
 		"Controller Suite",
 		[]Reporter{printer.NewlineReporter{}})
+}
+
+func createPipeline(namespace string, name string) error {
+	ctx := context.Background()
+
+	pipeline := cyndiv1beta1.CyndiPipeline{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: cyndiv1beta1.CyndiPipelineSpec{
+			AppName: name,
+		},
+	}
+
+	err := k8sClient.Create(ctx, &pipeline)
+
+	if err != nil {
+		return err
+	}
+
+	err = k8sClient.Status().Update(ctx, &pipeline)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getDBArgs(host string) DBParams {
+	cfg := getTestConfig()
+	return DBParams{
+		Host:     host,
+		Port:     cfg.DBPort,
+		Name:     cfg.DBName,
+		User:     cfg.DBUser,
+		Password: cfg.DBPass,
+	}
+}
+
+func getTestConfig() *Config {
+	options := viper.New()
+	options.SetDefault("DBHostHBI", "localhost")
+	options.SetDefault("DBHostApp", "localhost")
+	options.SetDefault("DBPort", "5432")
+	options.SetDefault("DBUser", "postgres")
+	options.SetDefault("DBPass", "postgres")
+	options.SetDefault("DBName", "test")
+	options.AutomaticEnv()
+
+	return &Config{
+		DBHostHBI: options.GetString("DBHostHBI"),
+		DBHostAPP: options.GetString("DBHostApp"),
+		DBPort:    options.GetString("DBPort"),
+		DBUser:    options.GetString("DBUser"),
+		DBPass:    options.GetString("DBPass"),
+		DBName:    options.GetString("DBName"),
+	}
 }
 
 var _ = BeforeSuite(func(done Done) {
@@ -106,13 +202,7 @@ var _ = Describe("Pipeline provisioning", func() {
 
 		It("Should connect to the DB", func() {
 			cfg := getTestConfig()
-			params := DBParams{
-				Host:     cfg.DBHost,
-				Port:     cfg.DBPort,
-				Name:     cfg.DBName,
-				User:     cfg.DBUser,
-				Password: cfg.DBPass,
-			}
+			params := getDBArgs(cfg.DBHostHBI)
 
 			_, err := connectToDB(params)
 			Expect(err).ToNot(HaveOccurred())
@@ -142,48 +232,57 @@ var _ = Describe("Pipeline provisioning", func() {
 	})
 })
 
-func createPipeline(namespace string, name string) error {
-	ctx := context.Background()
+var _ = Describe("Database operations", func() {
 
-	pipeline := cyndiv1beta1.CyndiPipeline{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: cyndiv1beta1.CyndiPipelineSpec{
-			AppName: name,
-		},
-	}
+	var (
+		RI *ReconcileIteration
+		c  ConfigMap
+	)
 
-	err := k8sClient.Create(ctx, &pipeline)
+	config := getTestConfig()
+	params := getDBArgs(config.DBHostHBI)
 
-	if err != nil {
-		return err
-	}
+	BeforeEach(func() {
+		dbconn, err := connectToDB(params)
+		Expect(err).ToNot(HaveOccurred())
 
-	err = k8sClient.Status().Update(ctx, &pipeline)
+		c.getConfigMap()
 
-	if err != nil {
-		return err
-	}
+		RI = &ReconcileIteration{
+			Client:      k8sClient,
+			AppDb:       dbconn,
+			AppDBParams: params,
+			DBSchema:    c.Data.DBSchema,
+		}
+	})
 
-	return nil
-}
+	AfterEach(func() {
+		RI.closeDB(RI.AppDb)
+	})
 
-func getTestConfig() *Config {
-	options := viper.New()
-	options.SetDefault("DBHost", "localhost")
-	options.SetDefault("DBPort", "5432")
-	options.SetDefault("DBUser", "postgres")
-	options.SetDefault("DBPass", "postgres")
-	options.SetDefault("DBName", "test")
-	options.AutomaticEnv()
+	Context("with successful connection", func() {
+		It("should successfully query", func() {
+			query := `CREATE SCHEMA "inventory";`
+			_, err := RI.runQuery(RI.AppDb, query)
+			Expect(err).To(BeNil())
+		})
 
-	return &Config{
-		DBHost: options.GetString("DBHost"),
-		DBPort: options.GetString("DBPort"),
-		DBUser: options.GetString("DBUser"),
-		DBPass: options.GetString("DBPass"),
-		DBName: options.GetString("DBName"),
-	}
-}
+		It("should be able to create a table", func() {
+			err := RI.createTable("test_table")
+			Expect(err).To(BeNil())
+
+		})
+
+		It("should check for table existence", func() {
+			exists, err := RI.checkIfTableExists("test_table")
+			Expect(exists).To(BeTrue())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should be able to delete the table", func() {
+			err := RI.deleteTable("test_table")
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+})
