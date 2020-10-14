@@ -1,10 +1,14 @@
-package controllers
+package connect
 
 import (
 	"context"
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+	"cyndi-operator/test"
 	"fmt"
+	"testing"
 	"time"
+
+	. "cyndi-operator/controllers/config"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -14,6 +18,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
 )
+
+func TestConnect(t *testing.T) {
+	test.Setup(t, "Connect")
+}
 
 var dbParams = DBParams{
 	Host:     "db",
@@ -44,7 +52,7 @@ var _ = Describe("Connect", func() {
 	BeforeEach(func() {
 		namespace = fmt.Sprintf("test-%d", time.Now().UnixNano())
 		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-		err := k8sClient.Create(context.TODO(), ns)
+		err := test.Client.Create(context.TODO(), ns)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
@@ -64,10 +72,10 @@ var _ = Describe("Connect", func() {
 				Template:     "{}",
 			}
 
-			err := CreateConnector(k8sClient, connectorName, namespace, config, nil, nil)
+			err := CreateConnector(test.Client, connectorName, namespace, config, nil, nil)
 			Expect(err).ToNot(HaveOccurred())
 
-			connector, err := GetConnector(k8sClient, connectorName, namespace)
+			connector, err := GetConnector(test.Client, connectorName, namespace)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(connector.GetName()).To(Equal(connectorName))
 
@@ -110,10 +118,10 @@ var _ = Describe("Connect", func() {
 				Template:     configTemplate,
 			}
 
-			err := CreateConnector(k8sClient, connectorName, namespace, config, nil, nil)
+			err := CreateConnector(test.Client, connectorName, namespace, config, nil, nil)
 			Expect(err).ToNot(HaveOccurred())
 
-			connector, err := GetConnector(k8sClient, connectorName, namespace)
+			connector, err := GetConnector(test.Client, connectorName, namespace)
 			Expect(err).ToNot(HaveOccurred())
 
 			spec, ok, err := unstructured.NestedMap(connector.UnstructuredContent(), "spec")
@@ -161,10 +169,10 @@ var _ = Describe("Connect", func() {
 				},
 			}
 
-			err := CreateConnector(k8sClient, connectorName, namespace, config, pipeline, scheme.Scheme)
+			err := CreateConnector(test.Client, connectorName, namespace, config, pipeline, scheme.Scheme)
 			Expect(err).ToNot(HaveOccurred())
 
-			connector, err := GetConnector(k8sClient, connectorName, namespace)
+			connector, err := GetConnector(test.Client, connectorName, namespace)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(connector.GetName()).To(Equal(connectorName))
 
@@ -176,7 +184,7 @@ var _ = Describe("Connect", func() {
 
 	Context("List Connectors", func() {
 		It("Lists 0 connectors in an empty namespace", func() {
-			connectors, err := GetConnectorsForApp(k8sClient, namespace, "advisor")
+			connectors, err := GetConnectorsForApp(test.Client, namespace, "advisor")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(connectors.Items).To(HaveLen(0))
 		})
@@ -187,22 +195,22 @@ var _ = Describe("Connect", func() {
 			var patchConfig = sampleConnectorConfig()
 			patchConfig.AppName = "patch"
 
-			err := CreateConnector(k8sClient, "advisor-01", namespace, advisorConfig, nil, nil)
+			err := CreateConnector(test.Client, "advisor-01", namespace, advisorConfig, nil, nil)
 			Expect(err).ToNot(HaveOccurred())
-			err = CreateConnector(k8sClient, "advisor-02", namespace, advisorConfig, nil, nil)
+			err = CreateConnector(test.Client, "advisor-02", namespace, advisorConfig, nil, nil)
 			Expect(err).ToNot(HaveOccurred())
-			err = CreateConnector(k8sClient, "patch-01", namespace, patchConfig, nil, nil)
+			err = CreateConnector(test.Client, "patch-01", namespace, patchConfig, nil, nil)
 			Expect(err).ToNot(HaveOccurred())
 
-			advisorConnectors, err := GetConnectorsForApp(k8sClient, namespace, "advisor")
+			advisorConnectors, err := GetConnectorsForApp(test.Client, namespace, "advisor")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(advisorConnectors.Items).To(HaveLen(2))
 
-			patchConnectors, err := GetConnectorsForApp(k8sClient, namespace, "patch")
+			patchConnectors, err := GetConnectorsForApp(test.Client, namespace, "patch")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(patchConnectors.Items).To(HaveLen(1))
 
-			complianceConnectors, err := GetConnectorsForApp(k8sClient, namespace, "compliance")
+			complianceConnectors, err := GetConnectorsForApp(test.Client, namespace, "compliance")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(complianceConnectors.Items).To(HaveLen(0))
 		})
@@ -211,16 +219,16 @@ var _ = Describe("Connect", func() {
 	Context("Delete Connector", func() {
 		It("Deletes a connector", func() {
 			name := "connector-to-be-deleted-01"
-			err := CreateConnector(k8sClient, name, namespace, sampleConnectorConfig(), nil, nil)
+			err := CreateConnector(test.Client, name, namespace, sampleConnectorConfig(), nil, nil)
 			Expect(err).ToNot(HaveOccurred())
 
-			_, err = GetConnector(k8sClient, name, namespace)
+			_, err = GetConnector(test.Client, name, namespace)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = DeleteConnector(k8sClient, name, namespace)
+			err = DeleteConnector(test.Client, name, namespace)
 			Expect(err).ToNot(HaveOccurred())
 
-			_, err = GetConnector(k8sClient, name, namespace)
+			_, err = GetConnector(test.Client, name, namespace)
 			Expect(err).To(HaveOccurred())
 			Expect(errors.IsNotFound(err)).To(BeTrue())
 		})
@@ -228,7 +236,7 @@ var _ = Describe("Connect", func() {
 		It("Does not fail on non-existing connector", func() {
 			name := "connector-does-not-exist"
 
-			err := DeleteConnector(k8sClient, name, namespace)
+			err := DeleteConnector(test.Client, name, namespace)
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})

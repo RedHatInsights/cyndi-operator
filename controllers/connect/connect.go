@@ -1,4 +1,4 @@
-package controllers
+package connect
 
 import (
 	"bytes"
@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+
+	. "cyndi-operator/controllers/config"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

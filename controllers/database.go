@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"text/template"
 
+	. "cyndi-operator/controllers/config"
+
 	"github.com/jackc/pgx"
 )
 

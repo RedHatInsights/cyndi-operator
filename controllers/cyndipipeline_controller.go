@@ -40,6 +40,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+	. "cyndi-operator/controllers/config"
+	connect "cyndi-operator/controllers/connect"
 )
 
 // CyndiPipelineReconciler reconciles a CyndiPipeline object
@@ -47,14 +49,6 @@ type CyndiPipelineReconciler struct {
 	Client client.Client
 	Scheme *runtime.Scheme
 	Log    logr.Logger
-}
-
-type DBParams struct {
-	Name     string
-	Host     string
-	Port     string
-	User     string
-	Password string
 }
 
 type ValidationParams struct {
@@ -190,7 +184,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, i.errorWithEvent("Error checking if table exists.", err)
 	}
 
-	connectorExists, err := CheckIfConnectorExists(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace)
+	connectorExists, err := connect.CheckIfConnectorExists(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace)
 	if err != nil {
 		return reconcile.Result{}, i.errorWithEvent("Error checking if connector exists", err)
 	}
@@ -242,7 +236,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 				return reconcile.Result{}, i.errorWithEvent("Error deleting table", err)
 			}
 
-			err = DeleteConnector(i.Client, connectorName(i.Instance.Status.PreviousPipelineVersion, i.Instance.Spec.AppName), i.Instance.Namespace)
+			err = connect.DeleteConnector(i.Client, connectorName(i.Instance.Status.PreviousPipelineVersion, i.Instance.Spec.AppName), i.Instance.Namespace)
 			if err != nil {
 				return reconcile.Result{}, i.errorWithEvent("Error deleting connector", err)
 			}
@@ -354,7 +348,7 @@ func (i *ReconcileIteration) addFinalizer() error {
 }
 
 func (i *ReconcileIteration) createConnector() error {
-	var config = ConnectorConfiguration{
+	var config = connect.ConnectorConfiguration{
 		AppName:      i.Instance.Spec.AppName,
 		InsightsOnly: i.Instance.Spec.InsightsOnly,
 		Cluster:      i.ConnectCluster,
@@ -367,5 +361,5 @@ func (i *ReconcileIteration) createConnector() error {
 		Template:     i.ConnectorConfig,
 	}
 
-	return CreateConnector(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace, config, i.Instance, i.Scheme)
+	return connect.CreateConnector(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace, config, i.Instance, i.Scheme)
 }
