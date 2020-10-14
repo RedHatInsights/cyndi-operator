@@ -18,58 +18,96 @@ package controllers
 
 import (
 	"context"
+	"io/ioutil"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/spf13/viper"
+	"gopkg.in/yaml.v1"
 
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	. "cyndi-operator/controllers/config"
 	"cyndi-operator/test"
 	// +kubebuilder:scaffold:imports
 )
 
-func TestControllers(t *testing.T) {
-	test.Setup(t, "Controllers")
+type DBConfig struct {
+	DBHostHBI string
+	DBHostAPP string
+	DBPort    string
+	DBPass    string
+	DBUser    string
+	DBName    string
 }
 
-var _ = Describe("Pipeline provisioning", func() {
-	Context("Basic", func() {
-		It("Should create a Kafka Connector", func() {
-			const (
-				name      = "test01"
-				namespace = "default"
-			)
+type ConfigMap struct {
+	APIVersion string `yaml:"apiVersion"`
+	Data       struct {
+		ConnConfig                        string `yaml:"connector.config"`
+		DBSchema                          string `yaml:"db.schema"`
+		ValidationInterval                string `yaml:"validation.interval"`
+		ValidationAttemptsThreshold       string `yaml:"validation.attempts.threshold"`
+		ValidationPercentageThreshold     string `yaml:"validation.percentage.threshold"`
+		InitValidationInterval            string `yaml:"init.validation.interval"`
+		InitValidationAttemptsThreshold   string `yaml:"init.validation.attempts.threshold"`
+		InitValidationPrecentageThreshold string `yaml:"init.validation.percentage.threshold"`
+		ConnectCluster                    string `yaml:"connect.cluster"`
+		ConnectorTasksMax                 string `yaml:"connector.tasks.max"`
+	} `yaml:"data"`
+	Kind     string `yaml:"kind"`
+	Metadata struct {
+		Name string `yaml:"name"`
+	} `yaml:"metadata"`
+}
 
-			err := createPipeline(namespace, name)
-			Expect(err).ToNot(HaveOccurred())
+func (c *ConfigMap) getConfigMap() (*ConfigMap, error) {
 
-			/*
-				This is just a basic skeleton. For this to be useful the test needs to be finished.
+	yamlFile, err := ioutil.ReadFile("../examples/cyndi.configmap.yml")
+	if err != nil {
+		return nil, err
+	}
+	err = yaml.Unmarshal(yamlFile, &c)
+	if err != nil {
+		return nil, err
+	}
 
-				TODO:
-				 - configmap
-				 - mock db access
+	return c, nil
+}
 
-				 _, err = r.Reconcile(req)
+func getDBArgs(host string) DBParams {
+	cfg := getTestConfig()
+	return DBParams{
+		Host:     host,
+		Port:     cfg.DBPort,
+		Name:     cfg.DBName,
+		User:     cfg.DBUser,
+		Password: cfg.DBPass,
+	}
+}
 
+func getTestConfig() *DBConfig {
+	options := viper.New()
+	options.SetDefault("DBHostHBI", "localhost")
+	options.SetDefault("DBHostApp", "localhost")
+	options.SetDefault("DBPort", "5432")
+	options.SetDefault("DBUser", "postgres")
+	options.SetDefault("DBPass", "postgres")
+	options.SetDefault("DBName", "test")
+	options.AutomaticEnv()
 
-				r := &CyndiPipelineReconciler{Client: test.Client, Scheme: scheme.Scheme, Log: logf.Log.WithName("test")}
-
-				req := reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      name,
-						Namespace: namespace,
-					},
-				}
-
-				Expect(err).ToNot(HaveOccurred())
-			*/
-		})
-	})
-})
+	return &DBConfig{
+		DBHostHBI: options.GetString("DBHostHBI"),
+		DBHostAPP: options.GetString("DBHostApp"),
+		DBPort:    options.GetString("DBPort"),
+		DBUser:    options.GetString("DBUser"),
+		DBPass:    options.GetString("DBPass"),
+		DBName:    options.GetString("DBName"),
+	}
+}
 
 func createPipeline(namespace string, name string) error {
 	ctx := context.Background()
@@ -98,3 +136,105 @@ func createPipeline(namespace string, name string) error {
 
 	return nil
 }
+
+func TestControllers(t *testing.T) {
+	test.Setup(t, "Controllers")
+}
+
+var _ = Describe("Pipeline provisioning", func() {
+	Context("Basic", func() {
+		It("Should create a Kafka Connector", func() {
+			const (
+				name      = "test01"
+				namespace = "default"
+			)
+
+			err := createPipeline(namespace, name)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should connect to the DB", func() {
+			cfg := getTestConfig()
+			params := getDBArgs(cfg.DBHostHBI)
+
+			_, err := connectToDB(params)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		/*
+			This is just a basic skeleton. For this to be useful the test needs to be finished.
+
+			TODO:
+			 - configmap
+			 - mock db access
+
+			 _, err = r.Reconcile(req)
+
+
+			r := &CyndiPipelineReconciler{Client: test.Client, Scheme: scheme.Scheme, Log: logf.Log.WithName("test")}
+
+			req := reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      name,
+					Namespace: namespace,
+				},
+			}
+
+			Expect(err).ToNot(HaveOccurred())
+		*/
+	})
+})
+
+var _ = Describe("Database operations", func() {
+
+	var (
+		RI *ReconcileIteration
+		c  ConfigMap
+	)
+
+	config := getTestConfig()
+	params := getDBArgs(config.DBHostHBI)
+
+	BeforeEach(func() {
+		dbconn, err := connectToDB(params)
+		Expect(err).ToNot(HaveOccurred())
+
+		c.getConfigMap()
+
+		RI = &ReconcileIteration{
+			AppDb:       dbconn,
+			AppDBParams: params,
+			DBSchema:    c.Data.DBSchema,
+		}
+	})
+
+	AfterEach(func() {
+		RI.closeDB(RI.AppDb)
+	})
+
+	Context("with successful connection", func() {
+		It("should successfully query", func() {
+			query := `CREATE SCHEMA "inventory";`
+			_, err := RI.runQuery(RI.AppDb, query)
+			Expect(err).To(BeNil())
+		})
+
+		It("should be able to create a table", func() {
+			err := RI.createTable("test_table")
+			Expect(err).To(BeNil())
+
+		})
+
+		It("should check for table existence", func() {
+			exists, err := RI.checkIfTableExists("test_table")
+			Expect(exists).To(BeTrue())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should be able to delete the table", func() {
+			err := RI.deleteTable("test_table")
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+})
