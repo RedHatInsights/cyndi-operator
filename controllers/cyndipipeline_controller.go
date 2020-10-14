@@ -84,6 +84,7 @@ type ReconcileIteration struct {
 }
 
 const cyndipipelineFinalizer = "finalizer.cyndi.cloud.redhat.com"
+const Topic = "platform.inventory.events"
 
 var log = logf.Log.WithName("controller_cyndipipeline")
 
@@ -189,7 +190,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, i.errorWithEvent("Error checking if table exists.", err)
 	}
 
-	connectorExists, err := i.checkIfConnectorExists(i.Instance.Status.ConnectorName)
+	connectorExists, err := CheckIfConnectorExists(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace)
 	if err != nil {
 		return reconcile.Result{}, i.errorWithEvent("Error checking if connector exists", err)
 	}
@@ -241,7 +242,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 				return reconcile.Result{}, i.errorWithEvent("Error deleting table", err)
 			}
 
-			err = i.deleteConnector(connectorName(i.Instance.Status.PreviousPipelineVersion, i.Instance.Spec.AppName))
+			err = DeleteConnector(i.Client, connectorName(i.Instance.Status.PreviousPipelineVersion, i.Instance.Spec.AppName), i.Instance.Namespace)
 			if err != nil {
 				return reconcile.Result{}, i.errorWithEvent("Error deleting connector", err)
 			}
@@ -350,4 +351,21 @@ func (i *ReconcileIteration) addFinalizer() error {
 		return i.errorWithEvent("Failed to update CyndiPipeline with finalizer", err)
 	}
 	return nil
+}
+
+func (i *ReconcileIteration) createConnector() error {
+	var config = ConnectorConfiguration{
+		AppName:      i.Instance.Spec.AppName,
+		InsightsOnly: i.Instance.Spec.InsightsOnly,
+		Cluster:      i.ConnectCluster,
+		Topic:        Topic,
+		TableName:    i.Instance.Status.TableName,
+		DB:           i.AppDBParams,
+		TasksMax:     i.ConnectorTasksMax,
+		BatchSize:    1000, // TODO: make configurable
+		MaxAge:       45,   // TODO: make configurable
+		Template:     i.ConnectorConfig,
+	}
+
+	return CreateConnector(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace, config, i.Instance, i.Scheme)
 }

@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-const Topic = "platform.inventory.events"
 const appNameLabel = "cyndi/appName"
 
 var connectorGVK = schema.GroupVersionKind{
@@ -45,20 +44,12 @@ type ConnectorConfiguration struct {
 	Template     string
 }
 
-func (i ReconcileIteration) checkIfConnectorExists(connectorName string) (bool, error) {
-	if connectorName == "" {
+func CheckIfConnectorExists(c client.Client, name string, namespace string) (bool, error) {
+	if name == "" {
 		return false, nil
 	}
 
-	found := &unstructured.Unstructured{}
-	found.SetGroupVersionKind(schema.GroupVersionKind{
-		Kind:    "KafkaConnector",
-		Version: "kafka.strimzi.io/v1alpha1",
-	})
-
-	err := i.Client.Get(context.TODO(), client.ObjectKey{Name: connectorName, Namespace: i.Instance.Namespace}, found)
-
-	if err != nil && errors.IsNotFound(err) {
+	if _, err := GetConnector(c, name, namespace); err != nil && errors.IsNotFound(err) {
 		return false, nil
 	} else if err == nil {
 		return true, nil
@@ -122,24 +113,6 @@ func newConnectorResource(name string, namespace string, config ConnectorConfigu
 	return u, nil
 }
 
-// TODO refactor
-func (i *ReconcileIteration) createConnector() error {
-	var config = ConnectorConfiguration{
-		AppName:      i.Instance.Spec.AppName,
-		InsightsOnly: i.Instance.Spec.InsightsOnly,
-		Cluster:      i.ConnectCluster,
-		Topic:        "platform.inventory.events",
-		TableName:    i.Instance.Status.TableName,
-		DB:           i.AppDBParams,
-		TasksMax:     i.ConnectorTasksMax,
-		BatchSize:    1000,
-		MaxAge:       45,
-		Template:     i.ConnectorConfig,
-	}
-
-	return CreateConnector(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace, config, i.Instance, i.Scheme)
-}
-
 func CreateConnector(c client.Client, name string, namespace string, config ConnectorConfiguration, owner metav1.Object, ownerScheme *runtime.Scheme) error {
 	connector, err := newConnectorResource(name, namespace, config)
 
@@ -154,26 +127,6 @@ func CreateConnector(c client.Client, name string, namespace string, config Conn
 	}
 
 	return c.Create(context.TODO(), connector)
-}
-
-func (i *ReconcileIteration) deleteConnector(connectorName string) error {
-	connectorExists, err := i.checkIfConnectorExists(connectorName)
-	if err != nil {
-		return err
-	} else if connectorExists != true {
-		return nil
-	}
-
-	u := &unstructured.Unstructured{}
-	u.SetName(connectorName)
-	u.SetNamespace(i.Instance.Namespace)
-	u.SetGroupVersionKind(schema.GroupVersionKind{
-		Kind:    "KafkaConnector",
-		Version: "kafka.strimzi.io/v1alpha1",
-	})
-	err = i.Client.Delete(context.Background(), u)
-	return err
-
 }
 
 // TODO move to k8s?
