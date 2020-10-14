@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 
+	. "cyndi-operator/controllers/config"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
