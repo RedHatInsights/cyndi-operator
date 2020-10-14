@@ -25,6 +25,13 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+# Get the container engine (podman/docker)
+ifneq (,$(shell which podman))
+CONTAINER_ENGINE=podman
+else
+CONTAINER_ENGINE=docker
+endif
+
 all: manager
 
 # Run tests
@@ -75,13 +82,21 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-# Build the docker image
-docker-build: test
-	docker build . -t ${IMG}
+# Build the container image
+container-build: test
+	$(CONTAINER_ENGINE) build . -t ${IMG}
 
 # Push the docker image
-docker-push:
-	docker push ${IMG}
+container-push:
+	$(CONTAINER_ENGINE) push ${IMG}
+
+# Test locally with a test DB
+test-local: generate fmt vet manifests
+	$(CONTAINER_ENGINE) run --rm --name hbiDB -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=test -d postgres
+	mkdir -p ${ENVTEST_ASSETS_DIR}
+	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/master/hack/setup-envtest.sh
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./controllers/... -coverprofile cover.out
+	$(CONTAINER_ENGINE) stop hbiDB
 
 # find or download controller-gen
 # download controller-gen if necessary
@@ -123,4 +138,4 @@ bundle: manifests
 
 # Build the bundle image.
 bundle-build:
-	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	$(CONTAINER_ENGINE) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
