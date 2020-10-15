@@ -1,21 +1,12 @@
-package controllers
-
-/*
-
-Utility functions for converting configmaps, secrets, etc. into higher-level structures.
-
-*/
+package config
 
 import (
-	"errors"
 	"fmt"
-
-	. "cyndi-operator/controllers/config"
 
 	corev1 "k8s.io/api/core/v1"
 )
 
-func parseDBSecret(secret *corev1.Secret) (DBParams, error) {
+func ParseDBSecret(secret *corev1.Secret) (DBParams, error) {
 	var dbParams = DBParams{}
 	var err error
 
@@ -50,8 +41,7 @@ func parseDBSecret(secret *corev1.Secret) (DBParams, error) {
 func readSecretValue(secret *corev1.Secret, key string) (string, error) {
 	value := secret.Data[key]
 	if value == nil || string(value) == "" {
-		errorMsg := fmt.Sprintf("%s missing from %s secret", key, secret.ObjectMeta.Name)
-		return "", errors.New(errorMsg)
+		return "", fmt.Errorf("%s missing from %s secret", key, secret.ObjectMeta.Name)
 	}
 
 	return string(value), nil

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"cyndi-operator/controllers/config"
 	"errors"
 	"strconv"
 )
@@ -21,7 +22,7 @@ func (i *ReconcileIteration) loadAppDBSecret() error {
 		return err
 	}
 
-	i.AppDBParams, err = parseDBSecret(secret)
+	i.AppDBParams, err = config.ParseDBSecret(secret)
 	return err
 }
 
@@ -32,7 +33,7 @@ func (i *ReconcileIteration) loadHBIDBSecret() error {
 		return err
 	}
 
-	i.HBIDBParams, err = parseDBSecret(secret)
+	i.HBIDBParams, err = config.ParseDBSecret(secret)
 	return err
 }
 
