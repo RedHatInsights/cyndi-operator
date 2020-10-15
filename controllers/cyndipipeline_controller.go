@@ -51,34 +51,20 @@ type CyndiPipelineReconciler struct {
 	Log    logr.Logger
 }
 
-type ValidationParams struct {
-	Interval                int64
-	AttemptsThreshold       int64
-	PercentageThreshold     int64
-	InitInterval            int64
-	InitAttemptsThreshold   int64
-	InitPercentageThreshold int64
-}
-
 type ReconcileIteration struct {
-	Instance          *cyndiv1beta1.CyndiPipeline
-	Log               logr.Logger
-	AppDb             *pgx.Conn
-	Client            client.Client
-	Scheme            *runtime.Scheme
-	Now               string
-	Recorder          record.EventRecorder
-	HBIDBParams       DBParams
-	AppDBParams       DBParams
-	DBSchema          string
-	ConnectorConfig   string
-	ValidationParams  ValidationParams
-	ConnectCluster    string
-	ConnectorTasksMax int64
+	Instance    *cyndiv1beta1.CyndiPipeline
+	Log         logr.Logger
+	AppDb       *pgx.Conn
+	Client      client.Client
+	Scheme      *runtime.Scheme
+	Now         string
+	Recorder    record.EventRecorder
+	HBIDBParams DBParams
+	AppDBParams DBParams
+	config      *CyndiConfiguration
 }
 
 const cyndipipelineFinalizer = "finalizer.cyndi.cloud.redhat.com"
-const Topic = "platform.inventory.events"
 
 var log = logf.Log.WithName("controller_cyndipipeline")
 
@@ -212,12 +198,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, i.errorWithEvent("Error updating status", err)
 	}
 
-	validationFailedCountThreshold := i.ValidationParams.AttemptsThreshold
-	if i.Instance.Status.InitialSyncInProgress == true {
-		validationFailedCountThreshold = i.ValidationParams.InitAttemptsThreshold
-	}
-
-	if i.Instance.Status.SyndicatedDataIsValid != true && i.Instance.Status.ValidationFailedCount > validationFailedCountThreshold {
+	if i.Instance.Status.SyndicatedDataIsValid != true && i.Instance.Status.ValidationFailedCount > i.getValidationConfig().AttemptsThreshold {
 		err = i.triggerRefresh()
 
 		if err != nil {
@@ -351,15 +332,23 @@ func (i *ReconcileIteration) createConnector() error {
 	var config = connect.ConnectorConfiguration{
 		AppName:      i.Instance.Spec.AppName,
 		InsightsOnly: i.Instance.Spec.InsightsOnly,
-		Cluster:      i.ConnectCluster,
-		Topic:        Topic,
+		Cluster:      i.config.ConnectCluster,
+		Topic:        i.config.Topic,
 		TableName:    i.Instance.Status.TableName,
 		DB:           i.AppDBParams,
-		TasksMax:     i.ConnectorTasksMax,
-		BatchSize:    1000, // TODO: make configurable
-		MaxAge:       45,   // TODO: make configurable
-		Template:     i.ConnectorConfig,
+		TasksMax:     i.config.ConnectorTasksMax,
+		BatchSize:    i.config.ConnectorBatchSize,
+		MaxAge:       i.config.ConnectorMaxAge,
+		Template:     i.config.ConnectorTemplate,
 	}
 
 	return connect.CreateConnector(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace, config, i.Instance, i.Scheme)
+}
+
+func (i *ReconcileIteration) getValidationConfig() ValidationConfiguration {
+	if i.Instance.Status.InitialSyncInProgress == true {
+		return i.config.ValidationConfigInit
+	}
+
+	return i.config.ValidationConfig
 }

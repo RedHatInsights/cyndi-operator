@@ -57,15 +57,12 @@ func (i *ReconcileIteration) validate() (bool, error) {
 	diff := cmp.Diff(hbiIds, appIds, cmp.Reporter(&r))
 	i.Log.Info(diff) // TODO
 
-	validationThresholdPercent := float64(i.ValidationParams.PercentageThreshold)
-	if i.Instance.Status.InitialSyncInProgress == true {
-		validationThresholdPercent = float64(i.ValidationParams.InitPercentageThreshold)
-	}
+	validationThresholdPercent := i.getValidationConfig().PercentageThreshold
 
 	idMismatchRatio := float64(len(r.diffs)) / float64(len(hbiIds))
 
 	i.Log.Info("Validation results", "validationThresholdPercent", validationThresholdPercent, "idMismatchRatio", idMismatchRatio)
-	return (idMismatchRatio * 100) <= validationThresholdPercent, nil
+	return (idMismatchRatio * 100) <= float64(validationThresholdPercent), nil
 }
 
 // TODO move to database
