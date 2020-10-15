@@ -48,7 +48,7 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	i.Instance.Status.SyndicatedDataIsValid = isValid
 	reqLogger.Info("Validation finished", "isValid", isValid)
 
-	return i.requeue(i.getValidationInterval())
+	return i.requeue(i.getValidationConfig().Interval)
 }
 
 func (r *ValidationReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -66,12 +66,4 @@ func (i *ReconcileIteration) requeue(interval int64) (reconcile.Result, error) {
 
 	delay := time.Second * time.Duration(interval)
 	return reconcile.Result{RequeueAfter: delay, Requeue: true}, nil
-}
-
-func (i *ReconcileIteration) getValidationInterval() int64 {
-	if i.Instance.Status.InitialSyncInProgress {
-		return i.ValidationParams.InitInterval
-	}
-
-	return i.ValidationParams.Interval
 }

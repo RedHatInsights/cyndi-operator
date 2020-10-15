@@ -204,7 +204,9 @@ var _ = Describe("Database operations", func() {
 		RI = &ReconcileIteration{
 			AppDb:       dbconn,
 			AppDBParams: params,
-			DBSchema:    c.Data.DBSchema,
+			config: &CyndiConfiguration{
+				DBTableInitScript: c.Data.DBSchema,
+			},
 		}
 	})
 

@@ -71,7 +71,7 @@ func (i *ReconcileIteration) deleteTable(tableName string) error {
 func (i *ReconcileIteration) createTable(tableName string) error {
 	m := make(map[string]string)
 	m["TableName"] = tableName
-	tmpl, err := template.New("dbSchema").Parse(i.DBSchema)
+	tmpl, err := template.New("dbSchema").Parse(i.config.DBTableInitScript)
 	if err != nil {
 		return err
 	}

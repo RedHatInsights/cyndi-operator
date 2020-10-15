@@ -63,8 +63,8 @@ const defaultConnectorTemplate = `{
 	"errors.log.include.messages":true
 }`
 
-const defaultConnectorTasksMax int64 = 8     // TODO
-const defaultConnectorBatchSize int64 = 1000 // TODO
+const defaultConnectorTasksMax int64 = 16
+const defaultConnectorBatchSize int64 = 100
 const defaultConnectorMaxAge int64 = 45
 
 const defaultDBTableInitScript = `
