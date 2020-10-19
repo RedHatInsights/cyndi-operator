@@ -1,32 +1,36 @@
 package controllers
 
 import (
+	"cyndi-operator/controllers/database"
 	"fmt"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/jackc/pgx"
 )
 
 const inventoryTableName = "hosts" // TODO: move
 const countMismatchThreshold = 0.5
 
 func (i *ReconcileIteration) validate() (bool, error) {
-	db, err := connectToDB(i.HBIDBParams)
+	var db = &database.Database{
+		Config: &i.HBIDBParams,
+	}
+
+	err := db.Connect()
 	if err != nil {
 		return false, err
 	}
 
-	defer i.closeDB(db)
+	defer db.Close()
 
-	hbiHostCount, err := i.countSystems(db, inventoryTableName, false)
+	hbiHostCount, err := db.CountHosts(inventoryTableName)
 	if err != nil {
 		return false, err
 	}
 
 	appTable := fmt.Sprintf("inventory.%s", i.Instance.Status.TableName)
 
-	appHostCount, err := i.countSystems(i.AppDb, appTable, true)
+	appHostCount, err := i.AppDb.CountHosts(appTable)
 	if err != nil {
 		return false, err
 	}
@@ -41,12 +45,12 @@ func (i *ReconcileIteration) validate() (bool, error) {
 		return false, nil
 	}
 
-	hbiIds, err := i.getHostIds(db, inventoryTableName, false)
+	hbiIds, err := db.GetHostIds(inventoryTableName)
 	if err != nil {
 		return false, err
 	}
 
-	appIds, err := i.getHostIds(i.AppDb, appTable, true)
+	appIds, err := i.AppDb.GetHostIds(appTable)
 	if err != nil {
 		return false, err
 	}
@@ -63,69 +67,6 @@ func (i *ReconcileIteration) validate() (bool, error) {
 
 	i.Log.Info("Validation results", "validationThresholdPercent", validationThresholdPercent, "idMismatchRatio", idMismatchRatio)
 	return (idMismatchRatio * 100) <= float64(validationThresholdPercent), nil
-}
-
-// TODO move to database
-func (i *ReconcileIteration) countSystems(db *pgx.Conn, table string, view bool) (int64, error) {
-
-	// TODO: add modified_on filter
-	//query := fmt.Sprintf(
-	//	"SELECT count(*) FROM %s WHERE modified_on < '%s'", table, i.Now)
-	// also add "AND canonical_facts ? 'insights_id'"
-	// waiting on https://issues.redhat.com/browse/RHCLOUD-9545
-	query := fmt.Sprintf("SELECT count(*) FROM %s", table)
-
-	rows, err := i.runQuery(db, query)
-
-	if err != nil {
-		return -1, err
-	}
-
-	defer rows.Close()
-
-	var response int64
-	for rows.Next() {
-		var count int64
-		err = rows.Scan(&count)
-		if err != nil {
-			return -1, err
-		}
-		response = count
-	}
-
-	if err != nil {
-		return -1, err
-	}
-
-	return response, err
-}
-
-// TODO move to database
-func (i *ReconcileIteration) getHostIds(db *pgx.Conn, table string, view bool) ([]string, error) {
-	// TODO" "AND canonical_facts ? 'insights_id'" when !view and insightsOnly
-	query := fmt.Sprintf("SELECT id FROM %s ORDER BY id", table)
-	rows, err := i.runQuery(db, query)
-
-	var ids []string
-
-	if err != nil {
-		return ids, err
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var id string
-		err = rows.Scan(&id)
-
-		if err != nil {
-			return ids, err
-		}
-
-		ids = append(ids, id)
-	}
-
-	return ids, nil
 }
 
 type DiffReporter struct {
