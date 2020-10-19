@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"cyndi-operator/controllers/config"
+	"cyndi-operator/controllers/utils"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )
@@ -16,7 +17,7 @@ const inventorySecretName = "host-inventory-db"
 const configMapName = "cyndi"
 
 func (i *ReconcileIteration) loadAppDBSecret() error {
-	secret, err := fetchSecret(i.Client, i.Instance.Namespace, i.Instance.Spec.AppName+"-db")
+	secret, err := utils.FetchSecret(i.Client, i.Instance.Namespace, i.Instance.Spec.AppName+"-db")
 
 	if err != nil {
 		return err
@@ -27,7 +28,7 @@ func (i *ReconcileIteration) loadAppDBSecret() error {
 }
 
 func (i *ReconcileIteration) loadHBIDBSecret() error {
-	secret, err := fetchSecret(i.Client, i.Instance.Namespace, inventorySecretName)
+	secret, err := utils.FetchSecret(i.Client, i.Instance.Namespace, inventorySecretName)
 
 	if err != nil {
 		return err
@@ -38,7 +39,7 @@ func (i *ReconcileIteration) loadHBIDBSecret() error {
 }
 
 func (i *ReconcileIteration) parseConfig() error {
-	cyndiConfig, err := fetchConfigMap(i.Client, i.Instance.Namespace, configMapName)
+	cyndiConfig, err := utils.FetchConfigMap(i.Client, i.Instance.Namespace, configMapName)
 
 	if err != nil && !errors.IsNotFound(err) {
 		return err

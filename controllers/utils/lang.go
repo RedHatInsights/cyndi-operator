@@ -1,4 +1,4 @@
-package controllers
+package utils
 
 /*
 
@@ -6,7 +6,7 @@ Things that should have been in golang's standard library
 
 */
 
-func contains(list []string, s string) bool {
+func ContainsString(list []string, s string) bool {
 	for _, v := range list {
 		if v == s {
 			return true
@@ -15,7 +15,7 @@ func contains(list []string, s string) bool {
 	return false
 }
 
-func abs(x int64) int64 {
+func Abs(x int64) int64 {
 	if x < 0 {
 		return -x
 	}
