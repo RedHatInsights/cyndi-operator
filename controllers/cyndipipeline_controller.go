@@ -42,6 +42,7 @@ import (
 	. "cyndi-operator/controllers/config"
 	connect "cyndi-operator/controllers/connect"
 	"cyndi-operator/controllers/database"
+	"cyndi-operator/controllers/utils"
 )
 
 // CyndiPipelineReconciler reconciles a CyndiPipeline object
@@ -143,7 +144,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 	// delete pipeline
 	if i.Instance.GetDeletionTimestamp() != nil {
-		if contains(i.Instance.GetFinalizers(), cyndipipelineFinalizer) {
+		if utils.ContainsString(i.Instance.GetFinalizers(), cyndipipelineFinalizer) {
 			if err := i.finalizeCyndiPipeline(); err != nil {
 				return reconcile.Result{}, i.errorWithEvent("Error running finalizer.", err)
 			}
@@ -157,7 +158,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, nil
 	}
 
-	if !contains(i.Instance.GetFinalizers(), cyndipipelineFinalizer) {
+	if !utils.ContainsString(i.Instance.GetFinalizers(), cyndipipelineFinalizer) {
 		if err := i.addFinalizer(); err != nil {
 			return reconcile.Result{}, i.errorWithEvent("Error adding finalizer to resource", err)
 		}
