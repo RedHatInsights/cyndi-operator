@@ -153,14 +153,6 @@ var _ = Describe("Pipeline provisioning", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("should connect to the DB", func() {
-			cfg := getTestConfig()
-			params := getDBArgs(cfg.DBHostHBI)
-
-			_, err := connectToDB(params)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
 		/*
 			This is just a basic skeleton. For this to be useful the test needs to be finished.
 
@@ -183,60 +175,4 @@ var _ = Describe("Pipeline provisioning", func() {
 			Expect(err).ToNot(HaveOccurred())
 		*/
 	})
-})
-
-var _ = Describe("Database operations", func() {
-
-	var (
-		RI *ReconcileIteration
-		c  ConfigMap
-	)
-
-	config := getTestConfig()
-	params := getDBArgs(config.DBHostHBI)
-
-	BeforeEach(func() {
-		dbconn, err := connectToDB(params)
-		Expect(err).ToNot(HaveOccurred())
-
-		c.getConfigMap()
-
-		RI = &ReconcileIteration{
-			AppDb:       dbconn,
-			AppDBParams: params,
-			config: &CyndiConfiguration{
-				DBTableInitScript: c.Data.DBSchema,
-			},
-		}
-	})
-
-	AfterEach(func() {
-		RI.closeDB(RI.AppDb)
-	})
-
-	Context("with successful connection", func() {
-		It("should successfully query", func() {
-			query := `CREATE SCHEMA "inventory";`
-			_, err := RI.runQuery(RI.AppDb, query)
-			Expect(err).To(BeNil())
-		})
-
-		It("should be able to create a table", func() {
-			err := RI.createTable("test_table")
-			Expect(err).To(BeNil())
-
-		})
-
-		It("should check for table existence", func() {
-			exists, err := RI.checkIfTableExists("test_table")
-			Expect(exists).To(BeTrue())
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("should be able to delete the table", func() {
-			err := RI.deleteTable("test_table")
-			Expect(err).ToNot(HaveOccurred())
-		})
-	})
-
 })

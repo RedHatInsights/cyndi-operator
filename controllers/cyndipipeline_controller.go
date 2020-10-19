@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/jackc/pgx"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -42,6 +41,7 @@ import (
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
 	. "cyndi-operator/controllers/config"
 	connect "cyndi-operator/controllers/connect"
+	"cyndi-operator/controllers/database"
 )
 
 // CyndiPipelineReconciler reconciles a CyndiPipeline object
@@ -54,7 +54,7 @@ type CyndiPipelineReconciler struct {
 type ReconcileIteration struct {
 	Instance    *cyndiv1beta1.CyndiPipeline
 	Log         logr.Logger
-	AppDb       *pgx.Conn
+	AppDb       *database.AppDatabase
 	Client      client.Client
 	Scheme      *runtime.Scheme
 	Now         string
@@ -109,10 +109,14 @@ func setup(client client.Client, scheme *runtime.Scheme, reqLogger logr.Logger, 
 		return i, i.errorWithEvent("Error while reading HBI DB secret.", err)
 	}
 
-	if db, err := connectToDB(i.AppDBParams); err != nil {
+	i.AppDb = &database.AppDatabase{
+		Database: database.Database{
+			Config: &i.AppDBParams,
+		},
+	}
+
+	if err = i.AppDb.Connect(); err != nil {
 		return i, i.errorWithEvent("Error while connecting to app DB.", err)
-	} else {
-		i.AppDb = db
 	}
 
 	return i, nil
@@ -127,7 +131,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	reqLogger.Info("Reconciling CyndiPipeline")
 
 	i, err := setup(r.Client, r.Scheme, reqLogger, request)
-	defer i.closeDB(i.AppDb)
+	defer i.AppDb.Close()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -165,7 +169,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		i.Instance.Status.InitialSyncInProgress = true
 	}
 
-	dbTableExists, err := i.checkIfTableExists(i.Instance.Status.TableName)
+	dbTableExists, err := i.AppDb.CheckIfTableExists(i.Instance.Status.TableName)
 	if err != nil {
 		return reconcile.Result{}, i.errorWithEvent("Error checking if table exists.", err)
 	}
@@ -182,7 +186,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 			i.refreshPipelineVersion()
 		}
 
-		err = i.createTable(i.Instance.Status.TableName)
+		err = i.AppDb.CreateTable(i.Instance.Status.TableName, i.config.DBTableInitScript)
 		if err != nil {
 			return reconcile.Result{}, i.errorWithEvent("Error creating table", err)
 		}
@@ -205,14 +209,14 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 			return reconcile.Result{}, i.errorWithEvent("Error triggering refresh", err)
 		}
 	} else if i.Instance.Status.SyndicatedDataIsValid == true {
-		err = i.updateView() // TODO: only update when outdated?
+		err = i.AppDb.UpdateView(i.Instance.Status.TableName) // TODO: only update when outdated?
 		if err != nil {
 			return reconcile.Result{}, i.errorWithEvent("Error updating database view", err)
 		}
 
 		// remove previous pipeline artifacts
 		if i.Instance.Status.PreviousPipelineVersion != "" {
-			err = i.deleteTable(tableName(i.Instance.Status.PreviousPipelineVersion))
+			err = i.AppDb.DeleteTable(tableName(i.Instance.Status.PreviousPipelineVersion))
 			if err != nil {
 				return reconcile.Result{}, i.errorWithEvent("Error deleting table", err)
 			}
@@ -309,7 +313,7 @@ func (i *ReconcileIteration) setupEventRecorder() error {
 }
 
 func (i *ReconcileIteration) finalizeCyndiPipeline() error {
-	err := i.deleteTable(i.Instance.Status.TableName)
+	err := i.AppDb.DeleteTable(i.Instance.Status.TableName)
 	if err != nil {
 		return err
 	}

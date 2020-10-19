@@ -25,7 +25,7 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	reqLogger.Info("Validating CyndiPipeline")
 
 	i, err := setup(r.Client, r.Scheme, reqLogger, request)
-	defer i.closeDB(i.AppDb)
+	defer i.AppDb.Close()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
