@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 
 	. "github.com/onsi/gomega"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +22,7 @@ import (
 )
 
 var Client client.Client
+var Clientset *kubernetes.Clientset
 
 var testEnv *envtest.Environment
 var cfg *rest.Config
@@ -56,6 +58,9 @@ func Setup(t *testing.T, suiteName string) {
 		Client, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(Client).ToNot(BeNil())
+
+		Clientset, err = kubernetes.NewForConfig(cfg)
+		Expect(err).ToNot(HaveOccurred())
 
 		close(done)
 	}, 60)

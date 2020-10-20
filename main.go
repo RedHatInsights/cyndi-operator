@@ -22,6 +22,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -67,19 +68,29 @@ func main() {
 		os.Exit(1)
 	}
 
+	clientset, err := kubernetes.NewForConfig(ctrl.GetConfigOrDie())
+	if err != nil {
+		setupLog.Error(err, "unable to set up clientset")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.ValidationReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("CyndiValidation"),
-		Scheme: mgr.GetScheme(),
+		CyndiPipelineReconciler: controllers.CyndiPipelineReconciler{
+			Client:    mgr.GetClient(),
+			Clientset: clientset,
+			Log:       ctrl.Log.WithName("controllers").WithName("CyndiValidation"),
+			Scheme:    mgr.GetScheme(),
+		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Validation")
 		os.Exit(1)
 	}
 
 	if err = (&controllers.CyndiPipelineReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("CyndiPipeline"),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Clientset: clientset,
+		Log:       ctrl.Log.WithName("controllers").WithName("CyndiPipeline"),
+		Scheme:    mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CyndiPipeline")
 		os.Exit(1)

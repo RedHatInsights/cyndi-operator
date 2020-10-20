@@ -47,9 +47,10 @@ import (
 
 // CyndiPipelineReconciler reconciles a CyndiPipeline object
 type CyndiPipelineReconciler struct {
-	Client client.Client
-	Scheme *runtime.Scheme
-	Log    logr.Logger
+	Client    client.Client
+	Clientset *kubernetes.Clientset
+	Scheme    *runtime.Scheme
+	Log       logr.Logger
 }
 
 type ReconcileIteration struct {
@@ -57,6 +58,7 @@ type ReconcileIteration struct {
 	Log         logr.Logger
 	AppDb       *database.AppDatabase
 	Client      client.Client
+	Clientset   *kubernetes.Clientset
 	Scheme      *runtime.Scheme
 	Now         string
 	Recorder    record.EventRecorder
@@ -69,13 +71,13 @@ const cyndipipelineFinalizer = "finalizer.cyndi.cloud.redhat.com"
 
 var log = logf.Log.WithName("controller_cyndipipeline")
 
-func setup(client client.Client, scheme *runtime.Scheme, reqLogger logr.Logger, request ctrl.Request) (ReconcileIteration, error) {
+func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Request) (ReconcileIteration, error) {
 
 	instance := &cyndiv1beta1.CyndiPipeline{}
 
 	i := ReconcileIteration{}
 
-	err := client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if k8errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -88,11 +90,12 @@ func setup(client client.Client, scheme *runtime.Scheme, reqLogger logr.Logger, 
 	}
 
 	i = ReconcileIteration{
-		Instance: instance,
-		Client:   client,
-		Scheme:   scheme,
-		Log:      reqLogger,
-		Now:      time.Now().Format(time.RFC3339)}
+		Instance:  instance,
+		Client:    r.Client,
+		Clientset: r.Clientset,
+		Scheme:    r.Scheme,
+		Log:       reqLogger,
+		Now:       time.Now().Format(time.RFC3339)}
 
 	if err = i.setupEventRecorder(); err != nil {
 		return i, err
@@ -127,7 +130,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling CyndiPipeline")
 
-	i, err := setup(r.Client, r.Scheme, reqLogger, request)
+	i, err := r.setup(reqLogger, request)
 
 	if i.AppDb != nil {
 		defer i.AppDb.Close() // TODO: i.Close()
@@ -291,20 +294,10 @@ func connectorName(pipelineVersion string, appName string) string {
 }
 
 func (i *ReconcileIteration) setupEventRecorder() error {
-	kubeConfig, err := ctrl.GetConfig()
-	if err != nil {
-		return err
-	}
-
-	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
-	if err != nil {
-		return err
-	}
-
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartRecordingToSink(
 		&typedcorev1.EventSinkImpl{
-			Interface: kubeClient.CoreV1().Events(i.Instance.Namespace)})
+			Interface: i.Clientset.CoreV1().Events(i.Instance.Namespace)})
 	recorder := eventBroadcaster.NewRecorder(
 		scheme.Scheme,
 		corev1.EventSource{Component: "cyndipipeline"})
