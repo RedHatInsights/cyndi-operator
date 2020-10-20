@@ -2,6 +2,7 @@ package database
 
 import (
 	"bytes"
+	"cyndi-operator/controllers/config"
 	"fmt"
 	"text/template"
 )
@@ -25,6 +26,14 @@ FROM inventory.%[1]s`
 
 const cullingStaleWarningOffset = "7"
 const cullingCulledOffset = "14"
+
+func NewAppDatabase(config *config.DBParams) *AppDatabase {
+	return &AppDatabase{
+		Database: Database{
+			Config: config,
+		},
+	}
+}
 
 func (db *AppDatabase) CheckIfTableExists(tableName string) (bool, error) {
 	if tableName == "" {
@@ -69,7 +78,7 @@ func (db *AppDatabase) CreateTable(tableName string, script string) error {
 	}
 
 	dbSchemaParsed := dbSchemaBuffer.String()
-	_, err = db.connection.Exec(dbSchemaParsed)
+	_, err = db.Exec(dbSchemaParsed)
 	return err
 }
 
@@ -82,11 +91,11 @@ func (db *AppDatabase) DeleteTable(tableName string) error {
 	}
 
 	query := fmt.Sprintf("DROP table inventory.%s CASCADE", tableName)
-	_, err = db.connection.Exec(query)
+	_, err = db.Exec(query)
 	return err
 }
 
 func (db *AppDatabase) UpdateView(tableName string) error {
-	_, err := db.connection.Exec(fmt.Sprintf(viewTemplate, tableName, cullingStaleWarningOffset, cullingCulledOffset))
+	_, err := db.Exec(fmt.Sprintf(viewTemplate, tableName, cullingStaleWarningOffset, cullingCulledOffset))
 	return err
 }

@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -25,24 +26,23 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v1"
+	ctrl "sigs.k8s.io/controller-runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	. "cyndi-operator/controllers/config"
+	connect "cyndi-operator/controllers/connect"
+	"cyndi-operator/controllers/database"
+	"cyndi-operator/controllers/utils"
 	"cyndi-operator/test"
 	// +kubebuilder:scaffold:imports
 )
-
-type DBConfig struct {
-	DBHostHBI string
-	DBHostAPP string
-	DBPort    string
-	DBPass    string
-	DBUser    string
-	DBName    string
-}
 
 type ConfigMap struct {
 	APIVersion string `yaml:"apiVersion"`
@@ -78,101 +78,134 @@ func (c *ConfigMap) getConfigMap() (*ConfigMap, error) {
 	return c, nil
 }
 
-func getDBArgs(host string) DBParams {
-	cfg := getTestConfig()
-	return DBParams{
-		Host:     host,
-		Port:     cfg.DBPort,
-		Name:     cfg.DBName,
-		User:     cfg.DBUser,
-		Password: cfg.DBPass,
-	}
-}
-
-func getTestConfig() *DBConfig {
+func getDBParams() DBParams {
 	options := viper.New()
 	options.SetDefault("DBHostHBI", "localhost")
-	options.SetDefault("DBHostApp", "localhost")
 	options.SetDefault("DBPort", "5432")
 	options.SetDefault("DBUser", "postgres")
 	options.SetDefault("DBPass", "postgres")
 	options.SetDefault("DBName", "test")
 	options.AutomaticEnv()
 
-	return &DBConfig{
-		DBHostHBI: options.GetString("DBHostHBI"),
-		DBHostAPP: options.GetString("DBHostApp"),
-		DBPort:    options.GetString("DBPort"),
-		DBUser:    options.GetString("DBUser"),
-		DBPass:    options.GetString("DBPass"),
-		DBName:    options.GetString("DBName"),
+	return DBParams{
+		Host:     options.GetString("DBHostHBI"),
+		Port:     options.GetString("DBPort"),
+		Name:     options.GetString("DBName"),
+		User:     options.GetString("DBUser"),
+		Password: options.GetString("DBPass"),
 	}
 }
 
-func createPipeline(namespace string, name string) error {
+func createPipeline(namespacedName types.NamespacedName) {
 	ctx := context.Background()
 
 	pipeline := cyndiv1beta1.CyndiPipeline{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name:      namespacedName.Name,
+			Namespace: namespacedName.Namespace,
 		},
 		Spec: cyndiv1beta1.CyndiPipelineSpec{
-			AppName: name,
+			AppName: namespacedName.Name,
 		},
 	}
 
 	err := test.Client.Create(ctx, &pipeline)
+	Expect(err).ToNot(HaveOccurred())
+}
 
-	if err != nil {
-		return err
+func createDbSecret(namespace string, name string, params DBParams) {
+	secret := &corev1.Secret{
+		Type: corev1.SecretTypeOpaque,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"db.host":     []byte(params.Host),
+			"db.port":     []byte(params.Port),
+			"db.name":     []byte(params.Name),
+			"db.user":     []byte(params.User),
+			"db.password": []byte(params.Password),
+		},
 	}
 
-	err = test.Client.Status().Update(ctx, &pipeline)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	err := test.Client.Create(context.TODO(), secret)
+	Expect(err).ToNot(HaveOccurred())
 }
 
 func TestControllers(t *testing.T) {
 	test.Setup(t, "Controllers")
 }
 
-var _ = Describe("Pipeline provisioning", func() {
-	Context("Basic", func() {
-		It("Should create a Kafka Connector", func() {
-			const (
-				name      = "test01"
-				namespace = "default"
-			)
+var _ = Describe("Pipeline operations", func() {
+	var (
+		namespacedName types.NamespacedName
+		dbParams       DBParams
+		db             *database.AppDatabase
+	)
 
-			err := createPipeline(namespace, name)
-			Expect(err).ToNot(HaveOccurred())
-		})
+	BeforeEach(func() {
+		namespacedName = types.NamespacedName{
+			Name:      "test-pipeline-01",
+			Namespace: test.UniqueNamespace(),
+		}
 
-		/*
-			This is just a basic skeleton. For this to be useful the test needs to be finished.
+		dbParams = getDBParams()
 
-			TODO:
-			 - configmap
-			 - mock db access
+		createDbSecret(namespacedName.Namespace, "host-inventory-db", dbParams)
+		createDbSecret(namespacedName.Namespace, fmt.Sprintf("%s-db", namespacedName.Name), dbParams)
 
-			 _, err = r.Reconcile(req)
+		db = database.NewAppDatabase(&dbParams)
+		err := db.Connect()
+		Expect(err).ToNot(HaveOccurred())
 
+		_, err = db.Exec(fmt.Sprintf(`DROP SCHEMA IF EXISTS "%s" CASCADE`, "inventory"))
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = db.Exec(fmt.Sprintf(`CREATE SCHEMA "%s"`, "inventory"))
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		db.Close()
+	})
+
+	Describe("New -> InitialSync", func() {
+		It("Creates a connector and db table for a new pipeline", func() {
+			createPipeline(namespacedName)
 
 			r := &CyndiPipelineReconciler{Client: test.Client, Scheme: scheme.Scheme, Log: logf.Log.WithName("test")}
 
-			req := reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      name,
-					Namespace: namespace,
-				},
+			req := ctrl.Request{
+				NamespacedName: namespacedName,
 			}
 
+			result, err := r.Reconcile(req)
 			Expect(err).ToNot(HaveOccurred())
-		*/
+			Expect(result.Requeue).To(BeFalse())
+
+			pipeline, err := utils.FetchCyndiPipeline(test.Client, namespacedName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
+			Expect(pipeline.Status.SyndicatedDataIsValid).To(BeFalse())
+
+			connector, err := connect.GetConnector(test.Client, pipeline.Status.ConnectorName, namespacedName.Namespace)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(connector.GetLabels()["cyndi/appName"]).To(Equal(namespacedName.Name))
+			Expect(connector.GetLabels()["cyndi/insightsOnly"]).To(Equal("false"))
+			Expect(connector.GetLabels()["strimzi.io/cluster"]).To(Equal("my-connect-cluster"))
+
+			exists, err := db.CheckIfTableExists(pipeline.Status.TableName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exists).To(BeTrue())
+		})
+	})
+
+	Describe("InitialSync -> Valid", func() {
+		// TODO
+	})
+
+	Describe("Invalid -> New", func() {
+		// TODO
 	})
 })
