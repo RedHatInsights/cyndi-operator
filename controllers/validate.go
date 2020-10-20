@@ -12,9 +12,7 @@ const inventoryTableName = "hosts" // TODO: move
 const countMismatchThreshold = 0.5
 
 func (i *ReconcileIteration) validate() (bool, error) {
-	var db = &database.Database{
-		Config: &i.HBIDBParams,
-	}
+	var db = database.NewDatabase(&i.HBIDBParams)
 
 	err := db.Connect()
 	if err != nil {

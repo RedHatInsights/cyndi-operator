@@ -5,6 +5,7 @@ import (
 
 	"github.com/jackc/pgx"
 
+	"cyndi-operator/controllers/config"
 	. "cyndi-operator/controllers/config"
 )
 
@@ -15,24 +16,18 @@ type Database struct {
 
 const connectionStringTemplate = "host=%s user=%s password=%s dbname=%s port=%s"
 
-func (db *Database) Connect() error {
-	connStr := fmt.Sprintf(
-		connectionStringTemplate,
-		db.Config.Host,
-		db.Config.User,
-		db.Config.Password,
-		db.Config.Name,
-		db.Config.Port)
-
-	if config, err := pgx.ParseDSN(connStr); err != nil {
-		return err
-	} else {
-		if db.connection, err = pgx.Connect(config); err != nil {
-			return err
-		}
-
-		return nil
+func NewDatabase(config *config.DBParams) *Database {
+	return &Database{
+		Config: config,
 	}
+}
+
+func (db *Database) Connect() (err error) {
+	if db.connection, err = GetConnection(db.Config); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (db *Database) Close() error {
@@ -51,6 +46,16 @@ func (db *Database) runQuery(query string) (*pgx.Rows, error) {
 	}
 
 	return rows, nil
+}
+
+func (db *Database) Exec(query string) (result pgx.CommandTag, err error) {
+	result, err = db.connection.Exec(query)
+
+	if err != nil {
+		return result, fmt.Errorf("Error executing query %s, %w", query, err)
+	}
+
+	return result, nil
 }
 
 func (db *Database) CountHosts(table string) (int64, error) {
@@ -115,4 +120,24 @@ func (db *Database) GetHostIds(table string) ([]string, error) {
 	}
 
 	return ids, nil
+}
+
+func GetConnection(params *DBParams) (connection *pgx.Conn, err error) {
+	connStr := fmt.Sprintf(
+		connectionStringTemplate,
+		params.Host,
+		params.User,
+		params.Password,
+		params.Name,
+		params.Port)
+
+	if config, err := pgx.ParseDSN(connStr); err != nil {
+		return nil, err
+	} else {
+		if connection, err = pgx.Connect(config); err != nil {
+			return nil, err
+		} else {
+			return connection, nil
+		}
+	}
 }

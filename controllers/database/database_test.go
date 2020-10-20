@@ -31,9 +31,7 @@ var _ = Describe("Database", func() {
 
 	BeforeEach(uniqueTable)
 	BeforeEach(func() {
-		db = &Database{
-			Config: getDBParams(),
-		}
+		db = NewDatabase(getDBParams())
 
 		err := db.Connect()
 		Expect(err).ToNot(HaveOccurred())

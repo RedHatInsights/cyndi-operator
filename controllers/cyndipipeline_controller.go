@@ -110,11 +110,7 @@ func setup(client client.Client, scheme *runtime.Scheme, reqLogger logr.Logger, 
 		return i, i.errorWithEvent("Error while reading HBI DB secret.", err)
 	}
 
-	i.AppDb = &database.AppDatabase{
-		Database: database.Database{
-			Config: &i.AppDBParams,
-		},
-	}
+	i.AppDb = database.NewAppDatabase(&i.AppDBParams)
 
 	if err = i.AppDb.Connect(); err != nil {
 		return i, i.errorWithEvent("Error while connecting to app DB.", err)

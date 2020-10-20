@@ -17,11 +17,7 @@ var _ = Describe("Application Database", func() {
 
 	BeforeEach(uniqueTable)
 	BeforeEach(func() {
-		db = &AppDatabase{
-			Database{
-				Config: getDBParams(),
-			},
-		}
+		db = NewAppDatabase(getDBParams())
 
 		err := db.Connect()
 		Expect(err).ToNot(HaveOccurred())
