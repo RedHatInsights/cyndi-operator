@@ -5,18 +5,13 @@ import (
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
 	"time"
 
-	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 type ValidationReconciler struct {
-	Client client.Client
-	Scheme *runtime.Scheme
-	Log    logr.Logger
+	CyndiPipelineReconciler
 }
 
 func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
@@ -24,7 +19,7 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Validating CyndiPipeline")
 
-	i, err := setup(r.Client, r.Scheme, reqLogger, request)
+	i, err := r.setup(reqLogger, request)
 
 	if i.AppDb != nil {
 		defer i.AppDb.Close() // TODO: i.Close()

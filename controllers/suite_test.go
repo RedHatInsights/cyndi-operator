@@ -133,6 +133,15 @@ func createDbSecret(namespace string, name string, params DBParams) {
 	Expect(err).ToNot(HaveOccurred())
 }
 
+func newCyndiReconciler() *CyndiPipelineReconciler {
+	return &CyndiPipelineReconciler{
+		Client:    test.Client,
+		Clientset: test.Clientset,
+		Scheme:    scheme.Scheme,
+		Log:       logf.Log.WithName("test"),
+	}
+}
+
 func TestControllers(t *testing.T) {
 	test.Setup(t, "Controllers")
 }
@@ -174,7 +183,7 @@ var _ = Describe("Pipeline operations", func() {
 		It("Creates a connector and db table for a new pipeline", func() {
 			createPipeline(namespacedName)
 
-			r := &CyndiPipelineReconciler{Client: test.Client, Scheme: scheme.Scheme, Log: logf.Log.WithName("test")}
+			r := newCyndiReconciler()
 
 			req := ctrl.Request{
 				NamespacedName: namespacedName,
