@@ -73,11 +73,9 @@ var log = logf.Log.WithName("controller_cyndipipeline")
 
 func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Request) (ReconcileIteration, error) {
 
-	instance := &cyndiv1beta1.CyndiPipeline{}
-
 	i := ReconcileIteration{}
 
-	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
+	instance, err := utils.FetchCyndiPipeline(r.Client, request.NamespacedName)
 	if err != nil {
 		if k8errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
