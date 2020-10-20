@@ -32,6 +32,7 @@ import (
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -168,10 +169,7 @@ var _ = Describe("Pipeline operations", func() {
 		err := db.Connect()
 		Expect(err).ToNot(HaveOccurred())
 
-		_, err = db.Exec(fmt.Sprintf(`DROP SCHEMA IF EXISTS "%s" CASCADE`, "inventory"))
-		Expect(err).ToNot(HaveOccurred())
-
-		_, err = db.Exec(fmt.Sprintf(`CREATE SCHEMA "%s"`, "inventory"))
+		_, err = db.Exec(`DROP SCHEMA IF EXISTS "inventory" CASCADE; CREATE SCHEMA "inventory";`)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
@@ -185,11 +183,7 @@ var _ = Describe("Pipeline operations", func() {
 
 			r := newCyndiReconciler()
 
-			req := ctrl.Request{
-				NamespacedName: namespacedName,
-			}
-
-			result, err := r.Reconcile(req)
+			result, err := r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Requeue).To(BeFalse())
 
@@ -211,10 +205,111 @@ var _ = Describe("Pipeline operations", func() {
 	})
 
 	Describe("InitialSync -> Valid", func() {
-		// TODO
+		It("Creates the hosts view", func() {
+			createPipeline(namespacedName)
+
+			r := newCyndiReconciler()
+
+			result, err := r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Requeue).To(BeFalse())
+
+			pipeline, err := utils.FetchCyndiPipeline(test.Client, namespacedName)
+			Expect(err).ToNot(HaveOccurred())
+
+			pipeline.Status.SyndicatedDataIsValid = true
+
+			err = test.Client.Status().Update(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+
+			result, err = r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Requeue).To(BeFalse())
+
+			pipeline, err = utils.FetchCyndiPipeline(test.Client, namespacedName)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
+			Expect(pipeline.Status.PreviousPipelineVersion).To(Equal(""))
+
+			viewExists, err := db.CheckIfTableExists("hosts")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(viewExists).To(BeTrue())
+		})
 	})
 
 	Describe("Invalid -> New", func() {
-		// TODO
+		It("Triggers refresh if pipeline is invalid for too long", func() {
+			createPipeline(namespacedName)
+
+			r := newCyndiReconciler()
+
+			result, err := r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Requeue).To(BeFalse())
+
+			pipeline, err := utils.FetchCyndiPipeline(test.Client, namespacedName)
+			Expect(err).ToNot(HaveOccurred())
+
+			pipelineVersion := pipeline.Status.PipelineVersion
+
+			pipeline.Status.SyndicatedDataIsValid = false
+			pipeline.Status.ValidationFailedCount = 11
+
+			err = test.Client.Status().Update(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+
+			result, err = r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Requeue).To(BeFalse())
+
+			pipeline, err = utils.FetchCyndiPipeline(test.Client, namespacedName)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(pipeline.Status.PreviousPipelineVersion).To(Equal(pipelineVersion))
+			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
+			Expect(pipeline.Status.PipelineVersion).To(Equal(""))
+		})
+
+		// TODO test existing view is kept until valid
+	})
+
+	Describe("-> Removed", func() {
+		It("Artifacts removed when pipeline is removed", func() {
+			createPipeline(namespacedName)
+
+			r := newCyndiReconciler()
+
+			result, err := r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Requeue).To(BeFalse())
+
+			pipeline, err := utils.FetchCyndiPipeline(test.Client, namespacedName)
+			Expect(err).ToNot(HaveOccurred())
+
+			status := pipeline.Status
+
+			err = test.Client.Delete(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+
+			result, err = r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Requeue).To(BeFalse())
+
+			tableExists, err := db.CheckIfTableExists(status.TableName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(tableExists).To(BeFalse())
+
+			viewExists, err := db.CheckIfTableExists("hosts")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(viewExists).To(BeFalse())
+
+			pipeline, err = utils.FetchCyndiPipeline(test.Client, namespacedName)
+			Expect(err).To(HaveOccurred())
+			Expect(errors.IsNotFound(err)).To(BeTrue())
+
+			// not testing that the connecter is gone as there is no garbage collection in envtest
+			// https://book.kubebuilder.io/reference/envtest.html#testing-considerations
+		})
 	})
 })

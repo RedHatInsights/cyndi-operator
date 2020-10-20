@@ -22,9 +22,8 @@ var _ = Describe("Application Database", func() {
 		err := db.Connect()
 		Expect(err).ToNot(HaveOccurred())
 
-		rows, err := db.runQuery(`CREATE SCHEMA "inventory";`)
+		_, err = db.Exec(`DROP SCHEMA IF EXISTS "inventory" CASCADE; CREATE SCHEMA "inventory";`)
 		Expect(err).ToNot(HaveOccurred())
-		rows.Close()
 	})
 
 	AfterEach(func() {
@@ -38,12 +37,12 @@ var _ = Describe("Application Database", func() {
 
 		It("should be able to create a table", func() {
 			err := db.CreateTable(TestTable, config.DBTableInitScript)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should check for table existence", func() {
 			err := db.CreateTable(TestTable, config.DBTableInitScript)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 
 			exists, err := db.CheckIfTableExists(TestTable)
 			Expect(exists).To(BeTrue())
@@ -58,7 +57,7 @@ var _ = Describe("Application Database", func() {
 
 		It("should be able to delete the table", func() {
 			err := db.CreateTable(TestTable, config.DBTableInitScript)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 
 			err = db.DeleteTable(TestTable)
 			Expect(err).ToNot(HaveOccurred())
@@ -75,10 +74,10 @@ var _ = Describe("Application Database", func() {
 
 		It("should be able to update the view", func() {
 			err := db.CreateTable(TestTable, config.DBTableInitScript)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 
 			err = db.UpdateView(TestTable)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 
 			rows, err := db.runQuery("SELECT * FROM inventory.hosts")
 			Expect(err).ToNot(HaveOccurred())
