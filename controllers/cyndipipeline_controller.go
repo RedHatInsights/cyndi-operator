@@ -81,9 +81,12 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 		Log:       reqLogger,
 		Now:       time.Now().Format(time.RFC3339)}
 
-	if err = i.setupEventRecorder(); err != nil {
-		return i, err
-	}
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartRecordingToSink(
+		&typedcorev1.EventSinkImpl{
+			Interface: i.Clientset.CoreV1().Events(i.Instance.Namespace),
+		})
+	i.Recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "cyndipipeline"})
 
 	if err = i.parseConfig(); err != nil {
 		return i, i.errorWithEvent("Error while reading cyndi configmap.", err)
@@ -126,107 +129,84 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, nil
 	}
 
-	// delete pipeline
-	if i.Instance.GetState() == cyndi.STATE_REMOVED {
-		if utils.ContainsString(i.Instance.GetFinalizers(), cyndipipelineFinalizer) {
-			if err := i.finalizeCyndiPipeline(); err != nil {
-				return reconcile.Result{}, i.errorWithEvent("Error running finalizer.", err)
-			}
-
-			controllerutil.RemoveFinalizer(i.Instance, cyndipipelineFinalizer)
-			err := r.Client.Update(context.TODO(), i.Instance)
-			if err != nil {
-				return reconcile.Result{}, i.errorWithEvent("Error updating resource after finalizer.", err)
-			}
-		}
-		return reconcile.Result{}, nil
+	if i.Instance.GetState() != cyndi.STATE_NEW && i.Instance.Status.CyndiConfigVersion != i.config.ConfigMapVersion {
+		i.Log.Info("ConfigMap changed, refreshing pipeline", "version", i.config.ConfigMapVersion)
+		i.Instance.TransitionToNew()
+		return i.UpdateStatus()
 	}
 
-	if !utils.ContainsString(i.Instance.GetFinalizers(), cyndipipelineFinalizer) {
-		if err := i.addFinalizer(); err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error adding finalizer to resource", err)
-		}
-	}
+	// remove any stale artifacts
+	// if we're shutting down this removes all artifacts
+	err = i.deleteStaleArtifacts()
 
-	// TODO: move elsewhere?
-	if err = i.deleteStaleArtifacts(); err != nil {
+	if err != nil {
 		i.Log.Error(err, "Error deleting stale artifacts")
 	}
 
-	//new pipeline
-	if i.Instance.GetState() == cyndi.STATE_NEW {
-		i.Instance.TransitionTo(cyndi.STATE_INITIAL_SYNC)
-	}
+	if i.Instance.GetState() == cyndi.STATE_REMOVED && err == nil {
+		i.Log.Info("Successfully finalized CyndiPipeline")
 
-	dbTableExists, err := i.AppDb.CheckIfTableExists(i.Instance.Status.TableName)
-	if err != nil {
-		return reconcile.Result{}, i.errorWithEvent("Error checking if table exists.", err)
-	}
-
-	connectorExists, err := connect.CheckIfConnectorExists(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace)
-	if err != nil {
-		return reconcile.Result{}, i.errorWithEvent("Error checking if connector exists", err)
-	}
-
-	//part, or all, of the pipeline is missing, create a new pipeline
-	if dbTableExists != true || connectorExists != true {
-		if i.Instance.GetState() != cyndi.STATE_INITIAL_SYNC {
-			// TODO
-			i.Instance.Status.PreviousPipelineVersion = i.Instance.Status.PipelineVersion
-			i.refreshPipelineVersion()
+		if err = i.removeFinalizer(); err != nil {
+			return reconcile.Result{}, i.errorWithEvent("Error updating resource after finalizer.", err)
 		}
 
-		err = i.AppDb.CreateTable(i.Instance.Status.TableName, i.config.DBTableInitScript)
-		if err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error creating table", err)
-		}
-
-		err = i.createConnector()
-		if err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error creating connector", err)
-		}
+		return reconcile.Result{}, nil
 	}
 
-	err = r.Client.Status().Update(context.TODO(), i.Instance)
-	if err != nil {
-		return reconcile.Result{}, i.errorWithEvent("Error updating status", err)
-	}
+	switch {
+	case i.Instance.GetState() == cyndi.STATE_NEW:
+		{
+			pipelineVersion := fmt.Sprintf("1_%s", strconv.FormatInt(time.Now().UnixNano(), 10))
+			i.Log.Info("New pipeline version", "version", pipelineVersion)
+			i.Instance.Status.CyndiConfigVersion = i.config.ConfigMapVersion
 
-	if i.Instance.Status.SyndicatedDataIsValid != true && i.Instance.Status.ValidationFailedCount > i.getValidationConfig().AttemptsThreshold {
-		err = i.triggerRefresh()
-
-		if err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error triggering refresh", err)
-		}
-	} else if i.Instance.Status.SyndicatedDataIsValid == true {
-		err = i.AppDb.UpdateView(i.Instance.Status.TableName) // TODO: only update when outdated?
-		if err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error updating database view", err)
-		}
-
-		// remove previous pipeline artifacts
-		if i.Instance.Status.PreviousPipelineVersion != "" {
-			err = i.AppDb.DeleteTable(cyndi.TableName(i.Instance.Status.PreviousPipelineVersion))
-			if err != nil {
-				return reconcile.Result{}, i.errorWithEvent("Error deleting table", err)
+			if err := i.addFinalizer(); err != nil {
+				return reconcile.Result{}, i.errorWithEvent("Error adding finalizer", err)
 			}
 
-			err = connect.DeleteConnector(i.Client, cyndi.ConnectorName(i.Instance.Status.PreviousPipelineVersion, i.Instance.Spec.AppName), i.Instance.Namespace)
+			err = i.AppDb.CreateTable(cyndi.TableName(pipelineVersion), i.config.DBTableInitScript)
 			if err != nil {
-				return reconcile.Result{}, i.errorWithEvent("Error deleting connector", err)
+				return reconcile.Result{}, i.errorWithEvent("Error creating table", err)
 			}
 
-			i.Instance.Status.PreviousPipelineVersion = ""
+			err = i.createConnector(cyndi.ConnectorName(pipelineVersion, i.Instance.Spec.AppName))
+			if err != nil {
+				return reconcile.Result{}, i.errorWithEvent("Error creating connector", err)
+			}
+
+			i.Log.Info("Transitioning to InitialSync")
+			i.Instance.TransitionToInitialSync(pipelineVersion)
 		}
 
-		i.Instance.Status.InitialSyncInProgress = false
-		err = i.Client.Status().Update(context.TODO(), i.Instance)
-		if err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error updating status", err)
+	case i.Instance.Status.SyndicatedDataIsValid == true:
+		{
+			table, err := i.AppDb.GetCurrentTable()
+			if err != nil {
+				return reconcile.Result{}, i.errorWithEvent("Error checking current table", err)
+			}
+
+			if table == nil || *table != i.Instance.Status.TableName {
+				i.Log.Info("Updating view", "table", i.Instance.Status.TableName)
+				if err = i.AppDb.UpdateView(i.Instance.Status.TableName); err != nil {
+					return reconcile.Result{}, i.errorWithEvent("Error updating database view", err)
+				}
+			}
+
+			if i.Instance.GetState() == cyndi.STATE_INITIAL_SYNC {
+				i.Instance.TransitionToValid()
+			}
+		}
+
+	case i.Instance.Status.SyndicatedDataIsValid == false:
+		{
+			if i.Instance.Status.ValidationFailedCount > i.getValidationConfig().AttemptsThreshold {
+				i.Log.Info("Pipeline failed to become valid. Refreshing.")
+				i.Instance.TransitionToNew()
+			}
 		}
 	}
 
-	return reconcile.Result{}, nil
+	return i.UpdateStatus()
 }
 
 func (i *ReconcileIteration) deleteStaleArtifacts() error {
@@ -235,7 +215,7 @@ func (i *ReconcileIteration) deleteStaleArtifacts() error {
 		tablesToKeep     []string
 	)
 
-	if i.Instance.Status.PipelineVersion != "" {
+	if i.Instance.GetState() != cyndi.STATE_REMOVED && i.Instance.Status.PipelineVersion != "" {
 		connectorsToKeep = append(connectorsToKeep, cyndi.ConnectorName(i.Instance.Status.PipelineVersion, i.Instance.Spec.AppName))
 		tablesToKeep = append(tablesToKeep, cyndi.TableName(i.Instance.Status.PipelineVersion))
 	}
@@ -281,81 +261,27 @@ func (i *ReconcileIteration) deleteStaleArtifacts() error {
 	return nil
 }
 
-func (i *ReconcileIteration) triggerRefresh() error {
-	i.Log.Info("Refreshing CyndiPipeline")
-
-	i.Instance.Status.PreviousPipelineVersion = i.Instance.Status.PipelineVersion
-	i.Instance.Status.ValidationFailedCount = 0
-	i.Instance.Status.PipelineVersion = ""
-
-	err := i.Client.Status().Update(context.TODO(), i.Instance)
-	return err
-}
-
 func (r *CyndiPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cyndi.CyndiPipeline{}).
 		Complete(r)
 }
 
-func (i *ReconcileIteration) refreshPipelineVersion() {
-	i.Instance.Status.PipelineVersion = fmt.Sprintf(
-		"1_%s",
-		strconv.FormatInt(time.Now().UnixNano(), 10))
-	i.Instance.Status.ConnectorName = cyndi.ConnectorName(i.Instance.Status.PipelineVersion, i.Instance.Spec.AppName)
-	i.Instance.Status.TableName = cyndi.TableName(i.Instance.Status.PipelineVersion)
-	i.Instance.Status.SyndicatedDataIsValid = false
-}
-
-func (i *ReconcileIteration) errorWithEvent(message string, err error) error {
-	i.Log.Error(err, "Caught error")
-
-	i.Recorder.Event(
-		i.Instance,
-		corev1.EventTypeWarning,
-		message,
-		err.Error())
-	return err
-}
-
-func (i *ReconcileIteration) debug(message string) {
-	i.Log.V(1).Info(message)
-}
-
-func (i *ReconcileIteration) setupEventRecorder() error {
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartRecordingToSink(
-		&typedcorev1.EventSinkImpl{
-			Interface: i.Clientset.CoreV1().Events(i.Instance.Namespace)})
-	recorder := eventBroadcaster.NewRecorder(
-		scheme.Scheme,
-		corev1.EventSource{Component: "cyndipipeline"})
-
-	i.Recorder = recorder
-	return nil
-}
-
-func (i *ReconcileIteration) finalizeCyndiPipeline() error {
-	err := i.AppDb.DeleteTable(i.Instance.Status.TableName)
-	if err != nil {
-		return err
-	}
-	i.Log.Info("Successfully finalized CyndiPipeline")
-	return nil
-}
-
 func (i *ReconcileIteration) addFinalizer() error {
-	i.Log.Info("Adding Finalizer for the CyndiPipeline")
-	controllerutil.AddFinalizer(i.Instance, cyndipipelineFinalizer)
-
-	err := i.Client.Update(context.TODO(), i.Instance)
-	if err != nil {
-		return i.errorWithEvent("Failed to update CyndiPipeline with finalizer", err)
+	if !utils.ContainsString(i.Instance.GetFinalizers(), cyndipipelineFinalizer) {
+		controllerutil.AddFinalizer(i.Instance, cyndipipelineFinalizer)
+		return i.Client.Update(context.TODO(), i.Instance)
 	}
+
 	return nil
 }
 
-func (i *ReconcileIteration) createConnector() error {
+func (i *ReconcileIteration) removeFinalizer() error {
+	controllerutil.RemoveFinalizer(i.Instance, cyndipipelineFinalizer)
+	return i.Client.Update(context.TODO(), i.Instance)
+}
+
+func (i *ReconcileIteration) createConnector(name string) error {
 	var config = connect.ConnectorConfiguration{
 		AppName:      i.Instance.Spec.AppName,
 		InsightsOnly: i.Instance.Spec.InsightsOnly,
@@ -369,7 +295,7 @@ func (i *ReconcileIteration) createConnector() error {
 		Template:     i.config.ConnectorTemplate,
 	}
 
-	return connect.CreateConnector(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace, config, i.Instance, i.Scheme)
+	return connect.CreateConnector(i.Client, name, i.Instance.Namespace, config, i.Instance, i.Scheme)
 }
 
 func (i *ReconcileIteration) getValidationConfig() ValidationConfiguration {

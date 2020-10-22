@@ -262,20 +262,18 @@ var _ = Describe("Pipeline operations", func() {
 
 			// simulate multiple tables/connectors left behind (e.g. due to operator error)
 			pipeline := getPipeline(namespacedName)
-			pipeline.Status.PipelineVersion = "1"
-			pipeline.Status.ConnectorName = cyndi.ConnectorName(pipeline.Status.PipelineVersion, namespacedName.Name)
-			pipeline.Status.TableName = cyndi.TableName(pipeline.Status.PipelineVersion)
+			pipeline.Status.PipelineVersion = ""
 			err := test.Client.Status().Update(context.TODO(), pipeline)
 			Expect(err).ToNot(HaveOccurred())
 			reconcile()
 
-			pipeline.Status.PipelineVersion = "2"
-			pipeline.Status.ConnectorName = cyndi.ConnectorName(pipeline.Status.PipelineVersion, namespacedName.Name)
-			pipeline.Status.TableName = cyndi.TableName(pipeline.Status.PipelineVersion)
+			pipeline = getPipeline(namespacedName)
+			pipeline.Status.PipelineVersion = ""
 			err = test.Client.Status().Update(context.TODO(), pipeline)
 			Expect(err).ToNot(HaveOccurred())
 			reconcile()
 
+			pipeline = getPipeline(namespacedName)
 			connectors, err := connect.GetConnectorsForApp(test.Client, namespacedName.Namespace, namespacedName.Name)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(connectors.Items).To(HaveLen(1))
@@ -288,20 +286,18 @@ var _ = Describe("Pipeline operations", func() {
 
 			// simulate multiple tables/connectors left behind (e.g. due to operator error)
 			pipeline := getPipeline(namespacedName)
-			pipeline.Status.PipelineVersion = "1"
-			pipeline.Status.ConnectorName = cyndi.ConnectorName(pipeline.Status.PipelineVersion, namespacedName.Name)
-			pipeline.Status.TableName = cyndi.TableName(pipeline.Status.PipelineVersion)
+			pipeline.Status.PipelineVersion = ""
 			err := test.Client.Status().Update(context.TODO(), pipeline)
 			Expect(err).ToNot(HaveOccurred())
 			reconcile()
 
-			pipeline.Status.PipelineVersion = "2"
-			pipeline.Status.ConnectorName = cyndi.ConnectorName(pipeline.Status.PipelineVersion, namespacedName.Name)
-			pipeline.Status.TableName = cyndi.TableName(pipeline.Status.PipelineVersion)
+			pipeline = getPipeline(namespacedName)
+			pipeline.Status.PipelineVersion = ""
 			err = test.Client.Status().Update(context.TODO(), pipeline)
 			Expect(err).ToNot(HaveOccurred())
 			reconcile()
 
+			pipeline = getPipeline(namespacedName)
 			tables, err := db.GetCyndiTables()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(tables).To(HaveLen(1))
@@ -335,7 +331,6 @@ var _ = Describe("Pipeline operations", func() {
 			reconcile()
 
 			pipeline := getPipeline(namespacedName)
-			pipelineVersion := pipeline.Status.PipelineVersion
 
 			pipeline.Status.SyndicatedDataIsValid = false
 			pipeline.Status.ValidationFailedCount = 11
@@ -346,7 +341,6 @@ var _ = Describe("Pipeline operations", func() {
 
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
-			Expect(pipeline.Status.PreviousPipelineVersion).To(Equal(pipelineVersion))
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
 			Expect(pipeline.Status.PipelineVersion).To(Equal(""))
 		})
@@ -371,13 +365,11 @@ var _ = Describe("Pipeline operations", func() {
 			createConfigMap(namespacedName.Namespace, "cyndi", map[string]string{"connect.cluster": "override"})
 			reconcile()
 
-			configMap := getConfigMap(namespacedName.Namespace)
 			pipeline = getPipeline(namespacedName)
-			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
-			Expect(pipeline.Status.CyndiConfigVersion).To(Equal(configMap.ObjectMeta.ResourceVersion))
-			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
-			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
 			Expect(pipeline.Status.SyndicatedDataIsValid).To(BeFalse())
+			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
 		})
 
 		It("Triggers refresh if configmap changes", func() {
@@ -405,12 +397,10 @@ var _ = Describe("Pipeline operations", func() {
 			// as a result, the pipeline should start re-sync to reflect the change
 			configMap = getConfigMap(namespacedName.Namespace)
 			pipeline = getPipeline(namespacedName)
-			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
-			Expect(pipeline.Status.CyndiConfigVersion).To(Equal(configMap.ObjectMeta.ResourceVersion))
-			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
-			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
 			Expect(pipeline.Status.SyndicatedDataIsValid).To(BeFalse())
-			// TODO check status
+			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
 		})
 
 		// TODO test existing view is kept until valid

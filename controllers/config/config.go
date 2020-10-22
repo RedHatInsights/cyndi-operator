@@ -40,6 +40,12 @@ func BuildCyndiConfig(instance *cyndiv1beta1.CyndiPipeline, cm *corev1.ConfigMap
 		return config, err
 	}
 
+	if cm == nil {
+		config.ConfigMapVersion = "-1"
+	} else {
+		config.ConfigMapVersion = cm.ResourceVersion
+	}
+
 	return config, err
 }
 

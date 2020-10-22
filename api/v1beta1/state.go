@@ -2,9 +2,7 @@ package v1beta1
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
-	"time"
 )
 
 type PipelineState string
@@ -37,26 +35,48 @@ func (instance *CyndiPipeline) GetState() PipelineState {
 	}
 }
 
-func (instance *CyndiPipeline) TransitionTo(state PipelineState) error {
+func (instance *CyndiPipeline) TransitionToNew() error {
+	instance.Status.InitialSyncInProgress = false
+	instance.Status.SyndicatedDataIsValid = false
+	instance.Status.ValidationFailedCount = 0
+	instance.Status.PipelineVersion = ""
+	return nil
+}
 
-	switch state {
-	case STATE_INITIAL_SYNC:
-		if instance.GetState() != STATE_NEW {
-			return invalidTransition(instance.GetState(), state)
-		}
-
-		instance.Status.InitialSyncInProgress = true
-		instance.Status.SyndicatedDataIsValid = false
-		instance.Status.PipelineVersion = fmt.Sprintf("1_%s", strconv.FormatInt(time.Now().UnixNano(), 10))
-		instance.Status.ConnectorName = ConnectorName(instance.Status.PipelineVersion, instance.Spec.AppName)
-		instance.Status.TableName = TableName(instance.Status.PipelineVersion)
+func (instance *CyndiPipeline) TransitionToInitialSync(pipelineVersion string) error {
+	if err := instance.assertState(STATE_INITIAL_SYNC, STATE_NEW); err != nil {
+		return err
 	}
+
+	instance.Status.InitialSyncInProgress = true
+	instance.Status.SyndicatedDataIsValid = false
+	instance.Status.ValidationFailedCount = 0
+	instance.Status.PipelineVersion = pipelineVersion
+	instance.Status.ConnectorName = ConnectorName(pipelineVersion, instance.Spec.AppName)
+	instance.Status.TableName = TableName(pipelineVersion)
 
 	return nil
 }
 
-func invalidTransition(from PipelineState, to PipelineState) error {
-	return fmt.Errorf("Attempted invalid state transition from %s to %s", from, to)
+func (instance *CyndiPipeline) TransitionToValid() error {
+	if err := instance.assertState(STATE_INITIAL_SYNC, STATE_INITIAL_SYNC, STATE_INVALID); err != nil {
+		return err
+	}
+
+	instance.Status.PreviousPipelineVersion = ""
+	instance.Status.InitialSyncInProgress = false
+
+	return nil
+}
+
+func (instance *CyndiPipeline) assertState(targetState PipelineState, validStates ...PipelineState) error {
+	for _, state := range validStates {
+		if instance.GetState() == state {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Attempted invalid state transition from %s to %s", instance.GetState(), targetState)
 }
 
 func TableName(pipelineVersion string) string {
