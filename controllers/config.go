@@ -45,11 +45,16 @@ func (i *ReconcileIteration) parseConfig() error {
 		return err
 	}
 
+	configMapVersion := cyndiConfig.ResourceVersion
+	if errors.IsNotFound(err) {
+		configMapVersion = "-1"
+	}
+
 	if i.Instance.Status.CyndiConfigVersion == "" {
-		i.Instance.Status.CyndiConfigVersion = cyndiConfig.ResourceVersion
-	} else if i.Instance.Status.CyndiConfigVersion != cyndiConfig.ResourceVersion {
+		i.Instance.Status.CyndiConfigVersion = configMapVersion
+	} else if i.Instance.Status.CyndiConfigVersion != configMapVersion {
 		//cyndi configmap changed, perform a refresh to use latest values
-		i.Instance.Status.CyndiConfigVersion = cyndiConfig.ResourceVersion
+		i.Instance.Status.CyndiConfigVersion = configMapVersion
 		if err = i.triggerRefresh(); err != nil {
 			return err
 		}
