@@ -39,6 +39,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+	"cyndi-operator/controllers/config"
 	. "cyndi-operator/controllers/config"
 	connect "cyndi-operator/controllers/connect"
 	"cyndi-operator/controllers/database"
@@ -51,20 +52,6 @@ type CyndiPipelineReconciler struct {
 	Clientset *kubernetes.Clientset
 	Scheme    *runtime.Scheme
 	Log       logr.Logger
-}
-
-type ReconcileIteration struct {
-	Instance    *cyndiv1beta1.CyndiPipeline
-	Log         logr.Logger
-	AppDb       *database.AppDatabase
-	Client      client.Client
-	Clientset   *kubernetes.Clientset
-	Scheme      *runtime.Scheme
-	Now         string
-	Recorder    record.EventRecorder
-	HBIDBParams DBParams
-	AppDBParams DBParams
-	config      *CyndiConfiguration
 }
 
 const cyndipipelineFinalizer = "finalizer.cyndi.cloud.redhat.com"
@@ -103,11 +90,11 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 		return i, i.errorWithEvent("Error while reading cyndi configmap.", err)
 	}
 
-	if err = i.loadHBIDBSecret(); err != nil {
+	if i.HBIDBParams, err = config.LoadSecret(i.Client, i.Instance.Namespace, "host-inventory-db"); err != nil {
 		return i, i.errorWithEvent("Error while reading HBI DB secret.", err)
 	}
 
-	if err = i.loadAppDBSecret(); err != nil {
+	if i.AppDBParams, err = config.LoadSecret(i.Client, i.Instance.Namespace, fmt.Sprintf("%s-db", i.Instance.Spec.AppName)); err != nil {
 		return i, i.errorWithEvent("Error while reading HBI DB secret.", err)
 	}
 
@@ -129,10 +116,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	reqLogger.Info("Reconciling CyndiPipeline")
 
 	i, err := r.setup(reqLogger, request)
-
-	if i.AppDb != nil {
-		defer i.AppDb.Close() // TODO: i.Close()
-	}
+	defer i.Close()
 
 	if err != nil {
 		return reconcile.Result{}, err

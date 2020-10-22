@@ -309,6 +309,7 @@ var _ = Describe("Pipeline operations", func() {
 
 			// TODO: assert status
 			pipeline := getPipeline(namespacedName)
+			pipelineVersion := pipeline.Status.PipelineVersion
 			Expect(pipeline.Status.CyndiConfigVersion).To(Equal("-1"))
 
 			// now add a new configmap
@@ -319,6 +320,7 @@ var _ = Describe("Pipeline operations", func() {
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.Status.CyndiConfigVersion).To(Equal(configMap.ObjectMeta.ResourceVersion))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
+			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
 			Expect(pipeline.Status.SyndicatedDataIsValid).To(BeFalse())
 		})
 
@@ -335,6 +337,7 @@ var _ = Describe("Pipeline operations", func() {
 
 			configMap := getConfigMap(namespacedName.Namespace)
 			pipeline := getPipeline(namespacedName)
+			pipelineVersion := pipeline.Status.PipelineVersion
 			Expect(pipeline.Status.CyndiConfigVersion).To(Equal(configMap.ObjectMeta.ResourceVersion))
 
 			// with pipeline in the Valid state, change the configmap
@@ -349,6 +352,7 @@ var _ = Describe("Pipeline operations", func() {
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.Status.CyndiConfigVersion).To(Equal(configMap.ObjectMeta.ResourceVersion))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
+			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
 			Expect(pipeline.Status.SyndicatedDataIsValid).To(BeFalse())
 			// TODO check status
 		})
