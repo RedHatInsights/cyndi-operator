@@ -18,6 +18,8 @@ const (
 	STATE_UNKNOWN      PipelineState = "UNKNOWN"
 )
 
+const tablePrefix = "hosts_v"
+
 func (instance *CyndiPipeline) GetState() PipelineState {
 	switch {
 	case instance.GetDeletionTimestamp() != nil:
@@ -58,7 +60,11 @@ func invalidTransition(from PipelineState, to PipelineState) error {
 }
 
 func TableName(pipelineVersion string) string {
-	return fmt.Sprintf("hosts_v%s", pipelineVersion)
+	return fmt.Sprintf("%s%s", tablePrefix, pipelineVersion)
+}
+
+func TableNameToConnectorName(tableName string, appName string) string {
+	return ConnectorName(string(tableName[len(tablePrefix):len(tableName)]), appName)
 }
 
 func ConnectorName(pipelineVersion string, appName string) string {
