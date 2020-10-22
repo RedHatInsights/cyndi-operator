@@ -27,4 +27,6 @@ type CyndiConfiguration struct {
 
 	ValidationConfig     ValidationConfiguration
 	ValidationConfigInit ValidationConfiguration
+
+	ConfigMapVersion string
 }

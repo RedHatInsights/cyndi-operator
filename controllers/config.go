@@ -18,21 +18,10 @@ const configMapName = "cyndi"
 func (i *ReconcileIteration) parseConfig() error {
 	cyndiConfig, err := utils.FetchConfigMap(i.Client, i.Instance.Namespace, configMapName)
 
-	if err != nil && !errors.IsNotFound(err) {
-		return err
-	}
-
-	configMapVersion := cyndiConfig.ResourceVersion
-	if errors.IsNotFound(err) {
-		configMapVersion = "-1"
-	}
-
-	if i.Instance.Status.CyndiConfigVersion == "" {
-		i.Instance.Status.CyndiConfigVersion = configMapVersion
-	} else if i.Instance.Status.CyndiConfigVersion != configMapVersion {
-		//cyndi configmap changed, perform a refresh to use latest values
-		i.Instance.Status.CyndiConfigVersion = configMapVersion
-		if err = i.triggerRefresh(); err != nil {
+	if err != nil {
+		if errors.IsNotFound(err) {
+			cyndiConfig = nil
+		} else {
 			return err
 		}
 	}
