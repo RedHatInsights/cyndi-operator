@@ -255,6 +255,58 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(connector.GetLabels()["cyndi/insightsOnly"]).To(Equal("false"))
 			Expect(connector.GetLabels()["strimzi.io/cluster"]).To(Equal("test01"))
 		})
+
+		It("Removes stale connectors", func() {
+			createPipeline(namespacedName)
+			reconcile()
+
+			// simulate multiple tables/connectors left behind (e.g. due to operator error)
+			pipeline := getPipeline(namespacedName)
+			pipeline.Status.PipelineVersion = "1"
+			pipeline.Status.ConnectorName = cyndi.ConnectorName(pipeline.Status.PipelineVersion, namespacedName.Name)
+			pipeline.Status.TableName = cyndi.TableName(pipeline.Status.PipelineVersion)
+			err := test.Client.Status().Update(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+			reconcile()
+
+			pipeline.Status.PipelineVersion = "2"
+			pipeline.Status.ConnectorName = cyndi.ConnectorName(pipeline.Status.PipelineVersion, namespacedName.Name)
+			pipeline.Status.TableName = cyndi.TableName(pipeline.Status.PipelineVersion)
+			err = test.Client.Status().Update(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+			reconcile()
+
+			connectors, err := connect.GetConnectorsForApp(test.Client, namespacedName.Namespace, namespacedName.Name)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(connectors.Items).To(HaveLen(1))
+			Expect(connectors.Items[0].GetName()).To(Equal(pipeline.Status.ConnectorName))
+		})
+
+		It("Removes stale tables", func() {
+			createPipeline(namespacedName)
+			reconcile()
+
+			// simulate multiple tables/connectors left behind (e.g. due to operator error)
+			pipeline := getPipeline(namespacedName)
+			pipeline.Status.PipelineVersion = "1"
+			pipeline.Status.ConnectorName = cyndi.ConnectorName(pipeline.Status.PipelineVersion, namespacedName.Name)
+			pipeline.Status.TableName = cyndi.TableName(pipeline.Status.PipelineVersion)
+			err := test.Client.Status().Update(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+			reconcile()
+
+			pipeline.Status.PipelineVersion = "2"
+			pipeline.Status.ConnectorName = cyndi.ConnectorName(pipeline.Status.PipelineVersion, namespacedName.Name)
+			pipeline.Status.TableName = cyndi.TableName(pipeline.Status.PipelineVersion)
+			err = test.Client.Status().Update(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+			reconcile()
+
+			tables, err := db.GetCyndiTables()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(tables).To(HaveLen(1))
+			Expect(tables[0]).To(Equal(pipeline.Status.TableName))
+		})
 	})
 
 	Describe("InitialSync -> Valid", func() {

@@ -83,5 +83,50 @@ var _ = Describe("Application Database", func() {
 			Expect(err).ToNot(HaveOccurred())
 			rows.Close()
 		})
+
+		It("should be able to fetch the current table", func() {
+			err := db.CreateTable(TestTable, config.DBTableInitScript)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = db.UpdateView(TestTable)
+			Expect(err).ToNot(HaveOccurred())
+
+			table, err := db.GetCurrentTable()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(*table).To(Equal(TestTable))
+		})
+
+		It("should return nil if the view does not exist", func() {
+			err := db.CreateTable(TestTable, config.DBTableInitScript)
+			Expect(err).ToNot(HaveOccurred())
+
+			table, err := db.GetCurrentTable()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(table).To(BeNil())
+		})
+
+		It("should return empty array if there are no tables", func() {
+			tables, err := db.GetCyndiTables()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(tables).To(HaveLen(0))
+		})
+
+		It("should list Cyndi tables", func() {
+			err := db.CreateTable("hosts_v1_1", config.DBTableInitScript)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = db.CreateTable("hosts_v1_2", config.DBTableInitScript)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = db.CreateTable("hosts_v1_3", config.DBTableInitScript)
+			Expect(err).ToNot(HaveOccurred())
+
+			tables, err := db.GetCyndiTables()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(tables).To(HaveLen(3))
+			Expect(tables[0]).To(Equal("hosts_v1_1"))
+			Expect(tables[1]).To(Equal("hosts_v1_2"))
+			Expect(tables[2]).To(Equal("hosts_v1_3"))
+		})
 	})
 })

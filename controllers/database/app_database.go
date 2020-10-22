@@ -99,3 +99,47 @@ func (db *AppDatabase) UpdateView(tableName string) error {
 	_, err := db.Exec(fmt.Sprintf(viewTemplate, tableName, cullingStaleWarningOffset, cullingCulledOffset))
 	return err
 }
+
+func (db *AppDatabase) GetCurrentTable() (table *string, err error) {
+	query := "SELECT table_name FROM information_schema.view_table_usage WHERE view_schema = 'inventory' AND view_name = 'hosts' LIMIT 1;"
+	rows, err := db.runQuery(query)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !rows.Next() {
+		return nil, nil
+	}
+
+	err = rows.Scan(&table)
+	if rows != nil {
+		rows.Close()
+	}
+
+	return table, err
+}
+
+func (db *AppDatabase) GetCyndiTables() (tables []string, err error) {
+	query := "SELECT table_name FROM information_schema.tables WHERE table_schema = 'inventory' AND table_type = 'BASE TABLE' AND table_name LIKE 'hosts_%' ORDER BY table_name"
+	rows, err := db.runQuery(query)
+
+	if err != nil {
+		return tables, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var table string
+		err = rows.Scan(&table)
+
+		if err != nil {
+			return tables, err
+		}
+
+		tables = append(tables, table)
+	}
+
+	return tables, nil
+}

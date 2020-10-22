@@ -148,6 +148,11 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		}
 	}
 
+	// TODO: move elsewhere?
+	if err = i.deleteStaleArtifacts(); err != nil {
+		i.Log.Error(err, "Error deleting stale artifacts")
+	}
+
 	//new pipeline
 	if i.Instance.GetState() == cyndi.STATE_NEW {
 		i.Instance.TransitionTo(cyndi.STATE_INITIAL_SYNC)
@@ -222,6 +227,58 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (i *ReconcileIteration) deleteStaleArtifacts() error {
+	var (
+		connectorsToKeep []string
+		tablesToKeep     []string
+	)
+
+	if i.Instance.Status.PipelineVersion != "" {
+		connectorsToKeep = append(connectorsToKeep, cyndi.ConnectorName(i.Instance.Status.PipelineVersion, i.Instance.Spec.AppName))
+		tablesToKeep = append(tablesToKeep, cyndi.TableName(i.Instance.Status.PipelineVersion))
+	}
+
+	currentTable, err := i.AppDb.GetCurrentTable()
+	if err != nil {
+		return err
+	}
+
+	if currentTable != nil {
+		connectorsToKeep = append(connectorsToKeep, cyndi.TableNameToConnectorName(*currentTable, i.Instance.Spec.AppName))
+		tablesToKeep = append(tablesToKeep, *currentTable)
+	}
+
+	connectors, err := connect.GetConnectorsForApp(i.Client, i.Instance.Namespace, i.Instance.Spec.AppName)
+	if err != nil {
+		return err
+	}
+
+	for _, connector := range connectors.Items {
+		if !utils.ContainsString(connectorsToKeep, connector.GetName()) {
+			i.Log.Info("Removing stale connector", "connector", connector.GetName())
+			if err = connect.DeleteConnector(i.Client, connector.GetName(), i.Instance.Namespace); err != nil {
+				return err
+			}
+		}
+	}
+
+	tables, err := i.AppDb.GetCyndiTables()
+	if err != nil {
+		return err
+	}
+
+	for _, table := range tables {
+		if !utils.ContainsString(tablesToKeep, table) {
+			i.Log.Info("Removing stale table", "table", table)
+			if err = i.AppDb.DeleteTable(table); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (i *ReconcileIteration) triggerRefresh() error {
