@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -38,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+	cyndi "cyndi-operator/api/v1beta1"
 	"cyndi-operator/controllers/config"
 	. "cyndi-operator/controllers/config"
 	connect "cyndi-operator/controllers/connect"
@@ -128,7 +127,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	// delete pipeline
-	if i.Instance.GetDeletionTimestamp() != nil {
+	if i.Instance.GetState() == cyndi.STATE_REMOVED {
 		if utils.ContainsString(i.Instance.GetFinalizers(), cyndipipelineFinalizer) {
 			if err := i.finalizeCyndiPipeline(); err != nil {
 				return reconcile.Result{}, i.errorWithEvent("Error running finalizer.", err)
@@ -150,9 +149,8 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	//new pipeline
-	if i.Instance.Status.PipelineVersion == "" {
-		i.refreshPipelineVersion()
-		i.Instance.Status.InitialSyncInProgress = true
+	if i.Instance.GetState() == cyndi.STATE_NEW {
+		i.Instance.TransitionTo(cyndi.STATE_INITIAL_SYNC)
 	}
 
 	dbTableExists, err := i.AppDb.CheckIfTableExists(i.Instance.Status.TableName)
@@ -167,7 +165,8 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 	//part, or all, of the pipeline is missing, create a new pipeline
 	if dbTableExists != true || connectorExists != true {
-		if i.Instance.Status.InitialSyncInProgress != true {
+		if i.Instance.GetState() != cyndi.STATE_INITIAL_SYNC {
+			// TODO
 			i.Instance.Status.PreviousPipelineVersion = i.Instance.Status.PipelineVersion
 			i.refreshPipelineVersion()
 		}
@@ -202,12 +201,12 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 		// remove previous pipeline artifacts
 		if i.Instance.Status.PreviousPipelineVersion != "" {
-			err = i.AppDb.DeleteTable(tableName(i.Instance.Status.PreviousPipelineVersion))
+			err = i.AppDb.DeleteTable(cyndi.TableName(i.Instance.Status.PreviousPipelineVersion))
 			if err != nil {
 				return reconcile.Result{}, i.errorWithEvent("Error deleting table", err)
 			}
 
-			err = connect.DeleteConnector(i.Client, connectorName(i.Instance.Status.PreviousPipelineVersion, i.Instance.Spec.AppName), i.Instance.Namespace)
+			err = connect.DeleteConnector(i.Client, cyndi.ConnectorName(i.Instance.Status.PreviousPipelineVersion, i.Instance.Spec.AppName), i.Instance.Namespace)
 			if err != nil {
 				return reconcile.Result{}, i.errorWithEvent("Error deleting connector", err)
 			}
@@ -238,7 +237,7 @@ func (i *ReconcileIteration) triggerRefresh() error {
 
 func (r *CyndiPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cyndiv1beta1.CyndiPipeline{}).
+		For(&cyndi.CyndiPipeline{}).
 		Complete(r)
 }
 
@@ -246,8 +245,8 @@ func (i *ReconcileIteration) refreshPipelineVersion() {
 	i.Instance.Status.PipelineVersion = fmt.Sprintf(
 		"1_%s",
 		strconv.FormatInt(time.Now().UnixNano(), 10))
-	i.Instance.Status.ConnectorName = connectorName(i.Instance.Status.PipelineVersion, i.Instance.Spec.AppName)
-	i.Instance.Status.TableName = tableName(i.Instance.Status.PipelineVersion)
+	i.Instance.Status.ConnectorName = cyndi.ConnectorName(i.Instance.Status.PipelineVersion, i.Instance.Spec.AppName)
+	i.Instance.Status.TableName = cyndi.TableName(i.Instance.Status.PipelineVersion)
 	i.Instance.Status.SyndicatedDataIsValid = false
 }
 
@@ -264,16 +263,6 @@ func (i *ReconcileIteration) errorWithEvent(message string, err error) error {
 
 func (i *ReconcileIteration) debug(message string) {
 	i.Log.V(1).Info(message)
-}
-
-func tableName(pipelineVersion string) string {
-	return fmt.Sprintf("hosts_v%s", pipelineVersion)
-}
-
-func connectorName(pipelineVersion string, appName string) string {
-	return fmt.Sprintf("syndication-pipeline-%s-%s",
-		appName,
-		strings.Replace(pipelineVersion, "_", "-", 1))
 }
 
 func (i *ReconcileIteration) setupEventRecorder() error {
