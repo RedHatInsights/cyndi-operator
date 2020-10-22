@@ -264,6 +264,7 @@ func (i *ReconcileIteration) refreshPipelineVersion() {
 		strconv.FormatInt(time.Now().UnixNano(), 10))
 	i.Instance.Status.ConnectorName = connectorName(i.Instance.Status.PipelineVersion, i.Instance.Spec.AppName)
 	i.Instance.Status.TableName = tableName(i.Instance.Status.PipelineVersion)
+	i.Instance.Status.SyndicatedDataIsValid = false
 }
 
 func (i *ReconcileIteration) errorWithEvent(message string, err error) error {
