@@ -19,7 +19,7 @@ type ValidationReconciler struct {
 func (r *ValidationReconciler) setup(reqLogger logr.Logger, request ctrl.Request) (ReconcileIteration, error) {
 	i, err := r.CyndiPipelineReconciler.setup(reqLogger, request)
 
-	if err != nil {
+	if err != nil || i.Instance == nil {
 		return i, err
 	}
 
@@ -35,7 +35,6 @@ func (r *ValidationReconciler) setup(reqLogger logr.Logger, request ctrl.Request
 func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Validating CyndiPipeline")
 
 	i, err := r.setup(reqLogger, request)
 	defer i.Close()
@@ -45,13 +44,24 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	}
 
 	// nothing to validate
-	if i.Instance == nil || i.Instance.GetDeletionTimestamp() != nil {
+	if i.Instance == nil || i.Instance.GetState() == cyndiv1beta1.STATE_REMOVED {
 		return reconcile.Result{}, nil
 	}
 
 	// new pipeline, nothing to validate yet
-	if i.Instance.Status.PipelineVersion == "" {
+	if i.Instance.GetState() == cyndiv1beta1.STATE_NEW {
 		return reconcile.Result{Requeue: true}, nil
+	}
+
+	reqLogger.Info("Validating CyndiPipeline")
+
+	problem, err := i.validateDependencies()
+	if err != nil {
+		return reconcile.Result{}, i.errorWithEvent("Error validating dependencies", err)
+	} else if problem != nil {
+		i.Log.Info("Refreshing pipeline due to invalid dependency", "reason", problem)
+		i.Instance.TransitionToNew()
+		return i.requeue(i.config.ValidationConfigInit.Interval)
 	}
 
 	isValid, err := i.validate()
@@ -59,8 +69,15 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		return reconcile.Result{}, i.errorWithEvent("Error validating pipeline", err)
 	}
 
-	i.Instance.Status.SyndicatedDataIsValid = isValid
 	reqLogger.Info("Validation finished", "isValid", isValid)
+
+	if isValid {
+		if err = i.Instance.TransitionToValid(); err != nil {
+			return reconcile.Result{}, i.errorWithEvent("Error making state transition", err)
+		}
+	} else {
+		i.Instance.Status.SyndicatedDataIsValid = false
+	}
 
 	return i.requeue(i.getValidationConfig().Interval)
 }

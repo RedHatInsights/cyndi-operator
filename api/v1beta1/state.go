@@ -24,11 +24,11 @@ func (instance *CyndiPipeline) GetState() PipelineState {
 		return STATE_REMOVED
 	case instance.Status.PipelineVersion == "":
 		return STATE_NEW
+	case instance.Status.SyndicatedDataIsValid == true:
+		return STATE_VALID
 	case instance.Status.InitialSyncInProgress == true:
 		return STATE_INITIAL_SYNC
-	case instance.Status.InitialSyncInProgress == false && instance.Status.SyndicatedDataIsValid == true:
-		return STATE_VALID
-	case instance.Status.InitialSyncInProgress == false && instance.Status.SyndicatedDataIsValid == false:
+	case instance.Status.SyndicatedDataIsValid == false && instance.Status.InitialSyncInProgress == false:
 		return STATE_INVALID
 	default:
 		return STATE_UNKNOWN
@@ -44,7 +44,7 @@ func (instance *CyndiPipeline) TransitionToNew() error {
 }
 
 func (instance *CyndiPipeline) TransitionToInitialSync(pipelineVersion string) error {
-	if err := instance.assertState(STATE_INITIAL_SYNC, STATE_NEW); err != nil {
+	if err := instance.assertState(STATE_INITIAL_SYNC, STATE_INITIAL_SYNC, STATE_NEW); err != nil {
 		return err
 	}
 
@@ -59,10 +59,11 @@ func (instance *CyndiPipeline) TransitionToInitialSync(pipelineVersion string) e
 }
 
 func (instance *CyndiPipeline) TransitionToValid() error {
-	if err := instance.assertState(STATE_INITIAL_SYNC, STATE_INITIAL_SYNC, STATE_INVALID); err != nil {
+	if err := instance.assertState(STATE_VALID, STATE_INITIAL_SYNC, STATE_VALID, STATE_INVALID); err != nil {
 		return err
 	}
 
+	instance.Status.SyndicatedDataIsValid = true
 	instance.Status.PreviousPipelineVersion = ""
 	instance.Status.InitialSyncInProgress = false
 

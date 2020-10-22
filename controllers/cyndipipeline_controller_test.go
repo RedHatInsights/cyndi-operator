@@ -172,7 +172,11 @@ func setPipelineValid(namespacedName types.NamespacedName, valid bool) {
 	pipeline, err := utils.FetchCyndiPipeline(test.Client, namespacedName)
 	Expect(err).ToNot(HaveOccurred())
 
-	pipeline.Status.SyndicatedDataIsValid = valid
+	if valid {
+		pipeline.TransitionToValid()
+	} else {
+		pipeline.Status.SyndicatedDataIsValid = false
+	}
 
 	err = test.Client.Status().Update(context.TODO(), pipeline)
 	Expect(err).ToNot(HaveOccurred())
@@ -333,7 +337,7 @@ var _ = Describe("Pipeline operations", func() {
 			pipeline := getPipeline(namespacedName)
 
 			pipeline.Status.SyndicatedDataIsValid = false
-			pipeline.Status.ValidationFailedCount = 11
+			pipeline.Status.ValidationFailedCount = 16
 
 			err := test.Client.Status().Update(context.TODO(), pipeline)
 			Expect(err).ToNot(HaveOccurred())
@@ -359,6 +363,7 @@ var _ = Describe("Pipeline operations", func() {
 			pipeline := getPipeline(namespacedName)
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
 			pipelineVersion := pipeline.Status.PipelineVersion
+			tableName := pipeline.Status.TableName
 			Expect(pipeline.Status.CyndiConfigVersion).To(Equal("-1"))
 
 			// now add a new configmap
@@ -370,6 +375,11 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
 			Expect(pipeline.Status.SyndicatedDataIsValid).To(BeFalse())
 			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
+
+			// ensure the view still points to the old table while the new one is being synchronized
+			table, err := db.GetCurrentTable()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(*table).To(Equal(tableName))
 		})
 
 		It("Triggers refresh if configmap changes", func() {
@@ -385,6 +395,7 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
 			configMap := getConfigMap(namespacedName.Namespace)
 			pipelineVersion := pipeline.Status.PipelineVersion
+			tableName := pipeline.Status.TableName
 			Expect(pipeline.Status.CyndiConfigVersion).To(Equal(configMap.ObjectMeta.ResourceVersion))
 
 			// with pipeline in the Valid state, change the configmap
@@ -401,9 +412,67 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
 			Expect(pipeline.Status.SyndicatedDataIsValid).To(BeFalse())
 			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
+
+			// ensure the view still points to the old table while the new one is being synchronized
+			table, err := db.GetCurrentTable()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(*table).To(Equal(tableName))
 		})
 
-		// TODO test existing view is kept until valid
+		It("Triggers refresh if table disappears", func() {
+			createPipeline(namespacedName)
+			reconcile()
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+
+			err := db.DeleteTable(pipeline.Status.TableName)
+			Expect(err).ToNot(HaveOccurred())
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+		})
+
+		It("Triggers refresh if connector disappears", func() {
+			createPipeline(namespacedName)
+			reconcile()
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+
+			err := connect.DeleteConnector(test.Client, pipeline.Status.ConnectorName, namespacedName.Namespace)
+			Expect(err).ToNot(HaveOccurred())
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+		})
+
+		It("Triggers refresh if connector configuration disagrees", func() {
+			createPipeline(namespacedName)
+			reconcile()
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+
+			pipeline.Spec.InsightsOnly = true
+			err := test.Client.Update(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+		})
 	})
 
 	Describe("-> Removed", func() {
