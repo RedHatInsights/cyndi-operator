@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -39,7 +40,6 @@ import (
 
 	cyndi "cyndi-operator/api/v1beta1"
 	"cyndi-operator/controllers/config"
-	. "cyndi-operator/controllers/config"
 	connect "cyndi-operator/controllers/connect"
 	"cyndi-operator/controllers/database"
 	"cyndi-operator/controllers/utils"
@@ -129,87 +129,93 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, nil
 	}
 
-	if i.Instance.GetState() != cyndi.STATE_NEW && i.Instance.Status.CyndiConfigVersion != i.config.ConfigMapVersion {
-		i.Log.Info("ConfigMap changed, refreshing pipeline", "version", i.config.ConfigMapVersion)
-		i.Instance.TransitionToNew()
-		return i.UpdateStatus()
-	}
-
-	// remove any stale artifacts
-	// if we're shutting down this removes all artifacts
-	err = i.deleteStaleArtifacts()
+	// remove any stale dependencies
+	// if we're shutting down this removes all dependencies
+	err = i.deleteStaleDependencies()
 
 	if err != nil {
-		i.Log.Error(err, "Error deleting stale artifacts")
+		i.errorWithEvent("Error deleting stale dependencies", err)
 	}
 
-	if i.Instance.GetState() == cyndi.STATE_REMOVED && err == nil {
-		i.Log.Info("Successfully finalized CyndiPipeline")
+	// STATE_REMOVED
+	if i.Instance.GetState() == cyndi.STATE_REMOVED {
+		if err != nil {
+			return reconcile.Result{}, i.errorWithEvent("Error deleting stale dependencies", err)
+		}
 
 		if err = i.removeFinalizer(); err != nil {
 			return reconcile.Result{}, i.errorWithEvent("Error updating resource after finalizer.", err)
 		}
 
+		i.Log.Info("Successfully finalized CyndiPipeline")
 		return reconcile.Result{}, nil
 	}
 
-	switch {
-	case i.Instance.GetState() == cyndi.STATE_NEW:
-		{
-			pipelineVersion := fmt.Sprintf("1_%s", strconv.FormatInt(time.Now().UnixNano(), 10))
-			i.Log.Info("New pipeline version", "version", pipelineVersion)
-			i.Instance.Status.CyndiConfigVersion = i.config.ConfigMapVersion
-
-			if err := i.addFinalizer(); err != nil {
-				return reconcile.Result{}, i.errorWithEvent("Error adding finalizer", err)
-			}
-
-			err = i.AppDb.CreateTable(cyndi.TableName(pipelineVersion), i.config.DBTableInitScript)
-			if err != nil {
-				return reconcile.Result{}, i.errorWithEvent("Error creating table", err)
-			}
-
-			err = i.createConnector(cyndi.ConnectorName(pipelineVersion, i.Instance.Spec.AppName))
-			if err != nil {
-				return reconcile.Result{}, i.errorWithEvent("Error creating connector", err)
-			}
-
-			i.Log.Info("Transitioning to InitialSync")
-			i.Instance.TransitionToInitialSync(pipelineVersion)
+	// STATE_NEW
+	if i.Instance.GetState() == cyndi.STATE_NEW {
+		if err := i.addFinalizer(); err != nil {
+			return reconcile.Result{}, i.errorWithEvent("Error adding finalizer", err)
 		}
 
-	case i.Instance.Status.SyndicatedDataIsValid == true:
-		{
-			table, err := i.AppDb.GetCurrentTable()
-			if err != nil {
-				return reconcile.Result{}, i.errorWithEvent("Error checking current table", err)
-			}
+		i.Instance.Status.CyndiConfigVersion = i.config.ConfigMapVersion
 
-			if table == nil || *table != i.Instance.Status.TableName {
-				i.Log.Info("Updating view", "table", i.Instance.Status.TableName)
-				if err = i.AppDb.UpdateView(i.Instance.Status.TableName); err != nil {
-					return reconcile.Result{}, i.errorWithEvent("Error updating database view", err)
-				}
-			}
+		pipelineVersion := fmt.Sprintf("1_%s", strconv.FormatInt(time.Now().UnixNano(), 10))
+		i.Log.Info("New pipeline version", "version", pipelineVersion)
+		i.Instance.TransitionToInitialSync(pipelineVersion)
 
-			if i.Instance.GetState() == cyndi.STATE_INITIAL_SYNC {
-				i.Instance.TransitionToValid()
-			}
+		err = i.AppDb.CreateTable(cyndi.TableName(pipelineVersion), i.config.DBTableInitScript)
+		if err != nil {
+			return reconcile.Result{}, i.errorWithEvent("Error creating table", err)
 		}
 
-	case i.Instance.Status.SyndicatedDataIsValid == false:
-		{
-			if i.Instance.Status.ValidationFailedCount > i.getValidationConfig().AttemptsThreshold {
-				i.Log.Info("Pipeline failed to become valid. Refreshing.")
-				i.Instance.TransitionToNew()
-			}
+		err = i.createConnector(cyndi.ConnectorName(pipelineVersion, i.Instance.Spec.AppName))
+		if err != nil {
+			return reconcile.Result{}, i.errorWithEvent("Error creating connector", err)
+		}
+
+		i.Log.Info("Transitioning to InitialSync")
+		return i.UpdateStatus()
+	}
+
+	if i.Instance.Status.CyndiConfigVersion != i.config.ConfigMapVersion {
+		i.Log.Info("ConfigMap changed, refreshing pipeline", "version", i.config.ConfigMapVersion)
+		i.Instance.TransitionToNew()
+		return i.UpdateStatus()
+	}
+
+	problem, err := i.validateDependencies()
+	if err != nil {
+		return reconcile.Result{}, i.errorWithEvent("Error validating dependencies", err)
+	} else if problem != nil {
+		i.Log.Info("Refreshing pipeline due to invalid dependency", "reason", problem)
+		i.Instance.TransitionToNew()
+		return i.UpdateStatus()
+	}
+
+	// STATE_VALID
+	if i.Instance.GetState() == cyndi.STATE_VALID {
+		if err = i.recreateViewIfNeeded(); err != nil {
+			return reconcile.Result{}, i.errorWithEvent("Error updating hosts view", err)
+		}
+
+		// TODO requeue if updates - for cleanup
+
+		return i.UpdateStatus()
+	}
+
+	// invalid pipeline - either STATE_INITIAL_SYNC or STATE_INVALID
+	if i.Instance.Status.SyndicatedDataIsValid == false {
+		if i.Instance.Status.ValidationFailedCount > i.getValidationConfig().AttemptsThreshold {
+			i.Log.Info("Pipeline failed to become valid. Refreshing.")
+			i.Instance.TransitionToNew()
+			return i.UpdateStatus()
 		}
 	}
 
 	return i.UpdateStatus()
 }
 
-func (i *ReconcileIteration) deleteStaleArtifacts() error {
+func (i *ReconcileIteration) deleteStaleDependencies() error {
 	var (
 		connectorsToKeep []string
 		tablesToKeep     []string
@@ -298,10 +304,49 @@ func (i *ReconcileIteration) createConnector(name string) error {
 	return connect.CreateConnector(i.Client, name, i.Instance.Namespace, config, i.Instance, i.Scheme)
 }
 
-func (i *ReconcileIteration) getValidationConfig() ValidationConfiguration {
-	if i.Instance.Status.InitialSyncInProgress == true {
-		return i.config.ValidationConfigInit
+func (i *ReconcileIteration) recreateViewIfNeeded() error {
+	table, err := i.AppDb.GetCurrentTable()
+	if err != nil {
+		return err
 	}
 
-	return i.config.ValidationConfig
+	if table == nil || *table != i.Instance.Status.TableName {
+		i.Log.Info("Updating view", "table", i.Instance.Status.TableName)
+		if err = i.AppDb.UpdateView(i.Instance.Status.TableName); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (i *ReconcileIteration) validateDependencies() (problem error, err error) {
+	dbTableExists, err := i.AppDb.CheckIfTableExists(i.Instance.Status.TableName)
+	if err != nil {
+		return nil, err
+	} else if dbTableExists == false {
+		return fmt.Errorf("Database table %s not found", i.Instance.Status.TableName), nil
+	}
+
+	connector, err := connect.GetConnector(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return fmt.Errorf("Connector %s not found in %s", i.Instance.Status.ConnectorName, i.Instance.Namespace), nil
+		}
+
+		return nil, err
+
+	}
+
+	if connector.GetLabels()["cyndi/appName"] != i.Instance.Spec.AppName {
+		return fmt.Errorf("App name disagrees (%s vs %s)", connector.GetLabels()["cyndi/appName"], i.Instance.Spec.AppName), nil
+	}
+
+	if connector.GetLabels()["cyndi/insightsOnly"] != strconv.FormatBool(i.Instance.Spec.InsightsOnly) {
+		return fmt.Errorf("InsightsOnly changed"), nil
+	}
+
+	// TODO: this should be expanded to fully cover the connector
+
+	return nil, nil
 }

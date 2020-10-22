@@ -96,13 +96,13 @@ USING GIN (system_profile JSONB_PATH_OPS);
 `
 
 var defaultValidationConfig = ValidationConfiguration{
-	Interval:            60,
+	Interval:            60 * 30,
 	AttemptsThreshold:   5,
 	PercentageThreshold: 5,
 }
 
 var defaultValidationConfigInit = ValidationConfiguration{
-	Interval:            15,
-	AttemptsThreshold:   10,
+	Interval:            60,
+	AttemptsThreshold:   15,
 	PercentageThreshold: 5,
 }

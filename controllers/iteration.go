@@ -67,3 +67,11 @@ func (i *ReconcileIteration) errorWithEvent(message string, err error) error {
 func (i *ReconcileIteration) debug(message string) {
 	i.Log.V(1).Info(message)
 }
+
+func (i *ReconcileIteration) getValidationConfig() config.ValidationConfiguration {
+	if i.Instance.Status.InitialSyncInProgress == true {
+		return i.config.ValidationConfigInit
+	}
+
+	return i.config.ValidationConfig
+}
