@@ -29,7 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+	cyndi "cyndi-operator/api/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -100,12 +100,12 @@ func getDBParams() DBParams {
 func createPipeline(namespacedName types.NamespacedName) {
 	ctx := context.Background()
 
-	pipeline := cyndiv1beta1.CyndiPipeline{
+	pipeline := cyndi.CyndiPipeline{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      namespacedName.Name,
 			Namespace: namespacedName.Namespace,
 		},
-		Spec: cyndiv1beta1.CyndiPipelineSpec{
+		Spec: cyndi.CyndiPipelineSpec{
 			AppName: namespacedName.Name,
 		},
 	}
@@ -156,7 +156,7 @@ func newCyndiReconciler() *CyndiPipelineReconciler {
 	}
 }
 
-func getPipeline(namespacedName types.NamespacedName) (pipeline *cyndiv1beta1.CyndiPipeline) {
+func getPipeline(namespacedName types.NamespacedName) (pipeline *cyndi.CyndiPipeline) {
 	pipeline, err := utils.FetchCyndiPipeline(test.Client, namespacedName)
 	Expect(err).ToNot(HaveOccurred())
 	return
@@ -228,6 +228,7 @@ var _ = Describe("Pipeline operations", func() {
 			reconcile()
 
 			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
 			Expect(pipeline.Status.SyndicatedDataIsValid).To(BeFalse())
 
@@ -266,6 +267,7 @@ var _ = Describe("Pipeline operations", func() {
 			reconcile()
 
 			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
 			Expect(pipeline.Status.PreviousPipelineVersion).To(Equal(""))
 
@@ -291,6 +293,7 @@ var _ = Describe("Pipeline operations", func() {
 			reconcile()
 
 			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
 			Expect(pipeline.Status.PreviousPipelineVersion).To(Equal(pipelineVersion))
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
 			Expect(pipeline.Status.PipelineVersion).To(Equal(""))
@@ -307,8 +310,8 @@ var _ = Describe("Pipeline operations", func() {
 			setPipelineValid(namespacedName, true)
 			reconcile()
 
-			// TODO: assert status
 			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
 			pipelineVersion := pipeline.Status.PipelineVersion
 			Expect(pipeline.Status.CyndiConfigVersion).To(Equal("-1"))
 
@@ -318,6 +321,7 @@ var _ = Describe("Pipeline operations", func() {
 
 			configMap := getConfigMap(namespacedName.Namespace)
 			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
 			Expect(pipeline.Status.CyndiConfigVersion).To(Equal(configMap.ObjectMeta.ResourceVersion))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
 			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
@@ -333,10 +337,9 @@ var _ = Describe("Pipeline operations", func() {
 			setPipelineValid(namespacedName, true)
 			reconcile()
 
-			// TODO: assert status
-
-			configMap := getConfigMap(namespacedName.Namespace)
 			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+			configMap := getConfigMap(namespacedName.Namespace)
 			pipelineVersion := pipeline.Status.PipelineVersion
 			Expect(pipeline.Status.CyndiConfigVersion).To(Equal(configMap.ObjectMeta.ResourceVersion))
 
@@ -350,6 +353,7 @@ var _ = Describe("Pipeline operations", func() {
 			// as a result, the pipeline should start re-sync to reflect the change
 			configMap = getConfigMap(namespacedName.Namespace)
 			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
 			Expect(pipeline.Status.CyndiConfigVersion).To(Equal(configMap.ObjectMeta.ResourceVersion))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
 			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
