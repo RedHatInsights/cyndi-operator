@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"cyndi-operator/controllers/database"
 	"cyndi-operator/controllers/utils"
 	"fmt"
 
@@ -12,16 +11,7 @@ const inventoryTableName = "hosts" // TODO: move
 const countMismatchThreshold = 0.5
 
 func (i *ReconcileIteration) validate() (bool, error) {
-	var db = database.NewDatabase(&i.HBIDBParams)
-
-	err := db.Connect()
-	if err != nil {
-		return false, err
-	}
-
-	defer db.Close()
-
-	hbiHostCount, err := db.CountHosts(inventoryTableName)
+	hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName)
 	if err != nil {
 		return false, err
 	}
@@ -43,7 +33,7 @@ func (i *ReconcileIteration) validate() (bool, error) {
 		return false, nil
 	}
 
-	hbiIds, err := db.GetHostIds(inventoryTableName)
+	hbiIds, err := i.InventoryDb.GetHostIds(inventoryTableName)
 	if err != nil {
 		return false, err
 	}

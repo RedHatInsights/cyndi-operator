@@ -13,30 +13,7 @@ Code for loading configuration, secrets, etc.
 
 */
 
-const inventorySecretName = "host-inventory-db"
 const configMapName = "cyndi"
-
-func (i *ReconcileIteration) loadAppDBSecret() error {
-	secret, err := utils.FetchSecret(i.Client, i.Instance.Namespace, i.Instance.Spec.AppName+"-db")
-
-	if err != nil {
-		return err
-	}
-
-	i.AppDBParams, err = config.ParseDBSecret(secret)
-	return err
-}
-
-func (i *ReconcileIteration) loadHBIDBSecret() error {
-	secret, err := utils.FetchSecret(i.Client, i.Instance.Namespace, inventorySecretName)
-
-	if err != nil {
-		return err
-	}
-
-	i.HBIDBParams, err = config.ParseDBSecret(secret)
-	return err
-}
 
 func (i *ReconcileIteration) parseConfig() error {
 	cyndiConfig, err := utils.FetchConfigMap(i.Client, i.Instance.Namespace, configMapName)

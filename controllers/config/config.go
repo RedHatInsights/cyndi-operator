@@ -2,10 +2,12 @@ package config
 
 import (
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+	"cyndi-operator/controllers/utils"
 	"fmt"
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func BuildCyndiConfig(instance *cyndiv1beta1.CyndiPipeline, cm *corev1.ConfigMap) (*CyndiConfiguration, error) {
@@ -88,4 +90,15 @@ func getValidationConfig(cm *corev1.ConfigMap, prefix string, defaultValue Valid
 	}
 
 	return result, err
+}
+
+func LoadSecret(c client.Client, namespace string, name string) (DBParams, error) {
+	secret, err := utils.FetchSecret(c, namespace, name)
+
+	if err != nil {
+		return DBParams{}, err
+	}
+
+	params, err := ParseDBSecret(secret)
+	return params, err
 }
