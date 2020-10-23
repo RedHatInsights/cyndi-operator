@@ -39,7 +39,7 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 test: generate fmt vet manifests
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/master/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test -v ./controllers/... -coverprofile cover.out
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test -p 1 ./controllers/... -coverprofile cover.out
 
 # Build manager binary
 manager: generate fmt vet
@@ -92,11 +92,10 @@ container-push:
 
 # Test locally with a test DB
 test-local: generate fmt vet manifests
-	$(CONTAINER_ENGINE) run --rm --name hbiDB -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=test -d postgres
+	$(CONTAINER_ENGINE) run --rm --name hbiDB -p 15432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=test -d postgres
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/master/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./controllers/... -coverprofile cover.out
-	$(CONTAINER_ENGINE) stop hbiDB
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); DBPORT=15432 go test -p 1 ./controllers/... -coverprofile cover.out -ginkgo.randomizeAllSpecs || (ret=$$?; $(CONTAINER_ENGINE) stop hbiDB; exit $$ret) && $(CONTAINER_ENGINE) stop hbiDB
 
 # find or download controller-gen
 # download controller-gen if necessary
