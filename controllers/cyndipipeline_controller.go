@@ -270,6 +270,7 @@ func (i *ReconcileIteration) deleteStaleDependencies() error {
 func (r *CyndiPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cyndi.CyndiPipeline{}).
+		Owns(connect.EmptyConnector()).
 		Complete(r)
 }
 
