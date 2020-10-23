@@ -64,8 +64,8 @@ func (i *ReconcileIteration) errorWithEvent(message string, err error) error {
 	return err
 }
 
-func (i *ReconcileIteration) debug(message string) {
-	i.Log.V(1).Info(message)
+func (i *ReconcileIteration) debug(message string, keysAndValues ...interface{}) {
+	i.Log.V(1).Info(message, keysAndValues...)
 }
 
 func (i *ReconcileIteration) getValidationConfig() config.ValidationConfiguration {

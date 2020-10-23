@@ -177,17 +177,11 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return i.UpdateStatus()
 	}
 
-	if i.Instance.Status.CyndiConfigVersion != i.config.ConfigMapVersion {
-		i.Log.Info("ConfigMap changed, refreshing pipeline", "version", i.config.ConfigMapVersion)
-		i.Instance.TransitionToNew()
-		return i.UpdateStatus()
-	}
-
-	problem, err := i.validateDependencies()
+	problem, err := i.checkForDeviation()
 	if err != nil {
 		return reconcile.Result{}, i.errorWithEvent("Error validating dependencies", err)
 	} else if problem != nil {
-		i.Log.Info("Refreshing pipeline due to invalid dependency", "reason", problem)
+		i.Log.Info("Refreshing pipeline due to state deviation", "reason", problem)
 		i.Instance.TransitionToNew()
 		return i.UpdateStatus()
 	}
@@ -321,7 +315,11 @@ func (i *ReconcileIteration) recreateViewIfNeeded() error {
 	return nil
 }
 
-func (i *ReconcileIteration) validateDependencies() (problem error, err error) {
+func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
+	if i.Instance.Status.CyndiConfigVersion != i.config.ConfigMapVersion {
+		return fmt.Errorf("ConfigMap changed. New version is %s", i.config.ConfigMapVersion), nil
+	}
+
 	dbTableExists, err := i.AppDb.CheckIfTableExists(i.Instance.Status.TableName)
 	if err != nil {
 		return nil, err
