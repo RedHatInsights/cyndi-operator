@@ -133,9 +133,7 @@ func CreateConnector(c client.Client, name string, namespace string, config Conn
 
 // TODO move to k8s?
 func GetConnector(c client.Client, name string, namespace string) (*unstructured.Unstructured, error) {
-	connector := &unstructured.Unstructured{}
-	connector.SetGroupVersionKind(connectorGVK)
-
+	connector := EmptyConnector()
 	err := c.Get(context.TODO(), client.ObjectKey{Name: name, Namespace: namespace}, connector)
 	return connector, err
 }
@@ -146,6 +144,12 @@ func GetConnectorsForApp(c client.Client, namespace string, appName string) (*un
 
 	err := c.List(context.TODO(), connectors, client.InNamespace(namespace), client.MatchingLabels{appNameLabel: appName})
 	return connectors, err
+}
+
+func EmptyConnector() *unstructured.Unstructured {
+	connector := &unstructured.Unstructured{}
+	connector.SetGroupVersionKind(connectorGVK)
+	return connector
 }
 
 /*
