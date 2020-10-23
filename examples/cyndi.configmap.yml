@@ -87,7 +87,7 @@ data:
     CREATE INDEX {{.TableName}}_system_profile_index ON inventory.{{.TableName}}
     USING GIN (system_profile JSONB_PATH_OPS);
 
-  validation.interval: '20'
+  validation.interval: '60'
   validation.attempts.threshold: '5'
   validation.percentage.threshold: '5'
   init.validation.interval: '10'

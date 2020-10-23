@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -55,11 +56,11 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 
 	reqLogger.Info("Validating CyndiPipeline")
 
-	problem, err := i.validateDependencies()
+	problem, err := i.checkForDeviation()
 	if err != nil {
 		return reconcile.Result{}, i.errorWithEvent("Error validating dependencies", err)
 	} else if problem != nil {
-		i.Log.Info("Refreshing pipeline due to invalid dependency", "reason", problem)
+		i.Log.Info("Refreshing pipeline due to state deviation", "reason", problem)
 		i.Instance.TransitionToNew()
 		return i.requeue(i.config.ValidationConfigInit.Interval)
 	}
@@ -82,10 +83,29 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	return i.requeue(i.getValidationConfig().Interval)
 }
 
+func eventFilterPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			if e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration() {
+				return true // Pipeline definition changed
+			}
+
+			old, ok1 := e.ObjectOld.(*cyndiv1beta1.CyndiPipeline)
+			new, ok2 := e.ObjectNew.(*cyndiv1beta1.CyndiPipeline)
+
+			if ok1 && ok2 && old.Status.InitialSyncInProgress == false && new.Status.InitialSyncInProgress == true {
+				return true // pipeline refresh happened - validate the new pipeline
+			}
+
+			return false
+		},
+	}
+}
+
 func (r *ValidationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cyndiv1beta1.CyndiPipeline{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		WithEventFilter(eventFilterPredicate()).
 		Complete(r)
 }
 
@@ -96,5 +116,6 @@ func (i *ReconcileIteration) requeue(interval int64) (reconcile.Result, error) {
 	}
 
 	delay := time.Second * time.Duration(interval)
+	i.debug("RequeueAfter", "delay", delay)
 	return reconcile.Result{RequeueAfter: delay, Requeue: true}, nil
 }
