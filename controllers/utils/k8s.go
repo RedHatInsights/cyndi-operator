@@ -33,3 +33,9 @@ func FetchCyndiPipeline(c client.Client, namespacedName types.NamespacedName) (*
 	err := c.Get(context.TODO(), namespacedName, instance)
 	return instance, err
 }
+
+func FetchCyndiPipelines(c client.Client, namespace string) (*cyndiv1beta1.CyndiPipelineList, error) {
+	list := &cyndiv1beta1.CyndiPipelineList{}
+	err := c.List(context.TODO(), list)
+	return list, err
+}
