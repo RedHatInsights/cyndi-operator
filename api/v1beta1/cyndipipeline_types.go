@@ -20,27 +20,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // CyndiPipelineSpec defines the desired state of CyndiPipeline
 type CyndiPipelineSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	AppName      string `json:"appName"`
-	InsightsOnly bool   `json:"insightsOnly"`
+
+	// +kubebuilder:validation:MinLength:=1
+	// +kubebuilder:validation:MaxLength:=64
+	// +kubebuilder:validation:Required
+	AppName string `json:"appName"`
+
+	// +optional
+	InsightsOnly bool `json:"insightsOnly"`
 }
 
 // CyndiPipelineStatus defines the observed state of CyndiPipeline
 type CyndiPipelineStatus struct {
-	ValidationFailedCount  int64  `json:"validationFailedCount"`
-	ConnectorName          string `json:"cyndiPipelineName"`
-	TableName              string `json:"tableName"`
-	PipelineVersion        string `json:"pipelineVersion"`
-	CyndiConfigVersion     string `json:"cyndiConfigVersion"`
-	ValidationDelaySeconds int64  `json:"validationDelaySeconds"`
-	InitialSyncInProgress  bool   `json:"initialSyncInProgress"`
+	ValidationFailedCount int64  `json:"validationFailedCount"`
+	ConnectorName         string `json:"cyndiPipelineName"`
+	TableName             string `json:"tableName"`
+	PipelineVersion       string `json:"pipelineVersion"`
+	CyndiConfigVersion    string `json:"cyndiConfigVersion"`
+	InitialSyncInProgress bool   `json:"initialSyncInProgress"`
 
 	// Name of the database table that is currently backing the "inventory.hosts" view
 	// May differ from TableName e.g. during a refresh
