@@ -4,7 +4,6 @@ import (
 	"context"
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
 	"cyndi-operator/controllers/database"
-	"time"
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -22,6 +21,10 @@ func (r *ValidationReconciler) setup(reqLogger logr.Logger, request ctrl.Request
 
 	if err != nil || i.Instance == nil {
 		return i, err
+	}
+
+	i.GetRequeueInterval = func(i *ReconcileIteration) int64 {
+		return i.getValidationConfig().Interval
 	}
 
 	i.InventoryDb = database.NewDatabase(&i.HBIDBParams)
@@ -62,7 +65,7 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	} else if problem != nil {
 		i.Log.Info("Refreshing pipeline due to state deviation", "reason", problem)
 		i.Instance.TransitionToNew()
-		return i.requeue(i.config.ValidationConfigInit.Interval)
+		return i.updateStatusAndRequeue()
 	}
 
 	isValid, err := i.validate()
@@ -80,7 +83,7 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		i.Instance.Status.SyndicatedDataIsValid = false
 	}
 
-	return i.requeue(i.getValidationConfig().Interval)
+	return i.updateStatusAndRequeue()
 }
 
 func eventFilterPredicate() predicate.Predicate {
@@ -107,15 +110,4 @@ func (r *ValidationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&cyndiv1beta1.CyndiPipeline{}).
 		WithEventFilter(eventFilterPredicate()).
 		Complete(r)
-}
-
-func (i *ReconcileIteration) requeue(interval int64) (reconcile.Result, error) {
-	err := i.Client.Status().Update(context.TODO(), i.Instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	delay := time.Second * time.Duration(interval)
-	i.debug("RequeueAfter", "delay", delay)
-	return reconcile.Result{RequeueAfter: delay, Requeue: true}, nil
 }
