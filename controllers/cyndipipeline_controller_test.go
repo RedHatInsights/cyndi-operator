@@ -168,14 +168,19 @@ func getConfigMap(namespace string) *corev1.ConfigMap {
 	return configMap
 }
 
-func setPipelineValid(namespacedName types.NamespacedName, valid bool) {
+func setPipelineValid(namespacedName types.NamespacedName, valid bool, fns ...func(i *cyndi.CyndiPipeline)) {
 	pipeline, err := utils.FetchCyndiPipeline(test.Client, namespacedName)
 	Expect(err).ToNot(HaveOccurred())
 
 	if valid {
-		pipeline.TransitionToValid()
+		pipeline.Status.InitialSyncInProgress = false
+		pipeline.SetValid(metav1.ConditionTrue, "ValidationSucceeded", "Validation succeeded")
 	} else {
-		pipeline.Status.SyndicatedDataIsValid = false
+		pipeline.SetValid(metav1.ConditionFalse, "ValidationFailed", "Validation failed")
+	}
+
+	for _, fn := range fns {
+		fn(pipeline)
 	}
 
 	err = test.Client.Status().Update(context.TODO(), pipeline)
@@ -234,7 +239,7 @@ var _ = Describe("Pipeline operations", func() {
 			pipeline := getPipeline(namespacedName)
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
-			Expect(pipeline.Status.SyndicatedDataIsValid).To(BeFalse())
+			Expect(pipeline.GetValid()).To(Equal(metav1.ConditionUnknown))
 			Expect(pipeline.Status.ActiveTableName).To(Equal(""))
 
 			connector, err := connect.GetConnector(test.Client, pipeline.Status.ConnectorName, namespacedName.Namespace)
@@ -333,16 +338,13 @@ var _ = Describe("Pipeline operations", func() {
 			createPipeline(namespacedName)
 			reconcile()
 
-			pipeline := getPipeline(namespacedName)
+			setPipelineValid(namespacedName, false, func(pipeline *cyndi.CyndiPipeline) {
+				pipeline.Status.ValidationFailedCount = 16
+			})
 
-			pipeline.Status.SyndicatedDataIsValid = false
-			pipeline.Status.ValidationFailedCount = 16
-
-			err := test.Client.Status().Update(context.TODO(), pipeline)
-			Expect(err).ToNot(HaveOccurred())
 			reconcile()
 
-			pipeline = getPipeline(namespacedName)
+			pipeline := getPipeline(namespacedName)
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
 			Expect(pipeline.Status.PipelineVersion).To(Equal(""))
@@ -358,12 +360,10 @@ var _ = Describe("Pipeline operations", func() {
 			setPipelineValid(namespacedName, true)
 			reconcile()
 
-			pipeline = getPipeline(namespacedName)
-			pipeline.Status.SyndicatedDataIsValid = false
-			pipeline.Status.ValidationFailedCount = 6
+			setPipelineValid(namespacedName, false, func(pipeline *cyndi.CyndiPipeline) {
+				pipeline.Status.ValidationFailedCount = 6
+			})
 
-			err := test.Client.Status().Update(context.TODO(), pipeline)
-			Expect(err).ToNot(HaveOccurred())
 			reconcile()
 
 			pipeline = getPipeline(namespacedName)
@@ -383,11 +383,10 @@ var _ = Describe("Pipeline operations", func() {
 
 				pipeline = getPipeline(namespacedName)
 				activeTableName := pipeline.Status.ActiveTableName
-				pipeline.Status.SyndicatedDataIsValid = false
-				pipeline.Status.ValidationFailedCount = 6
+				setPipelineValid(namespacedName, false, func(pipeline *cyndi.CyndiPipeline) {
+					pipeline.Status.ValidationFailedCount = 6
+				})
 
-				err := test.Client.Status().Update(context.TODO(), pipeline)
-				Expect(err).ToNot(HaveOccurred())
 				reconcile()
 
 				pipeline = getPipeline(namespacedName)
@@ -438,7 +437,7 @@ var _ = Describe("Pipeline operations", func() {
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
-			Expect(pipeline.Status.SyndicatedDataIsValid).To(BeFalse())
+			Expect(pipeline.GetValid()).To(Equal(metav1.ConditionUnknown))
 			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
 
 			// ensure the view still points to the old table while the new one is being synchronized
@@ -476,7 +475,7 @@ var _ = Describe("Pipeline operations", func() {
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
-			Expect(pipeline.Status.SyndicatedDataIsValid).To(BeFalse())
+			Expect(pipeline.GetValid()).To(Equal(metav1.ConditionUnknown))
 			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
 
 			// ensure the view still points to the old table while the new one is being synchronized

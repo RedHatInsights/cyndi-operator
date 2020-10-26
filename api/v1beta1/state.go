@@ -3,6 +3,9 @@ package v1beta1
 import (
 	"fmt"
 	"strings"
+
+	meta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type PipelineState string
@@ -17,6 +20,7 @@ const (
 )
 
 const tablePrefix = "hosts_v"
+const validConditionType = "Valid"
 
 func (instance *CyndiPipeline) GetState() PipelineState {
 	switch {
@@ -24,11 +28,11 @@ func (instance *CyndiPipeline) GetState() PipelineState {
 		return STATE_REMOVED
 	case instance.Status.PipelineVersion == "":
 		return STATE_NEW
-	case instance.Status.SyndicatedDataIsValid == true:
+	case instance.IsValid():
 		return STATE_VALID
 	case instance.Status.InitialSyncInProgress == true:
 		return STATE_INITIAL_SYNC
-	case instance.Status.SyndicatedDataIsValid == false && instance.Status.InitialSyncInProgress == false:
+	case instance.GetValid() == metav1.ConditionFalse:
 		return STATE_INVALID
 	default:
 		return STATE_UNKNOWN
@@ -36,8 +40,8 @@ func (instance *CyndiPipeline) GetState() PipelineState {
 }
 
 func (instance *CyndiPipeline) TransitionToNew() error {
+	instance.ResetValid()
 	instance.Status.InitialSyncInProgress = false
-	instance.Status.SyndicatedDataIsValid = false
 	instance.Status.ValidationFailedCount = 0
 	instance.Status.PipelineVersion = ""
 	return nil
@@ -48,8 +52,8 @@ func (instance *CyndiPipeline) TransitionToInitialSync(pipelineVersion string) e
 		return err
 	}
 
+	instance.ResetValid()
 	instance.Status.InitialSyncInProgress = true
-	instance.Status.SyndicatedDataIsValid = false
 	instance.Status.ValidationFailedCount = 0
 	instance.Status.PipelineVersion = pipelineVersion
 	instance.Status.ConnectorName = ConnectorName(pipelineVersion, instance.Spec.AppName)
@@ -58,15 +62,31 @@ func (instance *CyndiPipeline) TransitionToInitialSync(pipelineVersion string) e
 	return nil
 }
 
-func (instance *CyndiPipeline) TransitionToValid() error {
-	if err := instance.assertState(STATE_VALID, STATE_INITIAL_SYNC, STATE_VALID, STATE_INVALID); err != nil {
-		return err
+func (instance *CyndiPipeline) SetValid(status metav1.ConditionStatus, reason string, message string) {
+	meta.SetStatusCondition(&instance.Status.Conditions, metav1.Condition{
+		Type:    validConditionType,
+		Status:  status,
+		Reason:  reason,
+		Message: message,
+	})
+}
+
+func (instance *CyndiPipeline) ResetValid() {
+	instance.SetValid(metav1.ConditionUnknown, "New", "Validation not yet run")
+}
+
+func (instance *CyndiPipeline) IsValid() bool {
+	return meta.IsStatusConditionPresentAndEqual(instance.Status.Conditions, validConditionType, metav1.ConditionTrue)
+}
+
+func (instance *CyndiPipeline) GetValid() metav1.ConditionStatus {
+	condition := meta.FindStatusCondition(instance.Status.Conditions, validConditionType)
+
+	if condition == nil {
+		return metav1.ConditionUnknown
 	}
 
-	instance.Status.SyndicatedDataIsValid = true
-	instance.Status.InitialSyncInProgress = false
-
-	return nil
+	return condition.Status
 }
 
 func (instance *CyndiPipeline) assertState(targetState PipelineState, validStates ...PipelineState) error {

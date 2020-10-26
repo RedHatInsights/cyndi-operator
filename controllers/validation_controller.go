@@ -4,6 +4,9 @@ import (
 	"context"
 	cyndiv1beta1 "cyndi-operator/api/v1beta1"
 	"cyndi-operator/controllers/database"
+	"fmt"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -68,7 +71,7 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		return i.updateStatusAndRequeue()
 	}
 
-	isValid, err := i.validate()
+	isValid, mismatchRatio, mismatchCount, err := i.validate()
 	if err != nil {
 		return reconcile.Result{}, i.errorWithEvent("Error validating pipeline", err)
 	}
@@ -76,11 +79,28 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	reqLogger.Info("Validation finished", "isValid", isValid)
 
 	if isValid {
-		if err = i.Instance.TransitionToValid(); err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error making state transition", err)
-		}
+		i.Instance.Status.InitialSyncInProgress = false
+		i.Instance.SetValid(
+			metav1.ConditionTrue,
+			"ValidationSucceeded",
+			fmt.Sprintf(
+				"Validation succeeded - %v hosts (%.2f%%) do not match which is below the threshold for invalid pipeline (%d%%)",
+				mismatchCount,
+				mismatchRatio*100,
+				i.getValidationConfig().PercentageThreshold,
+			),
+		)
 	} else {
-		i.Instance.Status.SyndicatedDataIsValid = false
+		i.Instance.SetValid(
+			metav1.ConditionFalse,
+			"ValidationFailed",
+			fmt.Sprintf(
+				"Validation failed - %v hosts (%.2f%%) do not match which is above the threshold for invalid pipeline (%d%%)",
+				mismatchCount,
+				mismatchRatio*100,
+				i.getValidationConfig().PercentageThreshold,
+			),
+		)
 	}
 
 	return i.updateStatusAndRequeue()
