@@ -51,6 +51,10 @@ spec:
         status:
           description: CyndiPipelineStatus defines the observed state of CyndiPipeline
           properties:
+            activeTableName:
+              description: Name of the database table that is currently backing the
+                "inventory.hosts" view May differ from TableName e.g. during a refresh
+              type: string
             cyndiConfigVersion:
               type: string
             cyndiPipelineName:
@@ -58,8 +62,6 @@ spec:
             initialSyncInProgress:
               type: boolean
             pipelineVersion:
-              type: string
-            previousPipelineVersion:
               type: string
             syndicatedDataIsValid:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
@@ -76,11 +78,11 @@ spec:
               format: int64
               type: integer
           required:
+          - activeTableName
           - cyndiConfigVersion
           - cyndiPipelineName
           - initialSyncInProgress
           - pipelineVersion
-          - previousPipelineVersion
           - syndicatedDataIsValid
           - tableName
           - validationDelaySeconds

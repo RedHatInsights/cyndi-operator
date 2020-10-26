@@ -64,7 +64,6 @@ func (instance *CyndiPipeline) TransitionToValid() error {
 	}
 
 	instance.Status.SyndicatedDataIsValid = true
-	instance.Status.PreviousPipelineVersion = ""
 	instance.Status.InitialSyncInProgress = false
 
 	return nil

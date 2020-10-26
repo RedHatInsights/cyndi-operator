@@ -37,15 +37,18 @@ type CyndiPipelineStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	SyndicatedDataIsValid   bool   `json:"syndicatedDataIsValid"`
-	ValidationFailedCount   int64  `json:"validationFailedCount"`
-	ConnectorName           string `json:"cyndiPipelineName"`
-	TableName               string `json:"tableName"`
-	PipelineVersion         string `json:"pipelineVersion"`
-	CyndiConfigVersion      string `json:"cyndiConfigVersion"`
-	ValidationDelaySeconds  int64  `json:"validationDelaySeconds"`
-	PreviousPipelineVersion string `json:"previousPipelineVersion"`
-	InitialSyncInProgress   bool   `json:"initialSyncInProgress"`
+	SyndicatedDataIsValid  bool   `json:"syndicatedDataIsValid"`
+	ValidationFailedCount  int64  `json:"validationFailedCount"`
+	ConnectorName          string `json:"cyndiPipelineName"`
+	TableName              string `json:"tableName"`
+	PipelineVersion        string `json:"pipelineVersion"`
+	CyndiConfigVersion     string `json:"cyndiConfigVersion"`
+	ValidationDelaySeconds int64  `json:"validationDelaySeconds"`
+	InitialSyncInProgress  bool   `json:"initialSyncInProgress"`
+
+	// Name of the database table that is currently backing the "inventory.hosts" view
+	// May differ from TableName e.g. during a refresh
+	ActiveTableName string `json:"activeTableName"`
 }
 
 // +kubebuilder:object:root=true

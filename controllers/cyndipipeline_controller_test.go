@@ -321,7 +321,6 @@ var _ = Describe("Pipeline operations", func() {
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
-			Expect(pipeline.Status.PreviousPipelineVersion).To(Equal(""))
 
 			viewExists, err := db.CheckIfTableExists("hosts")
 			Expect(err).ToNot(HaveOccurred())
