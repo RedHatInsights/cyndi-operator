@@ -37,16 +37,13 @@ spec:
           description: CyndiPipelineSpec defines the desired state of CyndiPipeline
           properties:
             appName:
-              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                Important: Run "operator-sdk generate k8s" to regenerate code after
-                modifying this file Add custom validation using kubebuilder tags:
-                https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
+              maxLength: 64
+              minLength: 1
               type: string
             insightsOnly:
               type: boolean
           required:
           - appName
-          - insightsOnly
           type: object
         status:
           description: CyndiPipelineStatus defines the observed state of CyndiPipeline
@@ -134,9 +131,6 @@ spec:
               type: string
             tableName:
               type: string
-            validationDelaySeconds:
-              format: int64
-              type: integer
             validationFailedCount:
               format: int64
               type: integer
@@ -148,7 +142,6 @@ spec:
           - initialSyncInProgress
           - pipelineVersion
           - tableName
-          - validationDelaySeconds
           - validationFailedCount
           type: object
       type: object
