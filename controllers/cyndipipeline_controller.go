@@ -32,6 +32,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -167,6 +168,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		}
 
 		i.Instance.Status.CyndiConfigVersion = i.config.ConfigMapVersion
+		i.Instance.SetValid(metav1.ConditionUnknown, "New", "Validation not yet run")
 
 		pipelineVersion := fmt.Sprintf("1_%s", strconv.FormatInt(time.Now().UnixNano(), 10))
 		i.Log.Info("New pipeline version", "version", pipelineVersion)
@@ -205,7 +207,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	// invalid pipeline - either STATE_INITIAL_SYNC or STATE_INVALID
-	if i.Instance.Status.SyndicatedDataIsValid == false {
+	if i.Instance.IsValid() == false {
 		if i.Instance.Status.ValidationFailedCount > i.getValidationConfig().AttemptsThreshold {
 			i.Log.Info("Pipeline failed to become valid. Refreshing.")
 			i.Instance.TransitionToNew()

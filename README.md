@@ -178,6 +178,11 @@ The rest of this document assumes CodeReady Containers.
     oc apply -f ../config/samples/cyndi_v1beta1_cyndipipeline.yaml
     ```
 
+    Optionally, you can wait for the pipeline to become valid with
+    ```
+    oc wait cyndipipelines.cyndi.cloud.redhat.com/example-cyndipipeline --for=condition=Valid --timeout=300s -n my-kafka-project
+    ```
+
 ### Development
 
 [This is general info on building and running the operator.](https://v0-19-x.sdk.operatorframework.io/docs/golang/quickstart/#build-and-run-the-operator)

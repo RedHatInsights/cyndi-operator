@@ -34,10 +34,6 @@ type CyndiPipelineSpec struct {
 
 // CyndiPipelineStatus defines the observed state of CyndiPipeline
 type CyndiPipelineStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	SyndicatedDataIsValid  bool   `json:"syndicatedDataIsValid"`
 	ValidationFailedCount  int64  `json:"validationFailedCount"`
 	ConnectorName          string `json:"cyndiPipelineName"`
 	TableName              string `json:"tableName"`
@@ -49,6 +45,8 @@ type CyndiPipelineStatus struct {
 	// Name of the database table that is currently backing the "inventory.hosts" view
 	// May differ from TableName e.g. during a refresh
 	ActiveTableName string `json:"activeTableName"`
+
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 // +kubebuilder:object:root=true
