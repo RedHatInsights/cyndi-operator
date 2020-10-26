@@ -54,6 +54,7 @@ var _ = Describe("Config", func() {
 				"connector.batch.size":                 "13",
 				"connector.max.age":                    "14",
 				"db.schema":                            "CREATE TABLE hosts ()",
+				"standard.interval":                    "7200",
 				"validation.interval":                  "51",
 				"validation.attempts.threshold":        "52",
 				"validation.percentage.threshold":      "53",
@@ -73,6 +74,7 @@ var _ = Describe("Config", func() {
 		Expect(config.ConnectorBatchSize).To(Equal(int64(13)))
 		Expect(config.ConnectorMaxAge).To(Equal(int64(14)))
 		Expect(config.DBTableInitScript).To(Equal("CREATE TABLE hosts ()"))
+		Expect(config.StandardInterval).To(Equal(int64(7200)))
 		Expect(config.ValidationConfig.Interval).To(Equal(int64(51)))
 		Expect(config.ValidationConfig.AttemptsThreshold).To(Equal(int64(52)))
 		Expect(config.ValidationConfig.PercentageThreshold).To(Equal(int64(53)))
@@ -96,6 +98,7 @@ var _ = Describe("Config", func() {
 		Entry("connector.tasks.max", "connector.tasks.max"),
 		Entry("connector.batch.size", "connector.batch.size"),
 		Entry("connector.max.age", "connector.max.age"),
+		Entry("standard.interval", "standard.interval"),
 		Entry("validation.interval", "validation.interval"),
 		Entry("validation.attempts.threshold", "validation.attempts.threshold"),
 		Entry("validation.percentage.threshold", "validation.percentage.threshold"),

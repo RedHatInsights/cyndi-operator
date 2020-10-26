@@ -95,6 +95,8 @@ CREATE INDEX {{.TableName}}_system_profile_index ON inventory.{{.TableName}}
 USING GIN (system_profile JSONB_PATH_OPS);
 `
 
+const defaultStandardInterval int64 = 300
+
 var defaultValidationConfig = ValidationConfiguration{
 	Interval:            60 * 30,
 	AttemptsThreshold:   5,

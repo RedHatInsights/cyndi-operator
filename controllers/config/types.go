@@ -25,6 +25,9 @@ type CyndiConfiguration struct {
 
 	DBTableInitScript string
 
+	// How often the Reconcile function should run even if there is no event
+	StandardInterval int64
+
 	ValidationConfig     ValidationConfiguration
 	ValidationConfigInit ValidationConfiguration
 
