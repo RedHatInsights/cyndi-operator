@@ -24,12 +24,16 @@ import (
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -268,6 +272,36 @@ func (r *CyndiPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cyndi.CyndiPipeline{}).
 		Owns(connect.EmptyConnector()).
+		// trigger Reconcile if "cyndi" ConfigMap changes
+		Watches(&source.Kind{Type: &v1.ConfigMap{}}, &handler.EnqueueRequestsFromMapFunc{
+			ToRequests: handler.ToRequestsFunc(
+				func(configMap handler.MapObject) []reconcile.Request {
+					requests := []reconcile.Request{}
+
+					if configMap.Meta.GetName() != configMapName {
+						return requests
+					}
+
+					// cyndi configmap changed - let's Reconcile all CyndiPipelines in the given namespace
+					pipelines, err := utils.FetchCyndiPipelines(r.Client, configMap.Meta.GetNamespace())
+					if err != nil {
+						r.Log.Error(err, "Failed to fetch CyndiPipelines", "namespace", configMap.Meta.GetNamespace())
+						return requests
+					}
+
+					for _, pipeline := range pipelines.Items {
+						requests = append(requests, reconcile.Request{
+							NamespacedName: types.NamespacedName{
+								Namespace: configMap.Meta.GetNamespace(),
+								Name:      pipeline.GetName(),
+							},
+						})
+					}
+
+					r.Log.Info("Cyndi ConfigMap changed. Reconciling CyndiPipelines", "namespace", configMap.Meta.GetNamespace(), "pipelines", requests)
+					return requests
+				}),
+		}).
 		Complete(r)
 }
 
