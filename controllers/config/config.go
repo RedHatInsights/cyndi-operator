@@ -32,6 +32,10 @@ func BuildCyndiConfig(instance *cyndiv1beta1.CyndiPipeline, cm *corev1.ConfigMap
 
 	config.DBTableInitScript = getStringValue(cm, "db.schema", defaultDBTableInitScript)
 
+	if config.StandardInterval, err = getIntValue(cm, "standard.interval", defaultStandardInterval); err != nil {
+		return config, err
+	}
+
 	if config.ValidationConfig, err = getValidationConfig(cm, "", defaultValidationConfig); err != nil {
 		return config, err
 	}
