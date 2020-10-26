@@ -235,6 +235,7 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
 			Expect(pipeline.Status.SyndicatedDataIsValid).To(BeFalse())
+			Expect(pipeline.Status.ActiveTableName).To(Equal(""))
 
 			connector, err := connect.GetConnector(test.Client, pipeline.Status.ConnectorName, namespacedName.Namespace)
 			Expect(err).ToNot(HaveOccurred())
@@ -321,15 +322,14 @@ var _ = Describe("Pipeline operations", func() {
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
+			Expect(pipeline.Status.ActiveTableName).ToNot(Equal(""))
 
 			viewExists, err := db.CheckIfTableExists("hosts")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(viewExists).To(BeTrue())
 		})
-	})
 
-	Describe("Invalid -> New", func() {
-		It("Triggers refresh if pipeline is invalid for too long", func() {
+		It("Triggers refresh if pipeline fails to become valid for too long", func() {
 			createPipeline(namespacedName)
 			reconcile()
 
@@ -347,8 +347,74 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
 			Expect(pipeline.Status.PipelineVersion).To(Equal(""))
 		})
+	})
 
-		// TODO test existing view is kept until valid
+	Describe("Invalid -> New", func() {
+		It("Triggers refresh if pipeline in invalid for too long", func() {
+			createPipeline(namespacedName)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			pipeline.Status.SyndicatedDataIsValid = false
+			pipeline.Status.ValidationFailedCount = 6
+
+			err := test.Client.Status().Update(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
+			Expect(pipeline.Status.PipelineVersion).To(Equal(""))
+		})
+
+		Context("In a refresh", func() {
+			It("Keeps the old table active until the new one is valid", func() {
+				createPipeline(namespacedName)
+				reconcile()
+
+				pipeline := getPipeline(namespacedName)
+				setPipelineValid(namespacedName, true)
+				reconcile()
+
+				pipeline = getPipeline(namespacedName)
+				activeTableName := pipeline.Status.ActiveTableName
+				pipeline.Status.SyndicatedDataIsValid = false
+				pipeline.Status.ValidationFailedCount = 6
+
+				err := test.Client.Status().Update(context.TODO(), pipeline)
+				Expect(err).ToNot(HaveOccurred())
+				reconcile()
+
+				pipeline = getPipeline(namespacedName)
+				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+				Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
+				Expect(pipeline.Status.PipelineVersion).To(Equal(""))
+				Expect(pipeline.Status.ActiveTableName).To(Equal(activeTableName))
+				reconcile()
+
+				pipeline = getPipeline(namespacedName)
+				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
+				// while the new table is being seeded, the old one should still remain active (backing the hosts view)
+				Expect(pipeline.Status.ActiveTableName).To(Equal(activeTableName))
+
+				table, err := db.GetCurrentTable()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(*table).To(Equal(pipeline.Status.ActiveTableName))
+
+				setPipelineValid(namespacedName, true)
+				reconcile()
+
+				// at this point the new table should be active
+				pipeline = getPipeline(namespacedName)
+				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+				Expect(pipeline.Status.ActiveTableName).ToNot(Equal(activeTableName))
+			})
+		})
 	})
 
 	Describe("Valid -> New", func() {
@@ -379,6 +445,7 @@ var _ = Describe("Pipeline operations", func() {
 			table, err := db.GetCurrentTable()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(*table).To(Equal(tableName))
+			Expect(*table).To(Equal(pipeline.Status.ActiveTableName))
 		})
 
 		It("Triggers refresh if configmap changes", func() {
@@ -416,6 +483,7 @@ var _ = Describe("Pipeline operations", func() {
 			table, err := db.GetCurrentTable()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(*table).To(Equal(tableName))
+			Expect(*table).To(Equal(pipeline.Status.ActiveTableName))
 		})
 
 		It("Triggers refresh if table disappears", func() {
@@ -444,6 +512,7 @@ var _ = Describe("Pipeline operations", func() {
 			reconcile()
 
 			pipeline := getPipeline(namespacedName)
+			tableName := pipeline.Status.ActiveTableName
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
 
 			err := connect.DeleteConnector(test.Client, pipeline.Status.ConnectorName, namespacedName.Namespace)
@@ -452,6 +521,7 @@ var _ = Describe("Pipeline operations", func() {
 
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+			Expect(pipeline.Status.ActiveTableName).To(Equal(tableName))
 		})
 
 		It("Triggers refresh if connector configuration disagrees", func() {

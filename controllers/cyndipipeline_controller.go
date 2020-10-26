@@ -74,12 +74,17 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 	}
 
 	i = ReconcileIteration{
-		Instance:  instance,
-		Client:    r.Client,
-		Clientset: r.Clientset,
-		Scheme:    r.Scheme,
-		Log:       reqLogger,
-		Now:       time.Now().Format(time.RFC3339)}
+		Instance:         instance,
+		OriginalInstance: instance.DeepCopy(),
+		Client:           r.Client,
+		Clientset:        r.Clientset,
+		Scheme:           r.Scheme,
+		Log:              reqLogger,
+		Now:              time.Now().Format(time.RFC3339),
+		GetRequeueInterval: func(Instance *ReconcileIteration) int64 {
+			return i.config.StandardInterval
+		},
+	}
 
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartRecordingToSink(
@@ -174,7 +179,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		}
 
 		i.Log.Info("Transitioning to InitialSync")
-		return i.UpdateStatus()
+		return i.updateStatusAndRequeue()
 	}
 
 	problem, err := i.checkForDeviation()
@@ -183,7 +188,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	} else if problem != nil {
 		i.Log.Info("Refreshing pipeline due to state deviation", "reason", problem)
 		i.Instance.TransitionToNew()
-		return i.UpdateStatus()
+		return i.updateStatusAndRequeue()
 	}
 
 	// STATE_VALID
@@ -192,9 +197,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 			return reconcile.Result{}, i.errorWithEvent("Error updating hosts view", err)
 		}
 
-		// TODO requeue if updates - for cleanup
-
-		return i.UpdateStatus()
+		return i.updateStatusAndRequeue()
 	}
 
 	// invalid pipeline - either STATE_INITIAL_SYNC or STATE_INVALID
@@ -202,11 +205,11 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		if i.Instance.Status.ValidationFailedCount > i.getValidationConfig().AttemptsThreshold {
 			i.Log.Info("Pipeline failed to become valid. Refreshing.")
 			i.Instance.TransitionToNew()
-			return i.UpdateStatus()
+			return i.updateStatusAndRequeue()
 		}
 	}
 
-	return i.UpdateStatus()
+	return i.updateStatusAndRequeue()
 }
 
 func (i *ReconcileIteration) deleteStaleDependencies() error {
