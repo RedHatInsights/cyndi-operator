@@ -21,12 +21,12 @@ import (
 var (
 	namespacedName types.NamespacedName
 	dbParams       DBParams
-	hbiDb          *database.Database
+	hbiDb          database.Database
 	appDb          *database.AppDatabase
 	r              *ValidationReconciler
 )
 
-func createSeededTable(db *database.Database, TestTable string, ids ...string) {
+func createSeededTable(db database.Database, TestTable string, ids ...string) {
 	rows, err := db.RunQuery(fmt.Sprintf("CREATE TABLE %s (id uuid PRIMARY KEY)", TestTable))
 	Expect(err).ToNot(HaveOccurred())
 	rows.Close()
@@ -34,7 +34,7 @@ func createSeededTable(db *database.Database, TestTable string, ids ...string) {
 	seedTable(db, TestTable, ids...)
 }
 
-func seedTable(db *database.Database, TestTable string, ids ...string) {
+func seedTable(db database.Database, TestTable string, ids ...string) {
 	for _, id := range ids {
 		rows, err := db.RunQuery(fmt.Sprintf("INSERT INTO %s (id) VALUES ('%s')", TestTable, id))
 		Expect(err).ToNot(HaveOccurred())
@@ -82,7 +82,7 @@ var _ = Describe("Validation controller", func() {
 		_, err = appDb.Exec(`DROP SCHEMA IF EXISTS "inventory" CASCADE; CREATE SCHEMA "inventory";`)
 		Expect(err).ToNot(HaveOccurred())
 
-		hbiDb = database.NewDatabase(&dbParams)
+		hbiDb = database.NewBaseDatabase(&dbParams)
 		err = hbiDb.Connect()
 		Expect(err).ToNot(HaveOccurred())
 
@@ -110,9 +110,8 @@ var _ = Describe("Validation controller", func() {
 			initializePipeline(false)
 			pipeline := getPipeline(namespacedName)
 
-			// TODO: inheritance
 			seedTable(hbiDb, "public.hosts", hosts...)
-			createSeededTable(&appDb.Database, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts...)
+			createSeededTable(appDb, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts...)
 
 			reconcile()
 			pipeline = getPipeline(namespacedName)
@@ -138,9 +137,8 @@ var _ = Describe("Validation controller", func() {
 			initializePipeline(true)
 			pipeline := getPipeline(namespacedName)
 
-			// TODO: inheritance
 			seedTable(hbiDb, "public.hosts", hosts...)
-			createSeededTable(&appDb.Database, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[0:5]...)
+			createSeededTable(appDb, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[0:5]...)
 
 			reconcile()
 			pipeline = getPipeline(namespacedName)
@@ -165,9 +163,8 @@ var _ = Describe("Validation controller", func() {
 			initializePipeline(false)
 			pipeline := getPipeline(namespacedName)
 
-			// TODO: inheritance
 			seedTable(hbiDb, "public.hosts", hosts...)
-			createSeededTable(&appDb.Database, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[0:1]...)
+			createSeededTable(appDb, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[0:1]...)
 
 			reconcile()
 			pipeline = getPipeline(namespacedName)
@@ -193,9 +190,8 @@ var _ = Describe("Validation controller", func() {
 			initializePipeline(true)
 			pipeline := getPipeline(namespacedName)
 
-			// TODO: inheritance
 			seedTable(hbiDb, "public.hosts", hosts...)
-			createSeededTable(&appDb.Database, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[0:4]...)
+			createSeededTable(appDb, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[0:4]...)
 
 			reconcile()
 			pipeline = getPipeline(namespacedName)
@@ -218,9 +214,8 @@ var _ = Describe("Validation controller", func() {
 			initializePipeline(false)
 			pipeline := getPipeline(namespacedName)
 
-			// TODO: inheritance
 			seedTable(hbiDb, "public.hosts", hosts...)
-			createSeededTable(&appDb.Database, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[0:1]...)
+			createSeededTable(appDb, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[0:1]...)
 
 			for i := 1; i < 10; i++ {
 				reconcile()

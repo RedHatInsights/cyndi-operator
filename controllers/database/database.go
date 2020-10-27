@@ -9,20 +9,20 @@ import (
 	. "cyndi-operator/controllers/config"
 )
 
-type Database struct {
+type BaseDatabase struct {
 	Config     *DBParams
 	connection *pgx.Conn
 }
 
 const connectionStringTemplate = "host=%s user=%s password=%s dbname=%s port=%s"
 
-func NewDatabase(config *config.DBParams) *Database {
-	return &Database{
+func NewBaseDatabase(config *config.DBParams) Database {
+	return &BaseDatabase{
 		Config: config,
 	}
 }
 
-func (db *Database) Connect() (err error) {
+func (db *BaseDatabase) Connect() (err error) {
 	if db.connection, err = GetConnection(db.Config); err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func (db *Database) Connect() (err error) {
 	return nil
 }
 
-func (db *Database) Close() error {
+func (db *BaseDatabase) Close() error {
 	if db.connection != nil {
 		return db.connection.Close()
 	}
@@ -38,7 +38,7 @@ func (db *Database) Close() error {
 	return nil
 }
 
-func (db *Database) RunQuery(query string) (*pgx.Rows, error) {
+func (db *BaseDatabase) RunQuery(query string) (*pgx.Rows, error) {
 	rows, err := db.connection.Query(query)
 
 	if err != nil {
@@ -48,7 +48,7 @@ func (db *Database) RunQuery(query string) (*pgx.Rows, error) {
 	return rows, nil
 }
 
-func (db *Database) Exec(query string) (result pgx.CommandTag, err error) {
+func (db *BaseDatabase) Exec(query string) (result pgx.CommandTag, err error) {
 	result, err = db.connection.Exec(query)
 
 	if err != nil {
@@ -58,7 +58,7 @@ func (db *Database) Exec(query string) (result pgx.CommandTag, err error) {
 	return result, nil
 }
 
-func (db *Database) CountHosts(table string) (int64, error) {
+func (db *BaseDatabase) CountHosts(table string) (int64, error) {
 	// TODO: add modified_on filter
 	//query := fmt.Sprintf(
 	//	"SELECT count(*) FROM %s WHERE modified_on < '%s'", table, i.Now)
@@ -93,7 +93,7 @@ func (db *Database) CountHosts(table string) (int64, error) {
 }
 
 // TODO move to database
-func (db *Database) GetHostIds(table string) ([]string, error) {
+func (db *BaseDatabase) GetHostIds(table string) ([]string, error) {
 	// TODO" "AND canonical_facts ? 'insights_id'" when !view and insightsOnly
 	// also add "AND canonical_facts ? 'insights_id'"
 	// waiting on https://issues.redhat.com/browse/RHCLOUD-9545

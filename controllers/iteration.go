@@ -35,7 +35,7 @@ type ReconcileIteration struct {
 	AppDBParams config.DBParams
 
 	AppDb       *database.AppDatabase
-	InventoryDb *database.Database
+	InventoryDb database.Database
 
 	Now string
 

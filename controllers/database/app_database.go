@@ -8,7 +8,7 @@ import (
 )
 
 type AppDatabase struct {
-	Database
+	BaseDatabase
 }
 
 const viewTemplate = `CREATE OR REPLACE VIEW inventory.hosts AS SELECT
@@ -29,7 +29,7 @@ const cullingCulledOffset = "14"
 
 func NewAppDatabase(config *config.DBParams) *AppDatabase {
 	return &AppDatabase{
-		Database: Database{
+		BaseDatabase: BaseDatabase{
 			Config: config,
 		},
 	}

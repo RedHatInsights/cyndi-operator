@@ -13,7 +13,7 @@ func TestConfig(t *testing.T) {
 	test.Setup(t, "Database")
 }
 
-func createSeededTable(db *Database, TestTable string, ids ...string) {
+func createSeededTable(db Database, TestTable string, ids ...string) {
 	rows, err := db.RunQuery(fmt.Sprintf("CREATE TABLE %s (id uuid PRIMARY KEY)", TestTable))
 	Expect(err).ToNot(HaveOccurred())
 	rows.Close()
@@ -27,11 +27,11 @@ func createSeededTable(db *Database, TestTable string, ids ...string) {
 }
 
 var _ = Describe("Database", func() {
-	var db *Database
+	var db Database
 
 	BeforeEach(uniqueTable)
 	BeforeEach(func() {
-		db = NewDatabase(getDBParams())
+		db = NewBaseDatabase(getDBParams())
 
 		err := db.Connect()
 		Expect(err).ToNot(HaveOccurred())
