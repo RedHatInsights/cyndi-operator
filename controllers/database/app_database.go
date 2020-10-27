@@ -43,7 +43,7 @@ func (db *AppDatabase) CheckIfTableExists(tableName string) (bool, error) {
 	query := fmt.Sprintf(
 		"SELECT exists (SELECT FROM information_schema.tables WHERE table_schema = 'inventory' AND table_name = '%s')",
 		tableName)
-	rows, err := db.runQuery(query)
+	rows, err := db.RunQuery(query)
 
 	if err != nil {
 		return false, err
@@ -102,7 +102,7 @@ func (db *AppDatabase) UpdateView(tableName string) error {
 
 func (db *AppDatabase) GetCurrentTable() (table *string, err error) {
 	query := "SELECT table_name FROM information_schema.view_table_usage WHERE view_schema = 'inventory' AND view_name = 'hosts' LIMIT 1;"
-	rows, err := db.runQuery(query)
+	rows, err := db.RunQuery(query)
 
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func (db *AppDatabase) GetCurrentTable() (table *string, err error) {
 
 func (db *AppDatabase) GetCyndiTables() (tables []string, err error) {
 	query := "SELECT table_name FROM information_schema.tables WHERE table_schema = 'inventory' AND table_type = 'BASE TABLE' AND table_name LIKE 'hosts_%' ORDER BY table_name"
-	rows, err := db.runQuery(query)
+	rows, err := db.RunQuery(query)
 
 	if err != nil {
 		return tables, err

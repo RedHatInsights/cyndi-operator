@@ -42,7 +42,6 @@ func (instance *CyndiPipeline) GetState() PipelineState {
 func (instance *CyndiPipeline) TransitionToNew() error {
 	instance.ResetValid()
 	instance.Status.InitialSyncInProgress = false
-	instance.Status.ValidationFailedCount = 0
 	instance.Status.PipelineVersion = ""
 	return nil
 }
@@ -54,7 +53,6 @@ func (instance *CyndiPipeline) TransitionToInitialSync(pipelineVersion string) e
 
 	instance.ResetValid()
 	instance.Status.InitialSyncInProgress = true
-	instance.Status.ValidationFailedCount = 0
 	instance.Status.PipelineVersion = pipelineVersion
 	instance.Status.ConnectorName = ConnectorName(pipelineVersion, instance.Spec.AppName)
 	instance.Status.TableName = TableName(pipelineVersion)
@@ -69,6 +67,16 @@ func (instance *CyndiPipeline) SetValid(status metav1.ConditionStatus, reason st
 		Reason:  reason,
 		Message: message,
 	})
+
+	switch status {
+	case metav1.ConditionFalse:
+		instance.Status.ValidationFailedCount++
+	case metav1.ConditionUnknown:
+		instance.Status.ValidationFailedCount = 0
+	case metav1.ConditionTrue:
+		instance.Status.ValidationFailedCount = 0
+		instance.Status.InitialSyncInProgress = false
+	}
 }
 
 func (instance *CyndiPipeline) ResetValid() {

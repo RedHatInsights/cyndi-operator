@@ -74,14 +74,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ValidationReconciler{
-		CyndiPipelineReconciler: controllers.CyndiPipelineReconciler{
-			Client:    mgr.GetClient(),
-			Clientset: clientset,
-			Log:       ctrl.Log.WithName("controllers").WithName("CyndiValidation"),
-			Scheme:    mgr.GetScheme(),
-		},
-	}).SetupWithManager(mgr); err != nil {
+	if err = controllers.NewValidationReconciler(mgr.GetClient(), clientset, mgr.GetScheme(), ctrl.Log.WithName("controllers").WithName("CyndiValidation"), true).
+		SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Validation")
 		os.Exit(1)
 	}
