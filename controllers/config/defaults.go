@@ -24,17 +24,15 @@ const defaultConnectorTemplate = `{
 	"fields.whitelist": "account,display_name,tags,updated,created,stale_timestamp,system_profile",
 
 	{{ if eq .InsightsOnly "true" }}
-	"transforms": "timestampFilterShort,insightsFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,injectSchemaKey,injectSchemaValue",
+	"transforms": "timestampFilter,insightsFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,injectSchemaKey,injectSchemaValue",
 	"transforms.insightsFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
 	"transforms.insightsFilter.predicate": "!!record.headers().lastWithName('insights_id').value()",
 	{{ else  }}
-	"transforms": "timestampFilterLong,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,injectSchemaKey,injectSchemaValue",
+	"transforms": "timestampFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,injectSchemaKey,injectSchemaValue",
 	{{ end }}
 
-	"transforms.timestampFilterLong.type":"com.redhat.insights.kafka.connect.transforms.Filter",
-	"transforms.timestampFilterLong.predicate": "(Date.now() - record.timestamp()) < 45 * 24 * 60 * 60 * 1000",
-	"transforms.timestampFilterShort.type":"com.redhat.insights.kafka.connect.transforms.Filter",
-	"transforms.timestampFilterShort.predicate": "(Date.now() - record.timestamp()) < 21 * 24 * 60 * 60 * 1000",
+	"transforms.timestampFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
+	"transforms.timestampFilter.predicate": "(Date.now() - record.timestamp()) < {{.MaxAge}} * 24 * 60 * 60 * 1000",
 	"transforms.deleteToTombstone.type":"com.redhat.insights.kafka.connect.transforms.DropIf$Value",
 	"transforms.deleteToTombstone.predicate": "'delete'.equals(record.headers().lastWithName('event_type').value())",
 	"transforms.extractHost.type":"org.apache.kafka.connect.transforms.ExtractField$Value",
