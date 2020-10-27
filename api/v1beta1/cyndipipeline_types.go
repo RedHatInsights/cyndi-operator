@@ -34,12 +34,17 @@ type CyndiPipelineSpec struct {
 
 // CyndiPipelineStatus defines the observed state of CyndiPipeline
 type CyndiPipelineStatus struct {
-	ValidationFailedCount int64  `json:"validationFailedCount"`
-	ConnectorName         string `json:"cyndiPipelineName"`
-	TableName             string `json:"tableName"`
-	PipelineVersion       string `json:"pipelineVersion"`
-	CyndiConfigVersion    string `json:"cyndiConfigVersion"`
-	InitialSyncInProgress bool   `json:"initialSyncInProgress"`
+
+	// +kubebuilder:validation:Minimum:=0
+	ValidationFailedCount int64 `json:"validationFailedCount"`
+
+	PipelineVersion string `json:"pipelineVersion"`
+	ConnectorName   string `json:"cyndiPipelineName"`
+	TableName       string `json:"tableName"`
+
+	CyndiConfigVersion string `json:"cyndiConfigVersion"`
+
+	InitialSyncInProgress bool `json:"initialSyncInProgress"`
 
 	// Name of the database table that is currently backing the "inventory.hosts" view
 	// May differ from TableName e.g. during a refresh
@@ -50,6 +55,14 @@ type CyndiPipelineStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=cyndi,categories=all
+// +kubebuilder:printcolumn:name="App",type=string,JSONPath=`.spec.appName`
+// +kubebuilder:printcolumn:name="Insights only",type=boolean,JSONPath=`.spec.insightsOnly`
+// +kubebuilder:printcolumn:name="Active table",type=string,JSONPath=`.status.activeTableName`
+// +kubebuilder:printcolumn:name="Valid",type=string,JSONPath=`.status.conditions[?(@.type == "Valid")].status`
+// +kubebuilder:printcolumn:name="Initial sync",type=boolean,JSONPath=`.status.initialSyncInProgress`
+// +kubebuilder:printcolumn:name="Validation failure count",type=integer,JSONPath=`.status.validationFailedCount`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // CyndiPipeline is the Schema for the cyndipipelines API
 type CyndiPipeline struct {

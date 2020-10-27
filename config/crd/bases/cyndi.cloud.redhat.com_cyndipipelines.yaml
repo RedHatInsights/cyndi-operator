@@ -8,11 +8,37 @@ metadata:
   creationTimestamp: null
   name: cyndipipelines.cyndi.cloud.redhat.com
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.appName
+    name: App
+    type: string
+  - JSONPath: .spec.insightsOnly
+    name: Insights only
+    type: boolean
+  - JSONPath: .status.activeTableName
+    name: Active table
+    type: string
+  - JSONPath: .status.conditions[?(@.type == "Valid")].status
+    name: Valid
+    type: string
+  - JSONPath: .status.initialSyncInProgress
+    name: Initial sync
+    type: boolean
+  - JSONPath: .status.validationFailedCount
+    name: Validation failure count
+    type: integer
+  - JSONPath: .metadata.creationTimestamp
+    name: Age
+    type: date
   group: cyndi.cloud.redhat.com
   names:
+    categories:
+    - all
     kind: CyndiPipeline
     listKind: CyndiPipelineList
     plural: cyndipipelines
+    shortNames:
+    - cyndi
     singular: cyndipipeline
   scope: Namespaced
   subresources:
@@ -133,6 +159,7 @@ spec:
               type: string
             validationFailedCount:
               format: int64
+              minimum: 0
               type: integer
           required:
           - activeTableName
