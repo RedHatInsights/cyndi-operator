@@ -14,12 +14,12 @@ func TestConfig(t *testing.T) {
 }
 
 func createSeededTable(db *Database, TestTable string, ids ...string) {
-	rows, err := db.runQuery(fmt.Sprintf("CREATE TABLE %s (id uuid PRIMARY KEY)", TestTable))
+	rows, err := db.RunQuery(fmt.Sprintf("CREATE TABLE %s (id uuid PRIMARY KEY)", TestTable))
 	Expect(err).ToNot(HaveOccurred())
 	rows.Close()
 
 	for _, id := range ids {
-		rows, err = db.runQuery(fmt.Sprintf("INSERT INTO %s (id) VALUES ('%s')", TestTable, id))
+		rows, err = db.RunQuery(fmt.Sprintf("INSERT INTO %s (id) VALUES ('%s')", TestTable, id))
 		Expect(err).ToNot(HaveOccurred())
 		rows.Close()
 	}
@@ -49,7 +49,7 @@ var _ = Describe("Database", func() {
 
 	Context("With database connection", func() {
 		It("Simple query", func() {
-			rows, err := db.runQuery("SELECT 1+1")
+			rows, err := db.RunQuery("SELECT 1+1")
 			Expect(err).ToNot(HaveOccurred())
 			rows.Close()
 		})

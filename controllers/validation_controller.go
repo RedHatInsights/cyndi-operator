@@ -7,9 +7,12 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -17,6 +20,10 @@ import (
 
 type ValidationReconciler struct {
 	CyndiPipelineReconciler
+
+	// if true the Reconciler will check for pipeline state deviation
+	// should always be true except for tests
+	CheckResourceDeviation bool
 }
 
 func (r *ValidationReconciler) setup(reqLogger logr.Logger, request ctrl.Request) (ReconcileIteration, error) {
@@ -51,24 +58,21 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	}
 
 	// nothing to validate
-	if i.Instance == nil || i.Instance.GetState() == cyndiv1beta1.STATE_REMOVED {
+	if i.Instance == nil || i.Instance.GetState() == cyndiv1beta1.STATE_REMOVED || i.Instance.GetState() == cyndiv1beta1.STATE_NEW {
 		return reconcile.Result{}, nil
-	}
-
-	// new pipeline, nothing to validate yet
-	if i.Instance.GetState() == cyndiv1beta1.STATE_NEW {
-		return reconcile.Result{Requeue: true}, nil
 	}
 
 	reqLogger.Info("Validating CyndiPipeline")
 
-	problem, err := i.checkForDeviation()
-	if err != nil {
-		return reconcile.Result{}, i.errorWithEvent("Error validating dependencies", err)
-	} else if problem != nil {
-		i.Log.Info("Refreshing pipeline due to state deviation", "reason", problem)
-		i.Instance.TransitionToNew()
-		return i.updateStatusAndRequeue()
+	if r.CheckResourceDeviation {
+		problem, err := i.checkForDeviation()
+		if err != nil {
+			return reconcile.Result{}, i.errorWithEvent("Error validating dependencies", err)
+		} else if problem != nil {
+			i.Log.Info("Refreshing pipeline due to state deviation", "reason", problem)
+			i.Instance.TransitionToNew()
+			return i.updateStatusAndRequeue()
+		}
 	}
 
 	isValid, mismatchRatio, mismatchCount, err := i.validate()
@@ -79,7 +83,6 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	reqLogger.Info("Validation finished", "isValid", isValid)
 
 	if isValid {
-		i.Instance.Status.InitialSyncInProgress = false
 		i.Instance.SetValid(
 			metav1.ConditionTrue,
 			"ValidationSucceeded",
@@ -130,4 +133,16 @@ func (r *ValidationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&cyndiv1beta1.CyndiPipeline{}).
 		WithEventFilter(eventFilterPredicate()).
 		Complete(r)
+}
+
+func NewValidationReconciler(client client.Client, clientset *kubernetes.Clientset, scheme *runtime.Scheme, log logr.Logger, checkResourceDeviation bool) *ValidationReconciler {
+	return &ValidationReconciler{
+		CyndiPipelineReconciler: CyndiPipelineReconciler{
+			Client:    client,
+			Clientset: clientset,
+			Log:       log,
+			Scheme:    scheme,
+		},
+		CheckResourceDeviation: checkResourceDeviation,
+	}
 }

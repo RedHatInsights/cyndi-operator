@@ -79,7 +79,7 @@ var _ = Describe("Application Database", func() {
 			err = db.UpdateView(TestTable)
 			Expect(err).ToNot(HaveOccurred())
 
-			rows, err := db.runQuery("SELECT * FROM inventory.hosts")
+			rows, err := db.RunQuery("SELECT * FROM inventory.hosts")
 			Expect(err).ToNot(HaveOccurred())
 			rows.Close()
 		})

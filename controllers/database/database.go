@@ -38,7 +38,7 @@ func (db *Database) Close() error {
 	return nil
 }
 
-func (db *Database) runQuery(query string) (*pgx.Rows, error) {
+func (db *Database) RunQuery(query string) (*pgx.Rows, error) {
 	rows, err := db.connection.Query(query)
 
 	if err != nil {
@@ -67,7 +67,7 @@ func (db *Database) CountHosts(table string) (int64, error) {
 
 	query := fmt.Sprintf("SELECT count(*) FROM %s", table)
 
-	rows, err := db.runQuery(query)
+	rows, err := db.RunQuery(query)
 
 	if err != nil {
 		return -1, err
@@ -98,7 +98,7 @@ func (db *Database) GetHostIds(table string) ([]string, error) {
 	// also add "AND canonical_facts ? 'insights_id'"
 	// waiting on https://issues.redhat.com/browse/RHCLOUD-9545
 	query := fmt.Sprintf("SELECT id FROM %s ORDER BY id", table)
-	rows, err := db.runQuery(query)
+	rows, err := db.RunQuery(query)
 
 	var ids []string
 
