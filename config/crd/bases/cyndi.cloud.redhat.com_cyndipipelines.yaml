@@ -66,8 +66,17 @@ spec:
               maxLength: 64
               minLength: 1
               type: string
+            connectCluster:
+              minLength: 1
+              type: string
             insightsOnly:
               type: boolean
+            maxAge:
+              format: int64
+              type: integer
+            validationThreshold:
+              format: int64
+              type: integer
           required:
           - appName
           type: object

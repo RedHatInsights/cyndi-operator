@@ -26,6 +26,6 @@ func (i *ReconcileIteration) parseConfig() error {
 		}
 	}
 
-	i.config, err = config.BuildCyndiConfig(nil, cyndiConfig)
+	i.config, err = config.BuildCyndiConfig(i.Instance, cyndiConfig)
 	return err
 }

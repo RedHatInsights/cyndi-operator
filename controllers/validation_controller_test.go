@@ -224,5 +224,39 @@ var _ = Describe("Validation controller", func() {
 				Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(i)))
 			}
 		})
+
+		It("Uses threshold defined on the pipeline level", func() {
+			createPipeline(namespacedName)
+
+			// TODO: move to createPipeline
+			pipeline := getPipeline(namespacedName)
+			var newValue int64 = 5
+			pipeline.Spec.ValidationThreshold = &newValue
+			err := test.Client.Update(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+
+			var hosts = []string{
+				"3b8c0b37-6208-4323-b7df-030fee22db0c",
+				"99d28b1e-aad8-4ac0-8d98-ef33e7d3856e",
+				"14bcbbb5-8837-4d24-8122-1d44b65680f5",
+				"e1f13b37-a74c-4b49-a764-bcb094713201",
+				"e805b88e-f796-4c3c-8c36-3026d598e502",
+				"a472db5c-cb32-492e-a1ca-e86baa0bad72",
+			}
+
+			initializePipeline(false)
+			pipeline = getPipeline(namespacedName)
+
+			seedTable(hbiDb, "public.hosts", hosts...)
+			createSeededTable(appDb, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[1:6]...)
+
+			reconcile()
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.IsValid()).To(BeFalse())
+			Expect(pipeline.Status.Conditions[0].Reason).To(Equal("ValidationFailed"))
+			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation failed - 1 hosts (16.67%) do not match which is above the threshold for invalid pipeline (5%)"))
+			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
+			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(1)))
+		})
 	})
 })

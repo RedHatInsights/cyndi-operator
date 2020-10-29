@@ -29,7 +29,20 @@ type CyndiPipelineSpec struct {
 	AppName string `json:"appName"`
 
 	// +optional
-	InsightsOnly bool `json:"insightsOnly"`
+	InsightsOnly bool `json:"insightsOnly,omitempty"`
+
+	// +optional
+	// +kubebuilder:validation:MinLength:=1
+	ConnectCluster *string `json:"connectCluster,omitempty"`
+
+	// +optional
+	// +kubebuilder:validation:Min:=0
+	MaxAge *int64 `json:"maxAge,omitempty"`
+
+	// +optional
+	// +kubebuilder:validation:Min:=0
+	// +kubebuilder:validation:Max:=100
+	ValidationThreshold *int64 `json:"validationThreshold,omitempty"`
 }
 
 // CyndiPipelineStatus defines the observed state of CyndiPipeline
