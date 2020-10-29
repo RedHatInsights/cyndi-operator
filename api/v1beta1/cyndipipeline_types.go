@@ -64,6 +64,8 @@ type CyndiPipelineStatus struct {
 	ActiveTableName string `json:"activeTableName"`
 
 	Conditions []metav1.Condition `json:"conditions"`
+
+	HostCount int64 `json:"hostCount"`
 }
 
 // +kubebuilder:object:root=true
@@ -73,6 +75,7 @@ type CyndiPipelineStatus struct {
 // +kubebuilder:printcolumn:name="Insights only",type=boolean,JSONPath=`.spec.insightsOnly`
 // +kubebuilder:printcolumn:name="Active table",type=string,JSONPath=`.status.activeTableName`
 // +kubebuilder:printcolumn:name="Valid",type=string,JSONPath=`.status.conditions[?(@.type == "Valid")].status`
+// +kubebuilder:printcolumn:name="Host Count",type="integer",JSONPath=".status.hostCount"
 // +kubebuilder:printcolumn:name="Initial sync",type=boolean,JSONPath=`.status.initialSyncInProgress`
 // +kubebuilder:printcolumn:name="Validation failure count",type=integer,JSONPath=`.status.validationFailedCount`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"

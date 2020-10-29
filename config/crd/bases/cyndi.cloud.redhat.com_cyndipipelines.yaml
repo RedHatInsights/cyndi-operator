@@ -21,6 +21,9 @@ spec:
   - JSONPath: .status.conditions[?(@.type == "Valid")].status
     name: Valid
     type: string
+  - JSONPath: .status.hostCount
+    name: Host Count
+    type: integer
   - JSONPath: .status.initialSyncInProgress
     name: Initial sync
     type: boolean
@@ -160,6 +163,9 @@ spec:
               type: string
             cyndiPipelineName:
               type: string
+            hostCount:
+              format: int64
+              type: integer
             initialSyncInProgress:
               type: boolean
             pipelineVersion:
@@ -175,6 +181,7 @@ spec:
           - conditions
           - cyndiConfigVersion
           - cyndiPipelineName
+          - hostCount
           - initialSyncInProgress
           - pipelineVersion
           - tableName

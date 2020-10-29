@@ -60,13 +60,15 @@ func (instance *CyndiPipeline) TransitionToInitialSync(pipelineVersion string) e
 	return nil
 }
 
-func (instance *CyndiPipeline) SetValid(status metav1.ConditionStatus, reason string, message string) {
+func (instance *CyndiPipeline) SetValid(status metav1.ConditionStatus, reason string, message string, hostCount int64) {
 	meta.SetStatusCondition(&instance.Status.Conditions, metav1.Condition{
 		Type:    validConditionType,
 		Status:  status,
 		Reason:  reason,
 		Message: message,
 	})
+
+	instance.Status.HostCount = hostCount
 
 	switch status {
 	case metav1.ConditionFalse:
@@ -80,7 +82,7 @@ func (instance *CyndiPipeline) SetValid(status metav1.ConditionStatus, reason st
 }
 
 func (instance *CyndiPipeline) ResetValid() {
-	instance.SetValid(metav1.ConditionUnknown, "New", "Validation not yet run")
+	instance.SetValid(metav1.ConditionUnknown, "New", "Validation not yet run", -1)
 }
 
 func (instance *CyndiPipeline) IsValid() bool {

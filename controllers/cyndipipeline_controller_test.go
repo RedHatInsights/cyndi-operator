@@ -97,17 +97,28 @@ func getDBParams() DBParams {
 	}
 }
 
-func createPipeline(namespacedName types.NamespacedName) {
-	ctx := context.Background()
+func createPipeline(namespacedName types.NamespacedName, specs ...*cyndi.CyndiPipelineSpec) {
+	var (
+		ctx  = context.Background()
+		spec *cyndi.CyndiPipelineSpec
+	)
+
+	Expect(len(specs) <= 1).To(BeTrue())
+
+	if len(specs) == 1 {
+		spec = specs[0]
+	} else {
+		spec = &cyndi.CyndiPipelineSpec{}
+	}
+
+	spec.AppName = namespacedName.Name
 
 	pipeline := cyndi.CyndiPipeline{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      namespacedName.Name,
 			Namespace: namespacedName.Namespace,
 		},
-		Spec: cyndi.CyndiPipelineSpec{
-			AppName: namespacedName.Name,
-		},
+		Spec: *spec,
 	}
 
 	err := test.Client.Create(ctx, &pipeline)
@@ -174,9 +185,9 @@ func setPipelineValid(namespacedName types.NamespacedName, valid bool, fns ...fu
 
 	if valid {
 		pipeline.Status.InitialSyncInProgress = false
-		pipeline.SetValid(metav1.ConditionTrue, "ValidationSucceeded", "Validation succeeded")
+		pipeline.SetValid(metav1.ConditionTrue, "ValidationSucceeded", "Validation succeeded", -1)
 	} else {
-		pipeline.SetValid(metav1.ConditionFalse, "ValidationFailed", "Validation failed")
+		pipeline.SetValid(metav1.ConditionFalse, "ValidationFailed", "Validation failed", -1)
 	}
 
 	for _, fn := range fns {
