@@ -75,7 +75,7 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		}
 	}
 
-	isValid, mismatchRatio, mismatchCount, err := i.validate()
+	isValid, mismatchRatio, mismatchCount, hostCount, err := i.validate()
 	if err != nil {
 		return reconcile.Result{}, i.errorWithEvent("Error validating pipeline", err)
 	}
@@ -92,6 +92,7 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 				mismatchRatio*100,
 				i.getValidationConfig().PercentageThreshold,
 			),
+			hostCount,
 		)
 	} else {
 		i.Instance.SetValid(
@@ -103,6 +104,7 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 				mismatchRatio*100,
 				i.getValidationConfig().PercentageThreshold,
 			),
+			hostCount,
 		)
 	}
 

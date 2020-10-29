@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	cyndi "cyndi-operator/api/v1beta1"
 	"cyndi-operator/controllers/database"
 	"cyndi-operator/test"
 	"fmt"
@@ -49,7 +50,7 @@ func initializePipeline(toValid bool) {
 
 	if toValid {
 		pipeline = getPipeline(namespacedName)
-		pipeline.SetValid(metav1.ConditionTrue, "ValidationSucceeded", "success")
+		pipeline.SetValid(metav1.ConditionTrue, "ValidationSucceeded", "success", 1)
 		Expect(test.Client.Status().Update(context.TODO(), pipeline)).ToNot(HaveOccurred())
 	}
 }
@@ -120,6 +121,7 @@ var _ = Describe("Validation controller", func() {
 			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation succeeded - 0 hosts (0.00%) do not match which is below the threshold for invalid pipeline (40%)"))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
+			Expect(pipeline.Status.HostCount).To(Equal(int64(3)))
 		})
 
 		It("Correctly validates pipeline that's slightly off", func() {
@@ -147,6 +149,7 @@ var _ = Describe("Validation controller", func() {
 			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation succeeded - 1 hosts (16.67%) do not match which is below the threshold for invalid pipeline (20%)"))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
+			Expect(pipeline.Status.HostCount).To(Equal(int64(5)))
 		})
 	})
 
@@ -173,6 +176,7 @@ var _ = Describe("Validation controller", func() {
 			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation failed - 2 hosts (66.67%) do not match which is above the threshold for invalid pipeline (40%)"))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(1)))
+			Expect(pipeline.Status.HostCount).To(Equal(int64(1)))
 		})
 
 		It("Correctly invalidates pipeline that's somewhat off", func() {
@@ -200,6 +204,7 @@ var _ = Describe("Validation controller", func() {
 			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation failed - 2 hosts (33.33%) do not match which is above the threshold for invalid pipeline (20%)"))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(1)))
+			Expect(pipeline.Status.HostCount).To(Equal(int64(4)))
 		})
 
 		It("Keeps incrementing ValidationFailedCount if failures persist", func() {
@@ -226,14 +231,8 @@ var _ = Describe("Validation controller", func() {
 		})
 
 		It("Uses threshold defined on the pipeline level", func() {
-			createPipeline(namespacedName)
-
-			// TODO: move to createPipeline
-			pipeline := getPipeline(namespacedName)
-			var newValue int64 = 5
-			pipeline.Spec.ValidationThreshold = &newValue
-			err := test.Client.Update(context.TODO(), pipeline)
-			Expect(err).ToNot(HaveOccurred())
+			threshold := int64(5)
+			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{ValidationThreshold: &threshold})
 
 			var hosts = []string{
 				"3b8c0b37-6208-4323-b7df-030fee22db0c",
@@ -245,7 +244,7 @@ var _ = Describe("Validation controller", func() {
 			}
 
 			initializePipeline(false)
-			pipeline = getPipeline(namespacedName)
+			pipeline := getPipeline(namespacedName)
 
 			seedTable(hbiDb, "public.hosts", hosts...)
 			createSeededTable(appDb, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[1:6]...)
@@ -257,6 +256,7 @@ var _ = Describe("Validation controller", func() {
 			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation failed - 1 hosts (16.67%) do not match which is above the threshold for invalid pipeline (5%)"))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(1)))
+			Expect(pipeline.Status.HostCount).To(Equal(int64(5)))
 		})
 	})
 })
