@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	cyndi "cyndi-operator/api/v1beta1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -106,4 +108,65 @@ var _ = Describe("Config", func() {
 		Entry("init.validation.attempts.threshold", "init.validation.attempts.threshold"),
 		Entry("init.validation.percentage.threshold", "init.validation.percentage.threshold"),
 	)
+
+	Describe("Override config on CR level", func() {
+		It("Overrides ConnectCluster", func() {
+			cm := &corev1.ConfigMap{
+				Data: map[string]string{
+					"connect.cluster": "cluster01",
+				},
+			}
+
+			value := "cluster02"
+			pipeline := cyndi.CyndiPipeline{
+				Spec: cyndi.CyndiPipelineSpec{
+					ConnectCluster: &value,
+				},
+			}
+
+			config, err := BuildCyndiConfig(&pipeline, cm)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(config.ConnectCluster).To(Equal("cluster02"))
+		})
+
+		It("Overrides MaxAge", func() {
+			cm := &corev1.ConfigMap{
+				Data: map[string]string{
+					"connector.max.age": "10",
+				},
+			}
+
+			value := int64(9)
+			pipeline := cyndi.CyndiPipeline{
+				Spec: cyndi.CyndiPipelineSpec{
+					MaxAge: &value,
+				},
+			}
+
+			config, err := BuildCyndiConfig(&pipeline, cm)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(config.ConnectorMaxAge).To(Equal(int64(9)))
+		})
+
+		It("Overrides ValidationThreshold", func() {
+			cm := &corev1.ConfigMap{
+				Data: map[string]string{
+					"validation.percentage.threshold":      "5",
+					"init.validation.percentage.threshold": "6",
+				},
+			}
+
+			value := int64(7)
+			pipeline := cyndi.CyndiPipeline{
+				Spec: cyndi.CyndiPipelineSpec{
+					ValidationThreshold: &value,
+				},
+			}
+
+			config, err := BuildCyndiConfig(&pipeline, cm)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(config.ValidationConfig.PercentageThreshold).To(Equal(int64(7)))
+			Expect(config.ValidationConfigInit.PercentageThreshold).To(Equal(int64(7)))
+		})
+	})
 })

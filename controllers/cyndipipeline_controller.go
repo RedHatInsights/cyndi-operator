@@ -376,12 +376,20 @@ func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
 
 	}
 
-	if connector.GetLabels()["cyndi/appName"] != i.Instance.Spec.AppName {
-		return fmt.Errorf("App name disagrees (%s vs %s)", connector.GetLabels()["cyndi/appName"], i.Instance.Spec.AppName), nil
+	if connector.GetLabels()[connect.LabelAppName] != i.Instance.Spec.AppName {
+		return fmt.Errorf("App name disagrees (%s vs %s)", connector.GetLabels()[connect.LabelAppName], i.Instance.Spec.AppName), nil
 	}
 
-	if connector.GetLabels()["cyndi/insightsOnly"] != strconv.FormatBool(i.Instance.Spec.InsightsOnly) {
+	if connector.GetLabels()[connect.LabelInsightsOnly] != strconv.FormatBool(i.Instance.Spec.InsightsOnly) {
 		return fmt.Errorf("InsightsOnly changed"), nil
+	}
+
+	if connector.GetLabels()[connect.LabelStrimziCluster] != i.config.ConnectCluster {
+		return fmt.Errorf("ConnectCluster changed from %s to %s", connector.GetLabels()[connect.LabelStrimziCluster], i.config.ConnectCluster), nil
+	}
+
+	if connector.GetLabels()[connect.LabelMaxAge] != strconv.FormatInt(i.config.ConnectorMaxAge, 10) {
+		return fmt.Errorf("MaxAge changed from %s to %d", connector.GetLabels()[connect.LabelMaxAge], i.config.ConnectorMaxAge), nil
 	}
 
 	// TODO: this should be expanded to fully cover the connector

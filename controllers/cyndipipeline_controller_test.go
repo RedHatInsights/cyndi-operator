@@ -541,6 +541,58 @@ var _ = Describe("Pipeline operations", func() {
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
 		})
+
+		It("Triggers refresh if connect cluster changes", func() {
+			createConfigMap(namespacedName.Namespace, "cyndi", map[string]string{"connect.cluster": "cluster01"})
+			createPipeline(namespacedName)
+			reconcile()
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+
+			cluster := "cluster02"
+			pipeline.Spec.ConnectCluster = &cluster
+			err := test.Client.Update(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			connector, err := connect.GetConnector(test.Client, pipeline.Status.ConnectorName, namespacedName.Namespace)
+			Expect(connector.GetLabels()["strimzi.io/cluster"]).To(Equal(cluster))
+		})
+
+		It("Triggers refresh if MaxAge changes", func() {
+			createConfigMap(namespacedName.Namespace, "cyndi", map[string]string{"connector.max.age": "10"})
+			createPipeline(namespacedName)
+			reconcile()
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+
+			var newValue int64 = 5
+			pipeline.Spec.MaxAge = &newValue
+			err := test.Client.Update(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			connector, err := connect.GetConnector(test.Client, pipeline.Status.ConnectorName, namespacedName.Namespace)
+			Expect(connector.GetLabels()["cyndi/maxAge"]).To(Equal("5"))
+		})
 	})
 
 	Describe("-> Removed", func() {

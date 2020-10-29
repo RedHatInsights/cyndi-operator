@@ -15,7 +15,13 @@ func BuildCyndiConfig(instance *cyndiv1beta1.CyndiPipeline, cm *corev1.ConfigMap
 	config := &CyndiConfiguration{}
 
 	config.Topic = getStringValue(cm, "connector.topic", defaultTopic)
-	config.ConnectCluster = getStringValue(cm, "connect.cluster", defaultConnectCluster)
+
+	if instance != nil && instance.Spec.ConnectCluster != nil {
+		config.ConnectCluster = *instance.Spec.ConnectCluster
+	} else {
+		config.ConnectCluster = getStringValue(cm, "connect.cluster", defaultConnectCluster)
+	}
+
 	config.ConnectorTemplate = getStringValue(cm, "connector.config", defaultConnectorTemplate)
 
 	if config.ConnectorTasksMax, err = getIntValue(cm, "connector.tasks.max", defaultConnectorTasksMax); err != nil {
@@ -26,7 +32,9 @@ func BuildCyndiConfig(instance *cyndiv1beta1.CyndiPipeline, cm *corev1.ConfigMap
 		return config, err
 	}
 
-	if config.ConnectorMaxAge, err = getIntValue(cm, "connector.max.age", defaultConnectorMaxAge); err != nil {
+	if instance != nil && instance.Spec.MaxAge != nil {
+		config.ConnectorMaxAge = *instance.Spec.MaxAge
+	} else if config.ConnectorMaxAge, err = getIntValue(cm, "connector.max.age", defaultConnectorMaxAge); err != nil {
 		return config, err
 	}
 
@@ -36,11 +44,11 @@ func BuildCyndiConfig(instance *cyndiv1beta1.CyndiPipeline, cm *corev1.ConfigMap
 		return config, err
 	}
 
-	if config.ValidationConfig, err = getValidationConfig(cm, "", defaultValidationConfig); err != nil {
+	if config.ValidationConfig, err = getValidationConfig(instance, cm, "", defaultValidationConfig); err != nil {
 		return config, err
 	}
 
-	if config.ValidationConfigInit, err = getValidationConfig(cm, "init.", defaultValidationConfigInit); err != nil {
+	if config.ValidationConfigInit, err = getValidationConfig(instance, cm, "init.", defaultValidationConfigInit); err != nil {
 		return config, err
 	}
 
@@ -81,7 +89,7 @@ func getIntValue(cm *corev1.ConfigMap, key string, defaultValue int64) (int64, e
 	return defaultValue, nil
 }
 
-func getValidationConfig(cm *corev1.ConfigMap, prefix string, defaultValue ValidationConfiguration) (ValidationConfiguration, error) {
+func getValidationConfig(instance *cyndiv1beta1.CyndiPipeline, cm *corev1.ConfigMap, prefix string, defaultValue ValidationConfiguration) (ValidationConfiguration, error) {
 	var (
 		err    error
 		result = ValidationConfiguration{}
@@ -95,7 +103,9 @@ func getValidationConfig(cm *corev1.ConfigMap, prefix string, defaultValue Valid
 		return result, err
 	}
 
-	if result.PercentageThreshold, err = getIntValue(cm, fmt.Sprintf("%svalidation.percentage.threshold", prefix), defaultValue.PercentageThreshold); err != nil {
+	if instance != nil && instance.Spec.ValidationThreshold != nil {
+		result.PercentageThreshold = *instance.Spec.ValidationThreshold
+	} else if result.PercentageThreshold, err = getIntValue(cm, fmt.Sprintf("%svalidation.percentage.threshold", prefix), defaultValue.PercentageThreshold); err != nil {
 		return result, err
 	}
 

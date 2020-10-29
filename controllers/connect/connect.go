@@ -19,7 +19,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-const appNameLabel = "cyndi/appName"
+const (
+	LabelAppName        = "cyndi/appName"
+	LabelInsightsOnly   = "cyndi/insightsOnly"
+	LabelMaxAge         = "cyndi/maxAge"
+	LabelStrimziCluster = "strimzi.io/cluster"
+)
 
 var connectorGVK = schema.GroupVersionKind{
 	Group:   "kafka.strimzi.io",
@@ -98,9 +103,10 @@ func newConnectorResource(name string, namespace string, config ConnectorConfigu
 			"name":      name,
 			"namespace": namespace,
 			"labels": map[string]interface{}{
-				"strimzi.io/cluster": config.Cluster,
-				appNameLabel:         config.AppName,
-				"cyndi/insightsOnly": strconv.FormatBool(config.InsightsOnly),
+				LabelStrimziCluster: config.Cluster,
+				LabelAppName:        config.AppName,
+				LabelInsightsOnly:   strconv.FormatBool(config.InsightsOnly),
+				LabelMaxAge:         strconv.FormatInt(config.MaxAge, 10),
 			},
 		},
 		"spec": map[string]interface{}{
@@ -142,7 +148,7 @@ func GetConnectorsForApp(c client.Client, namespace string, appName string) (*un
 	connectors := &unstructured.UnstructuredList{}
 	connectors.SetGroupVersionKind(connectorsGVK)
 
-	err := c.List(context.TODO(), connectors, client.InNamespace(namespace), client.MatchingLabels{appNameLabel: appName})
+	err := c.List(context.TODO(), connectors, client.InNamespace(namespace), client.MatchingLabels{LabelAppName: appName})
 	return connectors, err
 }
 
