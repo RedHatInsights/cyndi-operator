@@ -46,6 +46,7 @@ import (
 	"cyndi-operator/controllers/config"
 	connect "cyndi-operator/controllers/connect"
 	"cyndi-operator/controllers/database"
+	"cyndi-operator/controllers/probes"
 	"cyndi-operator/controllers/utils"
 )
 
@@ -209,6 +210,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		if i.Instance.Status.ValidationFailedCount > i.getValidationConfig().AttemptsThreshold {
 			i.Log.Info("Pipeline failed to become valid. Refreshing.")
 			i.Instance.TransitionToNew()
+			probes.PipelineRefreshed(i.Instance)
 			return i.updateStatusAndRequeue()
 		}
 	}
