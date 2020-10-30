@@ -7,8 +7,10 @@ parameters:
   value: quay.io/cloudservices/xjoin-kafka-connect-strimzi
 - name: KAFKA_CONNECT_IMAGE_TAG
   value: c06acd0
-- name: BOOTSTRAP_SERVERS
-  value: platform-mq-kafka-bootstrap.platform-mq.svc.cluster.local:9093
+- name: KAFKA_BOOTSTRAP_HOST
+  value: platform-mq-kafka-bootstrap.platform-mq.svc.cluster.local
+- name: KAFKA_BOOTSTRAP_PORT
+  value: '9092'
 - name: NUM_REPLICAS
   value: '1'
 - name: VERSION
@@ -43,12 +45,12 @@ objects:
         cpu: ${CPU_REQUESTS}
         memory: ${MEMORY_REQUESTS}
 
-    bootstrapServers: ${BOOTSTRAP_SERVERS}
+    bootstrapServers: ${KAFKA_BOOTSTRAP_HOST}:${KAFKA_BOOTSTRAP_PORT}
     config:
       group.id: xjoin-connect-cluster-strimzi
-      offset.storage.topic: connect-cluster-offsets
-      config.storage.topic: connect-cluster-configs
-      status.storage.topic: connect-cluster-status
+      offset.storage.topic: xjoin-connect-config
+      config.storage.topic: xjoin-connect-offsets
+      status.storage.topic: xjoin-connect-status
     template:
       pod:
         imagePullSecrets:
