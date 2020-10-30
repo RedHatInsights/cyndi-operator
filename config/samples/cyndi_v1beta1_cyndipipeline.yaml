@@ -4,5 +4,3 @@ metadata:
   name: example-cyndipipeline
 spec:
   appName: advisor
-  insightsOnly: false
-  tasksMax: 1
