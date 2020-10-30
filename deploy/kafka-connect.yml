@@ -49,6 +49,11 @@ objects:
       offset.storage.topic: connect-cluster-offsets
       config.storage.topic: connect-cluster-configs
       status.storage.topic: connect-cluster-status
+    template:
+      pod:
+        imagePullSecrets:
+          - name: quay-cloudservices-pull
+          - name: rh-registry-pull
 
 - apiVersion: v1
   kind: Service
