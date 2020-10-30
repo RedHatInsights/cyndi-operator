@@ -7,7 +7,7 @@ data:
   init.validation.interval: '10'
   init.validation.attempts.threshold: '10'
   init.validation.percentage.threshold: '5'
-  connect.cluster: 'my-connect-cluster'
+  connect.cluster: xjoin-kafka-connect-strimzi
   connector.tasks.max: '1'
 kind: ConfigMap
 metadata:

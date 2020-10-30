@@ -1,7 +1,7 @@
 apiVersion: kafka.strimzi.io/v1beta1
 kind: KafkaConnect
 metadata:
-  name: my-connect-cluster
+  name: xjoin-kafka-connect-strimzi
   annotations:
   # use-connector-resources configures this KafkaConnect
   # to use KafkaConnector resources to avoid
