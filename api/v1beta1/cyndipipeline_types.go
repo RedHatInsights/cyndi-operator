@@ -29,7 +29,8 @@ type CyndiPipelineSpec struct {
 	AppName string `json:"appName"`
 
 	// +optional
-	InsightsOnly bool `json:"insightsOnly,omitempty"`
+	// +kubebuilder:default:=false
+	InsightsOnly bool `json:"insightsOnly"`
 
 	// +optional
 	// +kubebuilder:validation:MinLength:=1
