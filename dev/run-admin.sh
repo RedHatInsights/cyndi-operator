@@ -45,14 +45,10 @@ oc apply -f kafka-connect.yaml -n my-kafka-project
 
 sleep 1
 
-oc secrets link my-connect-cluster-connect $PULL_SECRET --for=pull -n my-kafka-project
+oc secrets link xjoin-kafka-connect-strimzi-connect $PULL_SECRET --for=pull -n my-kafka-project
 
-oc scale --replicas=1 kafkaconnect my-connect-cluster
-oc wait kafkaconnect/my-connect-cluster --for=condition=Ready --timeout=300s -n my-kafka-project
-
-# TODO: get rid of this step
-oc apply -f ../examples/cyndi.configmap.yml -n my-kafka-project
-
+oc scale --replicas=1 kafkaconnect xjoin-kafka-connect-strimzi
+oc wait kafkaconnect/xjoin-kafka-connect-strimzi --for=condition=Ready --timeout=300s -n my-kafka-project
 
 
 
