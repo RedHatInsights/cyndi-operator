@@ -58,16 +58,22 @@ func (db *BaseDatabase) Exec(query string) (result pgx.CommandTag, err error) {
 	return result, nil
 }
 
-func (db *BaseDatabase) CountHosts(table string) (int64, error) {
+func (db *BaseDatabase) getWhereClause(insightsOnly bool) string {
+	if insightsOnly {
+		return "WHERE canonical_facts ? 'insights_id'"
+	}
+
+	return ""
+}
+
+func (db *BaseDatabase) hostCountQuery(table string, insightsOnly bool) string {
+	return fmt.Sprintf(`SELECT count(*) FROM %s %s`, table, db.getWhereClause(insightsOnly))
+}
+
+func (db *BaseDatabase) CountHosts(table string, insightsOnly bool) (int64, error) {
 	// TODO: add modified_on filter
-	//query := fmt.Sprintf(
-	//	"SELECT count(*) FROM %s WHERE modified_on < '%s'", table, i.Now)
-	// also add "AND canonical_facts ? 'insights_id'"
 	// waiting on https://issues.redhat.com/browse/RHCLOUD-9545
-
-	query := fmt.Sprintf("SELECT count(*) FROM %s", table)
-
-	rows, err := db.RunQuery(query)
+	rows, err := db.RunQuery(db.hostCountQuery(table, insightsOnly))
 
 	if err != nil {
 		return -1, err
@@ -92,13 +98,14 @@ func (db *BaseDatabase) CountHosts(table string) (int64, error) {
 	return response, err
 }
 
-// TODO move to database
-func (db *BaseDatabase) GetHostIds(table string) ([]string, error) {
-	// TODO" "AND canonical_facts ? 'insights_id'" when !view and insightsOnly
-	// also add "AND canonical_facts ? 'insights_id'"
+func (db *BaseDatabase) hostIdQuery(table string, insightsOnly bool) string {
+	return fmt.Sprintf(`SELECT id FROM %s %s ORDER BY id`, table, db.getWhereClause(insightsOnly))
+}
+
+func (db *BaseDatabase) GetHostIds(table string, insightsOnly bool) ([]string, error) {
+	// TODO: add modified_on filter
 	// waiting on https://issues.redhat.com/browse/RHCLOUD-9545
-	query := fmt.Sprintf("SELECT id FROM %s ORDER BY id", table)
-	rows, err := db.RunQuery(query)
+	rows, err := db.RunQuery(db.hostIdQuery(table, insightsOnly))
 
 	var ids []string
 
