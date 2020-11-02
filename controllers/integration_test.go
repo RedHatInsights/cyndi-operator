@@ -270,4 +270,112 @@ var _ = Describe("Integration tests", func() {
 			Expect(tables).To(BeEmpty())
 		})
 	})
+
+	Describe("Abnormal procedures", func() {
+		Context("Refresh does not succeed", func() {
+			It("It switches to the new table if it's healthier", func() {
+				var (
+					insightsHosts = []string{
+						"0038cb4d-665b-4e94-87ab-a5b8a50916c5",
+						"64d799f2-2645-4818-b61a-daa53e805a72",
+						"2af6bf52-e681-477b-ae5f-72e449da32e4",
+						"9c3806b5-3425-4f35-94b6-6a255377d221",
+						"04967f96-aa62-42de-95a4-008a2f662b79",
+					}
+				)
+
+				// start with one host and transition to STATE_VALID
+				seedTable(hbiDb, "public.hosts", true, insightsHosts[0:1]...)
+
+				createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
+
+				pipeline := getPipeline(namespacedName)
+				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+
+				// start initial sync
+				pipeline = reconcile(cyndiReconciler)
+				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
+
+				appTable1 := pipeline.Status.TableName
+				seedAppTable(appDb, fmt.Sprintf("inventory.%s", appTable1), insightsHosts[0:1]...)
+
+				// transitions to valid as all hosts are replicated
+				pipeline = reconcile(validationReconciler, cyndiReconciler)
+				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+				Expect(pipeline.Status.HostCount).To(Equal(int64(1)))
+
+				// now seed the remaining hosts - making the pipeline invalid
+				seedTable(hbiDb, "public.hosts", true, insightsHosts[1:5]...)
+
+				for ; pipeline.GetState() != cyndi.STATE_NEW; pipeline = reconcile(validationReconciler, cyndiReconciler) {
+				}
+
+				pipeline = reconcile(validationReconciler, cyndiReconciler)
+				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
+
+				appTable2 := pipeline.Status.TableName
+				seedAppTable(appDb, fmt.Sprintf("inventory.%s", appTable2), insightsHosts[0:3]...) // replicate 3 hosts - still not valid but better than appTable1
+
+				// as this pipeline fails to become valid eventually it is refreshed again
+				for ; pipeline.GetState() != cyndi.STATE_NEW; pipeline = reconcile(validationReconciler, cyndiReconciler) {
+				}
+
+				pipeline = reconcile(validationReconciler, cyndiReconciler)
+				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
+				Expect(pipeline.Status.ActiveTableName).To(Equal(appTable2))
+			})
+
+			It("It keeps the old table active if it's healthier than the new one", func() {
+				var (
+					insightsHosts = []string{
+						"0038cb4d-665b-4e94-87ab-a5b8a50916c5",
+						"64d799f2-2645-4818-b61a-daa53e805a72",
+						"2af6bf52-e681-477b-ae5f-72e449da32e4",
+						"9c3806b5-3425-4f35-94b6-6a255377d221",
+						"04967f96-aa62-42de-95a4-008a2f662b79",
+					}
+				)
+
+				// start with one host and transition to STATE_VALID
+				seedTable(hbiDb, "public.hosts", true, insightsHosts[0:3]...)
+
+				createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
+
+				pipeline := getPipeline(namespacedName)
+				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+
+				// start initial sync
+				pipeline = reconcile(cyndiReconciler)
+				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
+
+				appTable1 := pipeline.Status.TableName
+				seedAppTable(appDb, fmt.Sprintf("inventory.%s", appTable1), insightsHosts[0:3]...)
+
+				// transitions to valid as all hosts are replicated
+				pipeline = reconcile(validationReconciler, cyndiReconciler)
+				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+				Expect(pipeline.Status.HostCount).To(Equal(int64(3)))
+
+				// now seed the remaining hosts - making the pipeline invalid
+				seedTable(hbiDb, "public.hosts", true, insightsHosts[3:5]...)
+
+				for ; pipeline.GetState() != cyndi.STATE_NEW; pipeline = reconcile(validationReconciler, cyndiReconciler) {
+				}
+
+				pipeline = reconcile(validationReconciler, cyndiReconciler)
+				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
+
+				appTable2 := pipeline.Status.TableName
+				seedAppTable(appDb, fmt.Sprintf("inventory.%s", appTable2), insightsHosts[0:2]...) // replicate 2 hosts - still not valid and worse than appTable1
+
+				// as this pipeline fails to become valid eventually it is refreshed again
+				for ; pipeline.GetState() != cyndi.STATE_NEW; pipeline = reconcile(validationReconciler, cyndiReconciler) {
+				}
+
+				pipeline = reconcile(validationReconciler, cyndiReconciler)
+				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
+				Expect(pipeline.Status.ActiveTableName).To(Equal(appTable1))
+			})
+		})
+	})
 })
