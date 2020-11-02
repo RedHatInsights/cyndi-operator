@@ -4,6 +4,7 @@ import (
 	"context"
 	cyndi "cyndi-operator/api/v1alpha1"
 	"cyndi-operator/controllers/database"
+	"cyndi-operator/controllers/utils"
 	"cyndi-operator/test"
 	"fmt"
 
@@ -123,7 +124,7 @@ var _ = Describe("Validation controller", func() {
 			pipeline := getPipeline(namespacedName)
 
 			seedTable(hbiDb, "public.hosts", false, hosts...)
-			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			appTable := utils.AppFullTableName(pipeline.Status.TableName)
 			createApplicationTable(appDb, appTable)
 			seedTable(appDb, appTable, false, hosts...)
 
@@ -161,7 +162,7 @@ var _ = Describe("Validation controller", func() {
 			seedTable(hbiDb, "public.hosts", true, insightsHosts...)
 			seedTable(hbiDb, "public.hosts", false, otherHosts...)
 
-			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			appTable := utils.AppFullTableName(pipeline.Status.TableName)
 			createApplicationTable(appDb, appTable)
 			seedTable(appDb, appTable, false, insightsHosts...)
 
@@ -191,7 +192,7 @@ var _ = Describe("Validation controller", func() {
 			pipeline := getPipeline(namespacedName)
 
 			seedTable(hbiDb, "public.hosts", false, hosts...)
-			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			appTable := utils.AppFullTableName(pipeline.Status.TableName)
 			createApplicationTable(appDb, appTable)
 			seedTable(appDb, appTable, false, hosts[0:5]...)
 
@@ -220,7 +221,7 @@ var _ = Describe("Validation controller", func() {
 			pipeline := getPipeline(namespacedName)
 
 			seedTable(hbiDb, "public.hosts", false, hosts...)
-			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			appTable := utils.AppFullTableName(pipeline.Status.TableName)
 			createApplicationTable(appDb, appTable)
 			seedTable(appDb, appTable, false, hosts[0:1]...)
 
@@ -250,7 +251,7 @@ var _ = Describe("Validation controller", func() {
 			pipeline := getPipeline(namespacedName)
 
 			seedTable(hbiDb, "public.hosts", false, hosts...)
-			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			appTable := utils.AppFullTableName(pipeline.Status.TableName)
 			createApplicationTable(appDb, appTable)
 			seedTable(appDb, appTable, false, hosts[0:4]...)
 
@@ -277,7 +278,7 @@ var _ = Describe("Validation controller", func() {
 			pipeline := getPipeline(namespacedName)
 
 			seedTable(hbiDb, "public.hosts", false, hosts...)
-			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			appTable := utils.AppFullTableName(pipeline.Status.TableName)
 			createApplicationTable(appDb, appTable)
 			seedTable(appDb, appTable, false, hosts[0:1]...)
 
@@ -306,7 +307,7 @@ var _ = Describe("Validation controller", func() {
 			pipeline := getPipeline(namespacedName)
 
 			seedTable(hbiDb, "public.hosts", false, hosts...)
-			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			appTable := utils.AppFullTableName(pipeline.Status.TableName)
 			createApplicationTable(appDb, appTable)
 			seedTable(appDb, appTable, false, hosts[1:6]...)
 
