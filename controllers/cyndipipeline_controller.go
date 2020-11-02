@@ -234,7 +234,7 @@ func (i *ReconcileIteration) deleteStaleDependencies() error {
 		return err
 	}
 
-	if currentTable != nil {
+	if currentTable != nil && i.Instance.GetState() != cyndi.STATE_REMOVED {
 		connectorsToKeep = append(connectorsToKeep, cyndi.TableNameToConnectorName(*currentTable, i.Instance.Spec.AppName))
 		tablesToKeep = append(tablesToKeep, *currentTable)
 	}

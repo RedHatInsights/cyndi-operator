@@ -45,6 +45,10 @@ import (
 	// +kubebuilder:scaffold:imports
 )
 
+/*
+ * Tests for CyndiPipelineReconciler. ValidationController is mocked (see setPipelineValid)
+ */
+
 type ConfigMap struct {
 	APIVersion string `yaml:"apiVersion"`
 	Data       struct {
@@ -607,7 +611,7 @@ var _ = Describe("Pipeline operations", func() {
 	})
 
 	Describe("-> Removed", func() {
-		It("Artifacts removed when pipeline is removed", func() {
+		It("Artifacts removed when initializing pipeline is removed", func() {
 			createPipeline(namespacedName)
 			reconcile()
 
@@ -616,7 +620,9 @@ var _ = Describe("Pipeline operations", func() {
 
 			err := test.Client.Delete(context.TODO(), pipeline)
 			Expect(err).ToNot(HaveOccurred())
-			reconcile()
+
+			result := reconcile()
+			Expect(result).To(BeZero())
 
 			tableExists, err := db.CheckIfTableExists(status.TableName)
 			Expect(err).ToNot(HaveOccurred())
@@ -630,8 +636,46 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(errors.IsNotFound(err)).To(BeTrue())
 
-			// not testing that the connecter is gone as there is no garbage collection in envtest
-			// https://book.kubebuilder.io/reference/envtest.html#testing-considerations
+			connectors, err := connect.GetConnectorsForApp(test.Client, namespacedName.Namespace, namespacedName.Name)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(connectors.Items).To(BeEmpty())
+
+			Expect(reconcile()).To(BeZero())
+		})
+
+		It("Artifacts removed when valid pipeline is removed", func() {
+			createPipeline(namespacedName)
+			reconcile()
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			status := pipeline.Status
+
+			err := test.Client.Delete(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+
+			result := reconcile()
+			Expect(result).To(BeZero())
+
+			tableExists, err := db.CheckIfTableExists(status.TableName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(tableExists).To(BeFalse())
+
+			viewExists, err := db.CheckIfTableExists("hosts")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(viewExists).To(BeFalse())
+
+			pipeline, err = utils.FetchCyndiPipeline(test.Client, namespacedName)
+			Expect(err).To(HaveOccurred())
+			Expect(errors.IsNotFound(err)).To(BeTrue())
+
+			connectors, err := connect.GetConnectorsForApp(test.Client, namespacedName.Namespace, namespacedName.Name)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(connectors.Items).To(BeEmpty())
+
+			Expect(reconcile()).To(BeZero())
 		})
 	})
 })

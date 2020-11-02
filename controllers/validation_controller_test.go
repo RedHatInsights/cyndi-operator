@@ -19,18 +19,13 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var (
-	namespacedName types.NamespacedName
-	dbParams       DBParams
-	hbiDb          database.Database
-	appDb          *database.AppDatabase
-	r              *ValidationReconciler
-)
+/*
+ * Tests for ValidationController. CyndiPipelineReconciler is mocked (see initializePipeline)
+ */
 
 func createApplicationTable(db database.Database, TestTable string) {
-	rows, err := db.RunQuery(fmt.Sprintf("CREATE TABLE %s (id uuid PRIMARY KEY)", TestTable))
+	_, err := db.Exec(fmt.Sprintf("CREATE TABLE %s (id uuid PRIMARY KEY)", TestTable))
 	Expect(err).ToNot(HaveOccurred())
-	rows.Close()
 }
 
 func seedTable(db database.Database, TestTable string, insights bool, ids ...string) {
@@ -41,25 +36,32 @@ func seedTable(db database.Database, TestTable string, insights bool, ids ...str
 	}
 
 	for _, id := range ids {
-		rows, err := db.RunQuery(fmt.Sprintf(template, TestTable, id))
+		_, err := db.Exec(fmt.Sprintf(template, TestTable, id))
 		Expect(err).ToNot(HaveOccurred())
-		rows.Close()
-	}
-}
-
-func initializePipeline(toValid bool) {
-	pipeline := getPipeline(namespacedName)
-	pipeline.TransitionToInitialSync("123456")
-	Expect(test.Client.Status().Update(context.TODO(), pipeline)).ToNot(HaveOccurred())
-
-	if toValid {
-		pipeline = getPipeline(namespacedName)
-		pipeline.SetValid(metav1.ConditionTrue, "ValidationSucceeded", "success", 1)
-		Expect(test.Client.Status().Update(context.TODO(), pipeline)).ToNot(HaveOccurred())
 	}
 }
 
 var _ = Describe("Validation controller", func() {
+	var (
+		namespacedName types.NamespacedName
+		dbParams       DBParams
+		hbiDb          database.Database
+		appDb          *database.AppDatabase
+		r              *ValidationReconciler
+	)
+
+	initializePipeline := func(toValid bool) {
+		pipeline := getPipeline(namespacedName)
+		pipeline.TransitionToInitialSync("123456")
+		Expect(test.Client.Status().Update(context.TODO(), pipeline)).ToNot(HaveOccurred())
+
+		if toValid {
+			pipeline = getPipeline(namespacedName)
+			pipeline.SetValid(metav1.ConditionTrue, "ValidationSucceeded", "success", 1)
+			Expect(test.Client.Status().Update(context.TODO(), pipeline)).ToNot(HaveOccurred())
+		}
+	}
+
 	BeforeEach(func() {
 		namespacedName = types.NamespacedName{
 			Name:      "test-pipeline-01",
@@ -93,6 +95,11 @@ var _ = Describe("Validation controller", func() {
 
 		_, err = hbiDb.Exec(`DROP TABLE IF EXISTS public.hosts; CREATE TABLE public.hosts (id uuid PRIMARY KEY, canonical_facts jsonb);`)
 		Expect(err).ToNot(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		appDb.Close()
+		hbiDb.Close()
 	})
 
 	var reconcile = func() (result ctrl.Result) {
