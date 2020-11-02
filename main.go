@@ -28,7 +28,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+	cyndi "cyndi-operator/api/v1alpha1"
 	"cyndi-operator/controllers"
 	"cyndi-operator/controllers/probes"
 	// +kubebuilder:scaffold:imports
@@ -42,7 +42,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(cyndiv1beta1.AddToScheme(scheme))
+	utilruntime.Must(cyndi.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

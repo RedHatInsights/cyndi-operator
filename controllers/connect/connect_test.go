@@ -2,7 +2,7 @@ package connect
 
 import (
 	"context"
-	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+	cyndi "cyndi-operator/api/v1alpha1"
 	"cyndi-operator/test"
 	"fmt"
 	"testing"
@@ -158,13 +158,13 @@ var _ = Describe("Connect", func() {
 				Template:     "{}",
 			}
 
-			pipeline := &cyndiv1beta1.CyndiPipeline{
+			pipeline := &cyndi.CyndiPipeline{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "pipeline-01",
 					Namespace: namespace,
 					UID:       "969f1d71-4187-432f-99aa-5accf8dc3fef",
 				},
-				Spec: cyndiv1beta1.CyndiPipelineSpec{
+				Spec: cyndi.CyndiPipelineSpec{
 					AppName: config.AppName,
 				},
 			}

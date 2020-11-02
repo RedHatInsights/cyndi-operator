@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	cyndi "cyndi-operator/api/v1beta1"
+	cyndi "cyndi-operator/api/v1alpha1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

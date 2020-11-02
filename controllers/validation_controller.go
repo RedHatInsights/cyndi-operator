@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+	cyndi "cyndi-operator/api/v1alpha1"
 	"cyndi-operator/controllers/database"
 	"fmt"
 
@@ -58,7 +58,7 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	}
 
 	// nothing to validate
-	if i.Instance == nil || i.Instance.GetState() == cyndiv1beta1.STATE_REMOVED || i.Instance.GetState() == cyndiv1beta1.STATE_NEW {
+	if i.Instance == nil || i.Instance.GetState() == cyndi.STATE_REMOVED || i.Instance.GetState() == cyndi.STATE_NEW {
 		return reconcile.Result{}, nil
 	}
 
@@ -118,8 +118,8 @@ func eventFilterPredicate() predicate.Predicate {
 				return true // Pipeline definition changed
 			}
 
-			old, ok1 := e.ObjectOld.(*cyndiv1beta1.CyndiPipeline)
-			new, ok2 := e.ObjectNew.(*cyndiv1beta1.CyndiPipeline)
+			old, ok1 := e.ObjectOld.(*cyndi.CyndiPipeline)
+			new, ok2 := e.ObjectNew.(*cyndi.CyndiPipeline)
 
 			if ok1 && ok2 && old.Status.InitialSyncInProgress == false && new.Status.InitialSyncInProgress == true {
 				return true // pipeline refresh happened - validate the new pipeline
@@ -132,7 +132,7 @@ func eventFilterPredicate() predicate.Predicate {
 
 func (r *ValidationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cyndiv1beta1.CyndiPipeline{}).
+		For(&cyndi.CyndiPipeline{}).
 		WithEventFilter(eventFilterPredicate()).
 		Complete(r)
 }

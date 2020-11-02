@@ -1,7 +1,7 @@
 package config
 
 import (
-	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+	cyndi "cyndi-operator/api/v1alpha1"
 	"cyndi-operator/controllers/utils"
 	"fmt"
 	"strconv"
@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func BuildCyndiConfig(instance *cyndiv1beta1.CyndiPipeline, cm *corev1.ConfigMap) (*CyndiConfiguration, error) {
+func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm *corev1.ConfigMap) (*CyndiConfiguration, error) {
 	var err error
 	config := &CyndiConfiguration{}
 
@@ -89,7 +89,7 @@ func getIntValue(cm *corev1.ConfigMap, key string, defaultValue int64) (int64, e
 	return defaultValue, nil
 }
 
-func getValidationConfig(instance *cyndiv1beta1.CyndiPipeline, cm *corev1.ConfigMap, prefix string, defaultValue ValidationConfiguration) (ValidationConfiguration, error) {
+func getValidationConfig(instance *cyndi.CyndiPipeline, cm *corev1.ConfigMap, prefix string, defaultValue ValidationConfiguration) (ValidationConfiguration, error) {
 	var (
 		err    error
 		result = ValidationConfiguration{}
