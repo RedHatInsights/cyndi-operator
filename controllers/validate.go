@@ -13,14 +13,14 @@ const inventoryTableName = "hosts" // TODO: move
 const countMismatchThreshold = 0.5
 
 func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mismatchCount int64, hostCount int64, err error) {
-	hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName)
+	hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly)
 	if err != nil {
 		return false, -1, -1, -1, err
 	}
 
 	appTable := fmt.Sprintf("inventory.%s", i.Instance.Status.TableName)
 
-	appHostCount, err := i.AppDb.CountHosts(appTable)
+	appHostCount, err := i.AppDb.CountHosts(appTable, false)
 	if err != nil {
 		return false, -1, -1, -1, err
 	}
@@ -39,12 +39,12 @@ func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mi
 		return false, countMismatchRatio, countMismatch, appHostCount, nil
 	}
 
-	hbiIds, err := i.InventoryDb.GetHostIds(inventoryTableName)
+	hbiIds, err := i.InventoryDb.GetHostIds(inventoryTableName, i.Instance.Spec.InsightsOnly)
 	if err != nil {
 		return false, -1, -1, -1, err
 	}
 
-	appIds, err := i.AppDb.GetHostIds(appTable)
+	appIds, err := i.AppDb.GetHostIds(appTable, false)
 	if err != nil {
 		return false, -1, -1, -1, err
 	}

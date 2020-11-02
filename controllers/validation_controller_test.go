@@ -27,17 +27,21 @@ var (
 	r              *ValidationReconciler
 )
 
-func createSeededTable(db database.Database, TestTable string, ids ...string) {
+func createApplicationTable(db database.Database, TestTable string) {
 	rows, err := db.RunQuery(fmt.Sprintf("CREATE TABLE %s (id uuid PRIMARY KEY)", TestTable))
 	Expect(err).ToNot(HaveOccurred())
 	rows.Close()
-
-	seedTable(db, TestTable, ids...)
 }
 
-func seedTable(db database.Database, TestTable string, ids ...string) {
+func seedTable(db database.Database, TestTable string, insights bool, ids ...string) {
+	var template = "INSERT INTO %s (id) VALUES ('%s')"
+
+	if insights {
+		template = `INSERT INTO %s (id, canonical_facts) VALUES ('%s', '{"insights_id": "7597d33e-a1a6-4fda-ad1e-b86b73c722fd"}')`
+	}
+
 	for _, id := range ids {
-		rows, err := db.RunQuery(fmt.Sprintf("INSERT INTO %s (id) VALUES ('%s')", TestTable, id))
+		rows, err := db.RunQuery(fmt.Sprintf(template, TestTable, id))
 		Expect(err).ToNot(HaveOccurred())
 		rows.Close()
 	}
@@ -87,7 +91,7 @@ var _ = Describe("Validation controller", func() {
 		err = hbiDb.Connect()
 		Expect(err).ToNot(HaveOccurred())
 
-		_, err = hbiDb.Exec(`DROP TABLE IF EXISTS public.hosts; CREATE TABLE public.hosts (id uuid PRIMARY KEY);`)
+		_, err = hbiDb.Exec(`DROP TABLE IF EXISTS public.hosts; CREATE TABLE public.hosts (id uuid PRIMARY KEY, canonical_facts jsonb);`)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
@@ -111,8 +115,48 @@ var _ = Describe("Validation controller", func() {
 			initializePipeline(false)
 			pipeline := getPipeline(namespacedName)
 
-			seedTable(hbiDb, "public.hosts", hosts...)
-			createSeededTable(appDb, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts...)
+			seedTable(hbiDb, "public.hosts", false, hosts...)
+			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			createApplicationTable(appDb, appTable)
+			seedTable(appDb, appTable, false, hosts...)
+
+			reconcile()
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.IsValid()).To(BeTrue())
+			Expect(pipeline.Status.Conditions[0].Reason).To(Equal("ValidationSucceeded"))
+			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation succeeded - 0 hosts (0.00%) do not match which is below the threshold for invalid pipeline (40%)"))
+			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
+			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
+			Expect(pipeline.Status.HostCount).To(Equal(int64(3)))
+		})
+
+		It("Correctly validates fully in-sync insightsOnly table", func() {
+			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
+
+			var (
+				insightsHosts = []string{
+					"3b8c0b37-6208-4323-b7df-030fee22db0c",
+					"99d28b1e-aad8-4ac0-8d98-ef33e7d3856e",
+					"14bcbbb5-8837-4d24-8122-1d44b65680f5",
+				}
+
+				otherHosts = []string{
+					"45f639ff-f1f5-4469-9a7b-35295fdb75fc",
+					"d2b58af8-fd82-4be1-83b1-1d1071b8bc95",
+					"5d378adc-11dc-4791-8f24-cb29e21918a4",
+					"f049590f-96ca-47fb-b35c-bcc097a767d7",
+				}
+			)
+
+			initializePipeline(false)
+			pipeline := getPipeline(namespacedName)
+
+			seedTable(hbiDb, "public.hosts", true, insightsHosts...)
+			seedTable(hbiDb, "public.hosts", false, otherHosts...)
+
+			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			createApplicationTable(appDb, appTable)
+			seedTable(appDb, appTable, false, insightsHosts...)
 
 			reconcile()
 			pipeline = getPipeline(namespacedName)
@@ -139,8 +183,10 @@ var _ = Describe("Validation controller", func() {
 			initializePipeline(true)
 			pipeline := getPipeline(namespacedName)
 
-			seedTable(hbiDb, "public.hosts", hosts...)
-			createSeededTable(appDb, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[0:5]...)
+			seedTable(hbiDb, "public.hosts", false, hosts...)
+			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			createApplicationTable(appDb, appTable)
+			seedTable(appDb, appTable, false, hosts[0:5]...)
 
 			reconcile()
 			pipeline = getPipeline(namespacedName)
@@ -166,8 +212,10 @@ var _ = Describe("Validation controller", func() {
 			initializePipeline(false)
 			pipeline := getPipeline(namespacedName)
 
-			seedTable(hbiDb, "public.hosts", hosts...)
-			createSeededTable(appDb, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[0:1]...)
+			seedTable(hbiDb, "public.hosts", false, hosts...)
+			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			createApplicationTable(appDb, appTable)
+			seedTable(appDb, appTable, false, hosts[0:1]...)
 
 			reconcile()
 			pipeline = getPipeline(namespacedName)
@@ -194,8 +242,10 @@ var _ = Describe("Validation controller", func() {
 			initializePipeline(true)
 			pipeline := getPipeline(namespacedName)
 
-			seedTable(hbiDb, "public.hosts", hosts...)
-			createSeededTable(appDb, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[0:4]...)
+			seedTable(hbiDb, "public.hosts", false, hosts...)
+			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			createApplicationTable(appDb, appTable)
+			seedTable(appDb, appTable, false, hosts[0:4]...)
 
 			reconcile()
 			pipeline = getPipeline(namespacedName)
@@ -219,8 +269,10 @@ var _ = Describe("Validation controller", func() {
 			initializePipeline(false)
 			pipeline := getPipeline(namespacedName)
 
-			seedTable(hbiDb, "public.hosts", hosts...)
-			createSeededTable(appDb, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[0:1]...)
+			seedTable(hbiDb, "public.hosts", false, hosts...)
+			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			createApplicationTable(appDb, appTable)
+			seedTable(appDb, appTable, false, hosts[0:1]...)
 
 			for i := 1; i < 10; i++ {
 				reconcile()
@@ -246,8 +298,10 @@ var _ = Describe("Validation controller", func() {
 			initializePipeline(false)
 			pipeline := getPipeline(namespacedName)
 
-			seedTable(hbiDb, "public.hosts", hosts...)
-			createSeededTable(appDb, fmt.Sprintf("inventory.%s", pipeline.Status.TableName), hosts[1:6]...)
+			seedTable(hbiDb, "public.hosts", false, hosts...)
+			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			createApplicationTable(appDb, appTable)
+			seedTable(appDb, appTable, false, hosts[1:6]...)
 
 			reconcile()
 			pipeline = getPipeline(namespacedName)
