@@ -2,7 +2,7 @@ apiVersion: v1
 data:
   standard.interval: '120'
   validation.interval: '60'
-  validation.attempts.threshold: '5'
+  validation.attempts.threshold: '3'
   validation.percentage.threshold: '5'
   init.validation.interval: '10'
   init.validation.attempts.threshold: '10'
