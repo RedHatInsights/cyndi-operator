@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-const inventoryTableName = "hosts" // TODO: move
+const inventoryTableName = "public.hosts" // TODO: move
 const countMismatchThreshold = 0.5
 
 func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mismatchCount int64, hostCount int64, err error) {

@@ -32,6 +32,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -206,8 +207,16 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	// invalid pipeline - either STATE_INITIAL_SYNC or STATE_INVALID
-	if i.Instance.IsValid() == false {
+	if i.Instance.GetValid() == metav1.ConditionFalse {
 		if i.Instance.Status.ValidationFailedCount > i.getValidationConfig().AttemptsThreshold {
+
+			// This pipeline never became valid.
+			if i.Instance.GetState() == cyndi.STATE_INITIAL_SYNC {
+				if err = i.updateViewIfHealthier(); err != nil {
+					i.Log.Error(err, "Failed to evaluate which table is healthier")
+				}
+			}
+
 			i.Log.Info("Pipeline failed to become valid. Refreshing.")
 			i.Instance.TransitionToNew()
 			probes.PipelineRefreshed(i.Instance)
@@ -395,4 +404,59 @@ func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
 	// TODO: this should be expanded to fully cover the connector
 
 	return nil, nil
+}
+
+/*
+ * Should be called when a refreshed pipeline failed to become valid.
+ * This method will either keep the old invalid table "active" (i.e. used by the view) or update the view to the new (also invalid) table.
+ * None of these options a good one - this is about picking lesser evil
+ */
+func (i *ReconcileIteration) updateViewIfHealthier() error {
+	table, err := i.AppDb.GetCurrentTable()
+
+	if err != nil {
+		return fmt.Errorf("Failed to determine active table %w", err)
+	}
+
+	if table != nil {
+		if *table == i.Instance.Status.TableName {
+			return nil // table is already active, nothing to do
+		}
+
+		// no need to close this as that's done in ReconcileIteration.Close()
+		i.InventoryDb = database.NewBaseDatabase(&i.HBIDBParams)
+
+		if err = i.InventoryDb.Connect(); err != nil {
+			return fmt.Errorf("Error while connecting to HBI DB %w", err)
+		}
+
+		hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly)
+		if err != nil {
+			return fmt.Errorf("Failed to get host count from inventory %w", err)
+		}
+
+		// TODO: reuse
+		activeTable := fmt.Sprintf("inventory.%s", *table)
+		activeTableHostCount, err := i.AppDb.CountHosts(activeTable, false)
+		if err != nil {
+			return fmt.Errorf("Failed to get host count from active table %w", err)
+		}
+
+		// TODO: reuse
+		appTable := fmt.Sprintf("inventory.%s", i.Instance.Status.TableName)
+		latestTableHostCount, err := i.AppDb.CountHosts(appTable, false)
+		if err != nil {
+			return fmt.Errorf("Failed to get host count from application table %w", err)
+		}
+
+		if utils.Abs(hbiHostCount-latestTableHostCount) > utils.Abs(hbiHostCount-activeTableHostCount) {
+			return nil // the active table is healthier; do not update anything
+		}
+	}
+
+	if err = i.AppDb.UpdateView(i.Instance.Status.TableName); err != nil {
+		return err
+	}
+
+	return nil
 }
