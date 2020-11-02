@@ -9,7 +9,7 @@ Utility functions for talking to the k8s API.
 import (
 	"context"
 
-	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+	cyndi "cyndi-operator/api/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -28,14 +28,14 @@ func FetchConfigMap(c client.Client, namespace string, name string) (*corev1.Con
 	return config, err
 }
 
-func FetchCyndiPipeline(c client.Client, namespacedName types.NamespacedName) (*cyndiv1beta1.CyndiPipeline, error) {
-	instance := &cyndiv1beta1.CyndiPipeline{}
+func FetchCyndiPipeline(c client.Client, namespacedName types.NamespacedName) (*cyndi.CyndiPipeline, error) {
+	instance := &cyndi.CyndiPipeline{}
 	err := c.Get(context.TODO(), namespacedName, instance)
 	return instance, err
 }
 
-func FetchCyndiPipelines(c client.Client, namespace string) (*cyndiv1beta1.CyndiPipelineList, error) {
-	list := &cyndiv1beta1.CyndiPipelineList{}
+func FetchCyndiPipelines(c client.Client, namespace string) (*cyndi.CyndiPipelineList, error) {
+	list := &cyndi.CyndiPipelineList{}
 	err := c.List(context.TODO(), list)
 	return list, err
 }

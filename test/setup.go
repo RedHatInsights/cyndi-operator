@@ -18,7 +18,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+	cyndi "cyndi-operator/api/v1alpha1"
 )
 
 var Client client.Client
@@ -52,7 +52,7 @@ func Setup(t *testing.T, suiteName string) {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(cfg).ToNot(BeNil())
 
-		err = cyndiv1beta1.AddToScheme(scheme.Scheme)
+		err = cyndi.AddToScheme(scheme.Scheme)
 		Expect(err).NotTo(HaveOccurred())
 
 		Client, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})

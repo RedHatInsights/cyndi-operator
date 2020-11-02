@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	cyndiv1beta1 "cyndi-operator/api/v1beta1"
+	cyndi "cyndi-operator/api/v1alpha1"
 	"cyndi-operator/controllers/config"
 	"cyndi-operator/controllers/database"
 	"time"
@@ -19,10 +19,10 @@ import (
 )
 
 type ReconcileIteration struct {
-	Instance *cyndiv1beta1.CyndiPipeline
+	Instance *cyndi.CyndiPipeline
 	// Do not alter this copy
 	// Used for tracking of whether Reconcile actually changed the state or not
-	OriginalInstance *cyndiv1beta1.CyndiPipeline
+	OriginalInstance *cyndi.CyndiPipeline
 
 	Recorder  record.EventRecorder
 	Scheme    *runtime.Scheme

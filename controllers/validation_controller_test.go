@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	cyndi "cyndi-operator/api/v1beta1"
+	cyndi "cyndi-operator/api/v1alpha1"
 	"cyndi-operator/controllers/database"
 	"cyndi-operator/test"
 	"fmt"

@@ -175,7 +175,7 @@ The rest of this document assumes CodeReady Containers.
 
 1. Finally, create a new pipeline
     ```
-    oc apply -f ../config/samples/cyndi_v1beta1_cyndipipeline.yaml
+    oc apply -f ../config/samples/cyndi_v1alpha1_cyndipipeline.yaml
     ```
 
     Optionally, you can wait for the pipeline to become valid with
@@ -197,7 +197,7 @@ Use `make delve` to start the operator in debug mode.
 Then connect to it with a debugger on port 2345.
 It can also be run locally with `make run ENABLE_WEBHOOKS=false`.
 
-After everything is running, create a new Custom Resource via `kubectl apply -f config/samples/cyndi_v1beta1_cyndipipeline.yaml`.
+After everything is running, create a new Custom Resource via `kubectl apply -f config/samples/cyndi_v1alpha1_cyndipipeline.yaml`.
 Then, the CR can be managed via Kubernetes commands like normal.
 
 ### Useful commands
