@@ -135,7 +135,7 @@ var _ = Describe("Integration tests", func() {
 			}
 
 			// keeps validating while the first few hosts are replicated
-			appTable := fmt.Sprintf("inventory.%s", pipeline.Status.TableName)
+			appTable := utils.AppFullTableName(pipeline.Status.TableName)
 			seedAppTable(appDb, appTable, insightsHosts[0:2]...)
 
 			pipeline = reconcile(validationReconciler)
@@ -185,7 +185,7 @@ var _ = Describe("Integration tests", func() {
 			Expect(pipeline.GetValid()).To(Equal(metav1.ConditionUnknown))
 
 			appTable1 := pipeline.Status.TableName
-			seedAppTable(appDb, fmt.Sprintf("inventory.%s", appTable1), insightsHosts...)
+			seedAppTable(appDb, utils.AppFullTableName(appTable1), insightsHosts...)
 
 			// transitions to valid as all hosts are replicated
 			pipeline = reconcile(validationReconciler, cyndiReconciler)
@@ -213,8 +213,8 @@ var _ = Describe("Integration tests", func() {
 			Expect(pipeline.Status.TableName).ToNot(Equal(pipeline.Status.ActiveTableName))
 
 			appTable2 := pipeline.Status.TableName
-			seedAppTable(appDb, fmt.Sprintf("inventory.%s", appTable2), insightsHosts...)
-			seedAppTable(appDb, fmt.Sprintf("inventory.%s", appTable2), newHost)
+			seedAppTable(appDb, utils.AppFullTableName(appTable2), insightsHosts...)
+			seedAppTable(appDb, utils.AppFullTableName(appTable2), newHost)
 
 			pipeline = reconcile(validationReconciler, cyndiReconciler)
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
@@ -241,7 +241,7 @@ var _ = Describe("Integration tests", func() {
 			Expect(pipeline.GetValid()).To(Equal(metav1.ConditionUnknown))
 
 			appTable := pipeline.Status.TableName
-			seedAppTable(appDb, fmt.Sprintf("inventory.%s", appTable), insightsHosts...)
+			seedAppTable(appDb, utils.AppFullTableName(appTable), insightsHosts...)
 
 			// transitions to valid as all hosts are replicated
 			pipeline = reconcile(validationReconciler, cyndiReconciler)
@@ -297,7 +297,7 @@ var _ = Describe("Integration tests", func() {
 				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
 
 				appTable1 := pipeline.Status.TableName
-				seedAppTable(appDb, fmt.Sprintf("inventory.%s", appTable1), insightsHosts[0:1]...)
+				seedAppTable(appDb, utils.AppFullTableName(appTable1), insightsHosts[0:1]...)
 
 				// transitions to valid as all hosts are replicated
 				pipeline = reconcile(validationReconciler, cyndiReconciler)
@@ -314,7 +314,7 @@ var _ = Describe("Integration tests", func() {
 				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
 
 				appTable2 := pipeline.Status.TableName
-				seedAppTable(appDb, fmt.Sprintf("inventory.%s", appTable2), insightsHosts[0:3]...) // replicate 3 hosts - still not valid but better than appTable1
+				seedAppTable(appDb, utils.AppFullTableName(appTable2), insightsHosts[0:3]...) // replicate 3 hosts - still not valid but better than appTable1
 
 				// as this pipeline fails to become valid eventually it is refreshed again
 				for ; pipeline.GetState() != cyndi.STATE_NEW; pipeline = reconcile(validationReconciler, cyndiReconciler) {
@@ -349,7 +349,7 @@ var _ = Describe("Integration tests", func() {
 				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
 
 				appTable1 := pipeline.Status.TableName
-				seedAppTable(appDb, fmt.Sprintf("inventory.%s", appTable1), insightsHosts[0:3]...)
+				seedAppTable(appDb, utils.AppFullTableName(appTable1), insightsHosts[0:3]...)
 
 				// transitions to valid as all hosts are replicated
 				pipeline = reconcile(validationReconciler, cyndiReconciler)
@@ -366,7 +366,7 @@ var _ = Describe("Integration tests", func() {
 				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
 
 				appTable2 := pipeline.Status.TableName
-				seedAppTable(appDb, fmt.Sprintf("inventory.%s", appTable2), insightsHosts[0:2]...) // replicate 2 hosts - still not valid and worse than appTable1
+				seedAppTable(appDb, utils.AppFullTableName(appTable2), insightsHosts[0:2]...) // replicate 2 hosts - still not valid and worse than appTable1
 
 				// as this pipeline fails to become valid eventually it is refreshed again
 				for ; pipeline.GetState() != cyndi.STATE_NEW; pipeline = reconcile(validationReconciler, cyndiReconciler) {

@@ -213,6 +213,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 			// This pipeline never became valid.
 			if i.Instance.GetState() == cyndi.STATE_INITIAL_SYNC {
 				if err = i.updateViewIfHealthier(); err != nil {
+					// if this continue and do refresh, keeping the old table active
 					i.Log.Error(err, "Failed to evaluate which table is healthier")
 				}
 			}
@@ -435,15 +436,13 @@ func (i *ReconcileIteration) updateViewIfHealthier() error {
 			return fmt.Errorf("Failed to get host count from inventory %w", err)
 		}
 
-		// TODO: reuse
-		activeTable := fmt.Sprintf("inventory.%s", *table)
+		activeTable := utils.AppFullTableName(*table)
 		activeTableHostCount, err := i.AppDb.CountHosts(activeTable, false)
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from active table %w", err)
 		}
 
-		// TODO: reuse
-		appTable := fmt.Sprintf("inventory.%s", i.Instance.Status.TableName)
+		appTable := utils.AppFullTableName(i.Instance.Status.TableName)
 		latestTableHostCount, err := i.AppDb.CountHosts(appTable, false)
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from application table %w", err)

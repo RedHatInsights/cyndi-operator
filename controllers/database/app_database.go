@@ -3,6 +3,7 @@ package database
 import (
 	"bytes"
 	"cyndi-operator/controllers/config"
+	"cyndi-operator/controllers/utils"
 	"fmt"
 	"text/template"
 )
@@ -90,7 +91,7 @@ func (db *AppDatabase) DeleteTable(tableName string) error {
 		return nil
 	}
 
-	query := fmt.Sprintf("DROP table inventory.%s CASCADE", tableName)
+	query := fmt.Sprintf("DROP table %s CASCADE", utils.AppFullTableName(tableName))
 	_, err = db.Exec(query)
 	return err
 }

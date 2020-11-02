@@ -3,7 +3,6 @@ package controllers
 import (
 	"cyndi-operator/controllers/probes"
 	"cyndi-operator/controllers/utils"
-	"fmt"
 	"math"
 
 	"github.com/google/go-cmp/cmp"
@@ -18,7 +17,7 @@ func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mi
 		return false, -1, -1, -1, err
 	}
 
-	appTable := fmt.Sprintf("inventory.%s", i.Instance.Status.TableName)
+	appTable := utils.AppFullTableName(i.Instance.Status.TableName)
 
 	appHostCount, err := i.AppDb.CountHosts(appTable, false)
 	if err != nil {
