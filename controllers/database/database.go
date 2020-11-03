@@ -24,7 +24,7 @@ func NewBaseDatabase(config *config.DBParams) Database {
 
 func (db *BaseDatabase) Connect() (err error) {
 	if db.connection, err = GetConnection(db.Config); err != nil {
-		return err
+		return fmt.Errorf("Error connecting to %s:%s/%s as %s : %s", db.Config.Host, db.Config.Port, db.Config.Name, db.Config.User, err)
 	}
 
 	return nil

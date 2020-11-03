@@ -6,9 +6,11 @@ import (
 	"cyndi-operator/controllers/database"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/record"
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -40,7 +42,7 @@ func (r *ValidationReconciler) setup(reqLogger logr.Logger, request ctrl.Request
 	i.InventoryDb = database.NewBaseDatabase(&i.HBIDBParams)
 
 	if err = i.InventoryDb.Connect(); err != nil {
-		return i, i.errorWithEvent("Error while connecting to HBI DB.", err)
+		return i, err
 	}
 
 	return i, err
@@ -48,13 +50,13 @@ func (r *ValidationReconciler) setup(reqLogger logr.Logger, request ctrl.Request
 
 func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger := r.Log.WithValues("Pipeline", request.Name, "Namespace", request.Namespace)
 
 	i, err := r.setup(reqLogger, request)
 	defer i.Close()
 
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, i.error(err)
 	}
 
 	// nothing to validate
@@ -67,43 +69,43 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	if r.CheckResourceDeviation {
 		problem, err := i.checkForDeviation()
 		if err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error validating dependencies", err)
+			return reconcile.Result{}, i.error(err, "Error checking for state deviation")
 		} else if problem != nil {
 			i.Log.Info("Refreshing pipeline due to state deviation", "reason", problem)
 			i.Instance.TransitionToNew()
+			i.eventWarning("Refreshing", "Refreshing pipeline due to state deviation: %s", problem)
 			return i.updateStatusAndRequeue()
 		}
 	}
 
 	isValid, mismatchRatio, mismatchCount, hostCount, err := i.validate()
 	if err != nil {
-		return reconcile.Result{}, i.errorWithEvent("Error validating pipeline", err)
+		return reconcile.Result{}, i.error(err, "Error validating pipeline")
 	}
 
 	reqLogger.Info("Validation finished", "isValid", isValid)
 
 	if isValid {
+		msg := fmt.Sprintf("%v hosts (%.2f%%) do not match", mismatchCount, mismatchRatio*100)
+
+		if i.Instance.GetState() == cyndi.STATE_INVALID {
+			i.eventNormal("Valid", "Pipeline is valid again")
+		}
+
 		i.Instance.SetValid(
 			metav1.ConditionTrue,
 			"ValidationSucceeded",
-			fmt.Sprintf(
-				"Validation succeeded - %v hosts (%.2f%%) do not match which is below the threshold for invalid pipeline (%d%%)",
-				mismatchCount,
-				mismatchRatio*100,
-				i.getValidationConfig().PercentageThreshold,
-			),
+			fmt.Sprintf("Validation succeeded - %s", msg),
 			hostCount,
 		)
 	} else {
+		msg := fmt.Sprintf("Validation failed - %v hosts (%.2f%%) do not match", mismatchCount, mismatchRatio*100)
+
+		i.Recorder.Event(i.Instance, corev1.EventTypeWarning, "ValidationFailed", msg)
 		i.Instance.SetValid(
 			metav1.ConditionFalse,
 			"ValidationFailed",
-			fmt.Sprintf(
-				"Validation failed - %v hosts (%.2f%%) do not match which is above the threshold for invalid pipeline (%d%%)",
-				mismatchCount,
-				mismatchRatio*100,
-				i.getValidationConfig().PercentageThreshold,
-			),
+			msg,
 			hostCount,
 		)
 	}
@@ -137,14 +139,9 @@ func (r *ValidationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func NewValidationReconciler(client client.Client, clientset *kubernetes.Clientset, scheme *runtime.Scheme, log logr.Logger, checkResourceDeviation bool) *ValidationReconciler {
+func NewValidationReconciler(client client.Client, clientset *kubernetes.Clientset, scheme *runtime.Scheme, log logr.Logger, recorder record.EventRecorder, checkResourceDeviation bool) *ValidationReconciler {
 	return &ValidationReconciler{
-		CyndiPipelineReconciler: CyndiPipelineReconciler{
-			Client:    client,
-			Clientset: clientset,
-			Log:       log,
-			Scheme:    scheme,
-		},
-		CheckResourceDeviation: checkResourceDeviation,
+		CyndiPipelineReconciler: *NewCyndiReconciler(client, clientset, scheme, log, recorder),
+		CheckResourceDeviation:  checkResourceDeviation,
 	}
 }

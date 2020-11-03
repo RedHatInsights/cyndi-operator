@@ -95,7 +95,7 @@ var _ = Describe("Config", func() {
 
 			_, err := BuildCyndiConfig(nil, cm)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError(fmt.Sprintf("%s is not a valid value for %s", "abc", key)))
+			Expect(err).To(MatchError(fmt.Sprintf(`"%s" is not a valid value for "%s"`, "abc", key)))
 		},
 		Entry("connector.tasks.max", "connector.tasks.max"),
 		Entry("connector.batch.size", "connector.batch.size"),
