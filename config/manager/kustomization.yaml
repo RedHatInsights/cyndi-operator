@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/redhat_emp1/cyndi-operator
-  newTag: test
+  newTag: latest

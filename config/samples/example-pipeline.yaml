@@ -1,6 +1,6 @@
 apiVersion: cyndi.cloud.redhat.com/v1alpha1
 kind: CyndiPipeline
 metadata:
-  name: advisor-pipeline
+  name: example-pipeline
 spec:
   appName: advisor

@@ -175,12 +175,12 @@ The rest of this document assumes CodeReady Containers.
 
 1. Finally, create a new pipeline
     ```
-    oc apply -f ../config/samples/advisor-pipeline.yaml
+    oc apply -f ../config/samples/example-pipeline.yaml
     ```
 
     Optionally, you can wait for the pipeline to become valid with
     ```
-    oc wait cyndi/advisor-pipeline --for=condition=Valid --timeout=300s -n my-kafka-project
+    oc wait cyndi/example-pipeline --for=condition=Valid --timeout=300s -n my-kafka-project
     ```
 
 ### Development
@@ -197,7 +197,7 @@ Use `make delve` to start the operator in debug mode.
 Then connect to it with a debugger on port 2345.
 It can also be run locally with `make run ENABLE_WEBHOOKS=false`.
 
-After everything is running, create a new Custom Resource via `kubectl apply -f config/samples/advisor-pipeline.yaml`.
+After everything is running, create a new Custom Resource via `kubectl apply -f config/samples/example-pipeline.yaml`.
 Then, the CR can be managed via Kubernetes commands like normal.
 
 ### Useful commands
