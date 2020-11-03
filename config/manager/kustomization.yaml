@@ -4,5 +4,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: default-route-openshift-image-registry.apps-crc.testing/default/cyndi-operator
-  newTag: v0.0.1
+  newName: quay.io/redhat_emp1/cyndi-operator
+  newTag: test
