@@ -36,6 +36,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/record"
 
 	. "cyndi-operator/controllers/config"
 	connect "cyndi-operator/controllers/connect"
@@ -163,12 +164,7 @@ func createConfigMap(namespace string, name string, data map[string]string) {
 }
 
 func newCyndiReconciler() *CyndiPipelineReconciler {
-	return &CyndiPipelineReconciler{
-		Client:    test.Client,
-		Clientset: test.Clientset,
-		Scheme:    scheme.Scheme,
-		Log:       logf.Log.WithName("test"),
-	}
+	return NewCyndiReconciler(test.Client, test.Clientset, scheme.Scheme, logf.Log.WithName("test"), record.NewFakeRecorder(10))
 }
 
 func getPipeline(namespacedName types.NamespacedName) (pipeline *cyndi.CyndiPipeline) {
@@ -232,7 +228,7 @@ var _ = Describe("Pipeline operations", func() {
 		dbParams = getDBParams()
 
 		createDbSecret(namespacedName.Namespace, "host-inventory-db", dbParams)
-		createDbSecret(namespacedName.Namespace, fmt.Sprintf("%s-db", namespacedName.Name), dbParams)
+		createDbSecret(namespacedName.Namespace, utils.AppDbSecretName(namespacedName.Name), dbParams)
 
 		db = database.NewAppDatabase(&dbParams)
 		err := db.Connect()
@@ -676,6 +672,83 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(connectors.Items).To(BeEmpty())
 
 			Expect(reconcile()).To(BeZero())
+		})
+	})
+
+	Describe("Failures", func() {
+		It("Fails if App DB secret is missing", func() {
+			appDbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, utils.AppDbSecretName(namespacedName.Name))
+			Expect(err).ToNot(HaveOccurred())
+			err = test.Client.Delete(context.TODO(), appDbSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			createPipeline(namespacedName)
+			_, err = r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal(`secrets "test-pipeline-01-db" not found`))
+
+			recorder, _ := r.Recorder.(*record.FakeRecorder)
+			Expect(recorder.Events).To(HaveLen(1))
+		})
+
+		It("Fails if App DB secret is misconfigured", func() {
+			appDbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, utils.AppDbSecretName(namespacedName.Name))
+			Expect(err).ToNot(HaveOccurred())
+
+			appDbSecret.Data["db.host"] = []byte("localhost")
+			appDbSecret.Data["db.port"] = []byte("55432")
+			err = test.Client.Update(context.TODO(), appDbSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			createPipeline(namespacedName)
+			_, err = r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(HavePrefix(`Error connecting to localhost:55432/test as postgres`))
+
+			recorder, _ := r.Recorder.(*record.FakeRecorder)
+			Expect(recorder.Events).To(HaveLen(1))
+		})
+
+		It("Fails if the configmap is misconfigured", func() {
+			createConfigMap(namespacedName.Namespace, "cyndi", map[string]string{"standard.interval": "abcd"})
+			createPipeline(namespacedName)
+
+			_, err := r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal(fmt.Sprintf(`Error parsing cyndi configmap in %s: "abcd" is not a valid value for "standard.interval"`, namespacedName.Namespace)))
+
+			recorder, _ := r.Recorder.(*record.FakeRecorder)
+			Expect(recorder.Events).To(HaveLen(1))
+		})
+
+		It("Fails if DB table cannot be created", func() {
+			_, err := db.Exec("DROP SCHEMA inventory CASCADE")
+			Expect(err).ToNot(HaveOccurred())
+
+			createPipeline(namespacedName)
+			_, err = r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(HavePrefix("Error executing query"))
+
+			recorder, _ := r.Recorder.(*record.FakeRecorder)
+			Expect(recorder.Events).To(HaveLen(2))
+		})
+
+		It("Fails if inventory.hosts view cannot be created", func() {
+			createPipeline(namespacedName)
+			reconcile()
+
+			setPipelineValid(namespacedName, true)
+
+			_, err := db.Exec("CREATE TABLE inventory.hosts ()")
+			Expect(err).ToNot(HaveOccurred())
+
+			_, err = r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(HavePrefix("Error executing query"))
+
+			recorder, _ := r.Recorder.(*record.FakeRecorder)
+			Expect(recorder.Events).To(HaveLen(2))
 		})
 	})
 })

@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
@@ -36,8 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,6 +54,7 @@ type CyndiPipelineReconciler struct {
 	Clientset *kubernetes.Clientset
 	Scheme    *runtime.Scheme
 	Log       logr.Logger
+	Recorder  record.EventRecorder
 }
 
 const cyndipipelineFinalizer = "finalizer.cyndi.cloud.redhat.com"
@@ -90,31 +88,25 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 		GetRequeueInterval: func(Instance *ReconcileIteration) int64 {
 			return i.config.StandardInterval
 		},
+		Recorder: r.Recorder,
 	}
 
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartRecordingToSink(
-		&typedcorev1.EventSinkImpl{
-			Interface: i.Clientset.CoreV1().Events(i.Instance.Namespace),
-		})
-	i.Recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "cyndipipeline"})
-
 	if err = i.parseConfig(); err != nil {
-		return i, i.errorWithEvent("Error while reading cyndi configmap.", err)
+		return i, err
 	}
 
 	if i.HBIDBParams, err = config.LoadSecret(i.Client, i.Instance.Namespace, "host-inventory-db"); err != nil {
-		return i, i.errorWithEvent("Error while reading HBI DB secret.", err)
+		return i, err
 	}
 
-	if i.AppDBParams, err = config.LoadSecret(i.Client, i.Instance.Namespace, fmt.Sprintf("%s-db", i.Instance.Spec.AppName)); err != nil {
-		return i, i.errorWithEvent("Error while reading HBI DB secret.", err)
+	if i.AppDBParams, err = config.LoadSecret(i.Client, i.Instance.Namespace, utils.AppDbSecretName(i.Instance.Spec.AppName)); err != nil {
+		return i, err
 	}
 
 	i.AppDb = database.NewAppDatabase(&i.AppDBParams)
 
 	if err = i.AppDb.Connect(); err != nil {
-		return i, i.errorWithEvent("Error while connecting to app DB.", err)
+		return i, err
 	}
 
 	return i, nil
@@ -126,14 +118,14 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 
 func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger := log.WithValues("Pipeline", request.Name, "Namespace", request.Namespace)
 	reqLogger.Info("Reconciling CyndiPipeline")
 
 	i, err := r.setup(reqLogger, request)
 	defer i.Close()
 
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, i.error(err)
 	}
 
 	// Request object not found, could have been deleted after reconcile request.
@@ -143,20 +135,20 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 	// remove any stale dependencies
 	// if we're shutting down this removes all dependencies
-	err = i.deleteStaleDependencies()
+	errors := i.deleteStaleDependencies()
 
-	if err != nil {
-		i.errorWithEvent("Error deleting stale dependencies", err)
+	for _, err := range errors {
+		i.error(err, "Error deleting stale dependency")
 	}
 
 	// STATE_REMOVED
 	if i.Instance.GetState() == cyndi.STATE_REMOVED {
-		if err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error deleting stale dependencies", err)
+		if len(errors) > 0 {
+			return reconcile.Result{}, errors[0]
 		}
 
 		if err = i.removeFinalizer(); err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error updating resource after finalizer.", err)
+			return reconcile.Result{}, i.error(err, "Error removing finalizer")
 		}
 
 		i.Log.Info("Successfully finalized CyndiPipeline")
@@ -166,7 +158,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	// STATE_NEW
 	if i.Instance.GetState() == cyndi.STATE_NEW {
 		if err := i.addFinalizer(); err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error adding finalizer", err)
+			return reconcile.Result{}, i.error(err, "Error adding finalizer")
 		}
 
 		i.Instance.Status.CyndiConfigVersion = i.config.ConfigMapVersion
@@ -174,15 +166,16 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		pipelineVersion := fmt.Sprintf("1_%s", strconv.FormatInt(time.Now().UnixNano(), 10))
 		i.Log.Info("New pipeline version", "version", pipelineVersion)
 		i.Instance.TransitionToInitialSync(pipelineVersion)
+		i.eventNormal("InitialSync", "Starting data synchronization to %s", i.Instance.Status.TableName)
 
 		err = i.AppDb.CreateTable(cyndi.TableName(pipelineVersion), i.config.DBTableInitScript)
 		if err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error creating table", err)
+			return reconcile.Result{}, i.error(err, "Error creating table")
 		}
 
 		err = i.createConnector(cyndi.ConnectorName(pipelineVersion, i.Instance.Spec.AppName))
 		if err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error creating connector", err)
+			return reconcile.Result{}, i.error(err, "Error creating connector")
 		}
 
 		i.Log.Info("Transitioning to InitialSync")
@@ -191,17 +184,20 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 	problem, err := i.checkForDeviation()
 	if err != nil {
-		return reconcile.Result{}, i.errorWithEvent("Error validating dependencies", err)
+		return reconcile.Result{}, i.error(err, "Error checking for state deviation")
 	} else if problem != nil {
 		i.Log.Info("Refreshing pipeline due to state deviation", "reason", problem)
 		i.Instance.TransitionToNew()
+		i.eventWarning("Refreshing", "Refreshing pipeline due to state deviation: %s", problem)
 		return i.updateStatusAndRequeue()
 	}
 
 	// STATE_VALID
 	if i.Instance.GetState() == cyndi.STATE_VALID {
-		if err = i.recreateViewIfNeeded(); err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error updating hosts view", err)
+		if updated, err := i.recreateViewIfNeeded(); err != nil {
+			return reconcile.Result{}, i.error(err, "Error updating hosts view")
+		} else if updated {
+			i.eventNormal("ValidationSucceeded", "Pipeline became valid. inventory.hosts view now points to %s", i.Instance.Status.TableName)
 		}
 
 		return i.updateStatusAndRequeue()
@@ -209,7 +205,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 	// invalid pipeline - either STATE_INITIAL_SYNC or STATE_INVALID
 	if i.Instance.GetValid() == metav1.ConditionFalse {
-		if i.Instance.Status.ValidationFailedCount > i.getValidationConfig().AttemptsThreshold {
+		if i.Instance.Status.ValidationFailedCount >= i.getValidationConfig().AttemptsThreshold {
 
 			// This pipeline never became valid.
 			if i.Instance.GetState() == cyndi.STATE_INITIAL_SYNC {
@@ -220,6 +216,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 			}
 
 			i.Log.Info("Pipeline failed to become valid. Refreshing.")
+			i.eventWarning("Refreshing", "Pipeline failed to become valid within given threshold")
 			i.Instance.TransitionToNew()
 			probes.PipelineRefreshed(i.Instance)
 			return i.updateStatusAndRequeue()
@@ -229,7 +226,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	return i.updateStatusAndRequeue()
 }
 
-func (i *ReconcileIteration) deleteStaleDependencies() error {
+func (i *ReconcileIteration) deleteStaleDependencies() (errors []error) {
 	var (
 		connectorsToKeep []string
 		tablesToKeep     []string
@@ -242,43 +239,41 @@ func (i *ReconcileIteration) deleteStaleDependencies() error {
 
 	currentTable, err := i.AppDb.GetCurrentTable()
 	if err != nil {
-		return err
-	}
-
-	if currentTable != nil && i.Instance.GetState() != cyndi.STATE_REMOVED {
+		errors = append(errors, err)
+	} else if currentTable != nil && i.Instance.GetState() != cyndi.STATE_REMOVED {
 		connectorsToKeep = append(connectorsToKeep, cyndi.TableNameToConnectorName(*currentTable, i.Instance.Spec.AppName))
 		tablesToKeep = append(tablesToKeep, *currentTable)
 	}
 
 	connectors, err := connect.GetConnectorsForApp(i.Client, i.Instance.Namespace, i.Instance.Spec.AppName)
 	if err != nil {
-		return err
-	}
-
-	for _, connector := range connectors.Items {
-		if !utils.ContainsString(connectorsToKeep, connector.GetName()) {
-			i.Log.Info("Removing stale connector", "connector", connector.GetName())
-			if err = connect.DeleteConnector(i.Client, connector.GetName(), i.Instance.Namespace); err != nil {
-				return err
+		errors = append(errors, err)
+	} else {
+		for _, connector := range connectors.Items {
+			if !utils.ContainsString(connectorsToKeep, connector.GetName()) {
+				i.Log.Info("Removing stale connector", "connector", connector.GetName())
+				if err = connect.DeleteConnector(i.Client, connector.GetName(), i.Instance.Namespace); err != nil {
+					errors = append(errors, err)
+				}
 			}
 		}
 	}
 
 	tables, err := i.AppDb.GetCyndiTables()
 	if err != nil {
-		return err
-	}
-
-	for _, table := range tables {
-		if !utils.ContainsString(tablesToKeep, table) {
-			i.Log.Info("Removing stale table", "table", table)
-			if err = i.AppDb.DeleteTable(table); err != nil {
-				return err
+		errors = append(errors, err)
+	} else {
+		for _, table := range tables {
+			if !utils.ContainsString(tablesToKeep, table) {
+				i.Log.Info("Removing stale table", "table", table)
+				if err = i.AppDb.DeleteTable(table); err != nil {
+					errors = append(errors, err)
+				}
 			}
 		}
 	}
 
-	return nil
+	return
 }
 
 func (r *CyndiPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -349,20 +344,22 @@ func (i *ReconcileIteration) createConnector(name string) error {
 	return connect.CreateConnector(i.Client, name, i.Instance.Namespace, config, i.Instance, i.Scheme)
 }
 
-func (i *ReconcileIteration) recreateViewIfNeeded() error {
+func (i *ReconcileIteration) recreateViewIfNeeded() (bool, error) {
 	table, err := i.AppDb.GetCurrentTable()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if table == nil || *table != i.Instance.Status.TableName {
 		i.Log.Info("Updating view", "table", i.Instance.Status.TableName)
 		if err = i.AppDb.UpdateView(i.Instance.Status.TableName); err != nil {
-			return err
+			return false, err
 		}
+
+		return true, nil
 	}
 
-	return nil
+	return false, nil
 }
 
 func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
@@ -429,7 +426,7 @@ func (i *ReconcileIteration) updateViewIfHealthier() error {
 		i.InventoryDb = database.NewBaseDatabase(&i.HBIDBParams)
 
 		if err = i.InventoryDb.Connect(); err != nil {
-			return fmt.Errorf("Error while connecting to HBI DB %w", err)
+			return err
 		}
 
 		hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly)
@@ -459,4 +456,14 @@ func (i *ReconcileIteration) updateViewIfHealthier() error {
 	}
 
 	return nil
+}
+
+func NewCyndiReconciler(client client.Client, clientset *kubernetes.Clientset, scheme *runtime.Scheme, log logr.Logger, recorder record.EventRecorder) *CyndiPipelineReconciler {
+	return &CyndiPipelineReconciler{
+		Client:    client,
+		Clientset: clientset,
+		Log:       log,
+		Scheme:    scheme,
+		Recorder:  recorder,
+	}
 }

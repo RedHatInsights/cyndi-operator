@@ -3,6 +3,7 @@ package controllers
 import (
 	"cyndi-operator/controllers/config"
 	"cyndi-operator/controllers/utils"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )
@@ -27,5 +28,10 @@ func (i *ReconcileIteration) parseConfig() error {
 	}
 
 	i.config, err = config.BuildCyndiConfig(i.Instance, cyndiConfig)
+
+	if err != nil {
+		return fmt.Errorf("Error parsing %s configmap in %s: %w", configMapName, i.Instance.Namespace, err)
+	}
+
 	return err
 }

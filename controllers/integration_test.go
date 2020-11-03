@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -66,12 +67,12 @@ var _ = Describe("Integration tests", func() {
 		})
 
 		cyndiReconciler = newCyndiReconciler()
-		validationReconciler = NewValidationReconciler(test.Client, test.Clientset, scheme.Scheme, logf.Log.WithName("test"), false)
+		validationReconciler = NewValidationReconciler(test.Client, test.Clientset, scheme.Scheme, logf.Log.WithName("test"), record.NewFakeRecorder(10), false)
 
 		dbParams = getDBParams()
 
 		createDbSecret(namespacedName.Namespace, "host-inventory-db", dbParams)
-		createDbSecret(namespacedName.Namespace, fmt.Sprintf("%s-db", namespacedName.Name), dbParams)
+		createDbSecret(namespacedName.Namespace, utils.AppDbSecretName(namespacedName.Name), dbParams)
 
 		appDb = database.NewAppDatabase(&dbParams)
 		err := appDb.Connect()
@@ -197,7 +198,7 @@ var _ = Describe("Integration tests", func() {
 			newHost := "0ce8b6a5-32f0-4152-995a-73a390d89744"
 			seedTable(hbiDb, "public.hosts", true, newHost)
 
-			for i := 1; i < 4; i++ {
+			for i := 1; i < 3; i++ {
 				pipeline = reconcile(validationReconciler, cyndiReconciler)
 				Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INVALID))
 				Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(i)))

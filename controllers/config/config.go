@@ -80,7 +80,7 @@ func getIntValue(cm *corev1.ConfigMap, key string, defaultValue int64) (int64, e
 
 	if value, ok := cm.Data[key]; ok {
 		if parsed, err := strconv.ParseInt(value, 10, 64); err != nil {
-			return -1, fmt.Errorf("%s is not a valid value for %s", value, key)
+			return -1, fmt.Errorf(`"%s" is not a valid value for "%s"`, value, key)
 		} else {
 			return parsed, nil
 		}

@@ -5,15 +5,17 @@ import (
 	cyndi "cyndi-operator/api/v1alpha1"
 	"cyndi-operator/controllers/config"
 	"cyndi-operator/controllers/database"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -52,23 +54,27 @@ func (i *ReconcileIteration) Close() {
 	}
 }
 
-func (i *ReconcileIteration) UpdateStatus() (ctrl.Result, error) {
-	if err := i.Client.Status().Update(context.TODO(), i.Instance); err != nil {
-		return reconcile.Result{}, i.errorWithEvent("Error updating pipeline status", err)
+// logs the error and produces an error log message
+func (i *ReconcileIteration) error(err error, prefixes ...string) error {
+	msg := err.Error()
+
+	if len(prefixes) > 0 {
+		prefix := strings.Join(prefixes[:], ", ")
+		msg = fmt.Sprintf("%s: %s", prefix, msg)
 	}
 
-	return reconcile.Result{}, nil
+	i.Log.Error(err, msg)
+
+	i.eventWarning("Failed", msg)
+	return err
 }
 
-func (i *ReconcileIteration) errorWithEvent(message string, err error) error {
-	i.Log.Error(err, "Caught error")
+func (i *ReconcileIteration) eventNormal(reason, messageFmt string, args ...interface{}) {
+	i.Recorder.Eventf(i.Instance, corev1.EventTypeNormal, reason, messageFmt, args...)
+}
 
-	i.Recorder.Event(
-		i.Instance,
-		corev1.EventTypeWarning,
-		message,
-		err.Error())
-	return err
+func (i *ReconcileIteration) eventWarning(reason, messageFmt string, args ...interface{}) {
+	i.Recorder.Eventf(i.Instance, corev1.EventTypeWarning, reason, messageFmt, args...)
 }
 
 func (i *ReconcileIteration) debug(message string, keysAndValues ...interface{}) {
@@ -86,7 +92,7 @@ func (i *ReconcileIteration) getValidationConfig() config.ValidationConfiguratio
 func (i *ReconcileIteration) updateStatusAndRequeue() (reconcile.Result, error) {
 	// Update Status.ActiveTableName to reflect the active table regardless of what happened in this Reconcile() invocation
 	if table, err := i.AppDb.GetCurrentTable(); err != nil {
-		return reconcile.Result{}, i.errorWithEvent("Error determining current table", err)
+		return reconcile.Result{}, i.error(err, "Error determining current table")
 	} else {
 		if table == nil {
 			i.Instance.Status.ActiveTableName = ""
@@ -101,7 +107,12 @@ func (i *ReconcileIteration) updateStatusAndRequeue() (reconcile.Result, error) 
 		i.debug("Updating status")
 
 		if err := i.Client.Status().Update(context.TODO(), i.Instance); err != nil {
-			return reconcile.Result{}, i.errorWithEvent("Error updating pipeline status", err)
+			if errors.IsConflict(err) {
+				i.Log.Error(err, "Status conflict")
+				return reconcile.Result{}, err
+			}
+
+			return reconcile.Result{}, i.error(err, "Error updating pipeline status")
 		}
 	}
 

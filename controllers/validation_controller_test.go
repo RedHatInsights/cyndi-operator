@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -76,12 +77,12 @@ var _ = Describe("Validation controller", func() {
 			"validation.percentage.threshold":      "20",
 		})
 
-		r = NewValidationReconciler(test.Client, test.Clientset, scheme.Scheme, logf.Log.WithName("test"), false)
+		r = NewValidationReconciler(test.Client, test.Clientset, scheme.Scheme, logf.Log.WithName("test"), record.NewFakeRecorder(10), false)
 
 		dbParams = getDBParams()
 
 		createDbSecret(namespacedName.Namespace, "host-inventory-db", dbParams)
-		createDbSecret(namespacedName.Namespace, fmt.Sprintf("%s-db", namespacedName.Name), dbParams)
+		createDbSecret(namespacedName.Namespace, utils.AppDbSecretName(namespacedName.Name), dbParams)
 
 		appDb = database.NewAppDatabase(&dbParams)
 		err := appDb.Connect()
@@ -132,7 +133,7 @@ var _ = Describe("Validation controller", func() {
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.IsValid()).To(BeTrue())
 			Expect(pipeline.Status.Conditions[0].Reason).To(Equal("ValidationSucceeded"))
-			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation succeeded - 0 hosts (0.00%) do not match which is below the threshold for invalid pipeline (40%)"))
+			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation succeeded - 0 hosts (0.00%) do not match"))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
 			Expect(pipeline.Status.HostCount).To(Equal(int64(3)))
@@ -170,7 +171,7 @@ var _ = Describe("Validation controller", func() {
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.IsValid()).To(BeTrue())
 			Expect(pipeline.Status.Conditions[0].Reason).To(Equal("ValidationSucceeded"))
-			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation succeeded - 0 hosts (0.00%) do not match which is below the threshold for invalid pipeline (40%)"))
+			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation succeeded - 0 hosts (0.00%) do not match"))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
 			Expect(pipeline.Status.HostCount).To(Equal(int64(3)))
@@ -200,7 +201,7 @@ var _ = Describe("Validation controller", func() {
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.IsValid()).To(BeTrue())
 			Expect(pipeline.Status.Conditions[0].Reason).To(Equal("ValidationSucceeded"))
-			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation succeeded - 1 hosts (16.67%) do not match which is below the threshold for invalid pipeline (20%)"))
+			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation succeeded - 1 hosts (16.67%) do not match"))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
 			Expect(pipeline.Status.HostCount).To(Equal(int64(5)))
@@ -229,7 +230,7 @@ var _ = Describe("Validation controller", func() {
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.IsValid()).To(BeFalse())
 			Expect(pipeline.Status.Conditions[0].Reason).To(Equal("ValidationFailed"))
-			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation failed - 2 hosts (66.67%) do not match which is above the threshold for invalid pipeline (40%)"))
+			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation failed - 2 hosts (66.67%) do not match"))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(1)))
 			Expect(pipeline.Status.HostCount).To(Equal(int64(1)))
@@ -259,7 +260,7 @@ var _ = Describe("Validation controller", func() {
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.IsValid()).To(BeFalse())
 			Expect(pipeline.Status.Conditions[0].Reason).To(Equal("ValidationFailed"))
-			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation failed - 2 hosts (33.33%) do not match which is above the threshold for invalid pipeline (20%)"))
+			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation failed - 2 hosts (33.33%) do not match"))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(1)))
 			Expect(pipeline.Status.HostCount).To(Equal(int64(4)))
@@ -315,10 +316,29 @@ var _ = Describe("Validation controller", func() {
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.IsValid()).To(BeFalse())
 			Expect(pipeline.Status.Conditions[0].Reason).To(Equal("ValidationFailed"))
-			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation failed - 1 hosts (16.67%) do not match which is above the threshold for invalid pipeline (5%)"))
+			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation failed - 1 hosts (16.67%) do not match"))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeTrue())
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(1)))
 			Expect(pipeline.Status.HostCount).To(Equal(int64(5)))
+		})
+	})
+
+	Describe("Failures", func() {
+		It("Fails if HBI DB secret is missing", func() {
+			dbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, "host-inventory-db")
+			Expect(err).ToNot(HaveOccurred())
+			dbSecret.Data["db.host"] = []byte("localhost")
+			dbSecret.Data["db.port"] = []byte("55432")
+			err = test.Client.Update(context.TODO(), dbSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			createPipeline(namespacedName)
+			_, err = r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(HavePrefix(`Error connecting to localhost:55432/test as postgres`))
+
+			recorder, _ := r.Recorder.(*record.FakeRecorder)
+			Expect(recorder.Events).To(HaveLen(1))
 		})
 	})
 })
