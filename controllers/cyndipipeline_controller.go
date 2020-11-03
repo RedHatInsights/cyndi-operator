@@ -120,8 +120,9 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 	return i, nil
 }
 
-// +kubebuilder:rbac:groups=cyndi.cloud.redhat.com,resources=cyndipipelines,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=cyndi.cloud.redhat.com,resources=cyndipipelines/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=cyndi.cloud.redhat.com,resources=cyndipipelines;cyndipipelines/status;cyndipipelines/finalizers,verbs=*
+// +kubebuilder:rbac:groups=kafka.strimzi.io,resources=kafkaconnectors;kafkaconnectors/finalizers,verbs=*
+// +kubebuilder:rbac:groups="",resources=configmaps;secrets,verbs=get;list;watch
 
 func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()

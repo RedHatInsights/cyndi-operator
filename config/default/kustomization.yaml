@@ -1,5 +1,5 @@
 # Adds namespace to all resources.
-namespace: default
+namespace: my-kafka-project
 
 # Value of this field is prepended to the
 # names of all resources, e.g. a deployment named
@@ -12,12 +12,12 @@ namePrefix: cyndi-operator-
 #commonLabels:
 #  someName: someValue
 
-# [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in 
+# [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
 # crd/kustomization.yaml
 #- ../webhook
 # [CERTMANAGER] To enable cert-manager, uncomment all sections with 'CERTMANAGER'. 'WEBHOOK' components are required.
 #- ../certmanager
-# [PROMETHEUS] To enable prometheus monitor, uncomment all sections with 'PROMETHEUS'. 
+# [PROMETHEUS] To enable prometheus monitor, uncomment all sections with 'PROMETHEUS'.
 #- ../prometheus
 
   # Protect the /metrics endpoint by putting it behind auth.
@@ -26,7 +26,7 @@ namePrefix: cyndi-operator-
 patchesStrategicMerge:
 - manager_auth_proxy_patch.yaml
 
-# [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in 
+# [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
 # crd/kustomization.yaml
 #- manager_webhook_patch.yaml
 

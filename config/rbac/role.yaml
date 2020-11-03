@@ -7,22 +7,26 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - cyndi.cloud.redhat.com
+  - ""
   resources:
-  - cyndipipelines
+  - configmaps
+  - secrets
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - cyndi.cloud.redhat.com
   resources:
+  - cyndipipelines
+  - cyndipipelines/finalizers
   - cyndipipelines/status
   verbs:
-  - get
-  - patch
-  - update
+  - '*'
+- apiGroups:
+  - kafka.strimzi.io
+  resources:
+  - kafkaconnectors
+  - kafkaconnectors/finalizers
+  verbs:
+  - '*'
