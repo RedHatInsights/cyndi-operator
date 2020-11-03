@@ -55,7 +55,8 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	devMode := os.Getenv("DEV_MODE") == "true"
+	ctrl.SetLogger(zap.New(zap.UseDevMode(devMode)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
@@ -80,8 +81,8 @@ func main() {
 		clientset, mgr.GetScheme(),
 		ctrl.Log.WithName("controllers").WithName("validation"),
 		mgr.GetEventRecorderFor("validation"),
-		true).
-		SetupWithManager(mgr); err != nil {
+		true,
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Validation")
 		os.Exit(1)
 	}

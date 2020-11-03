@@ -1,5 +1,6 @@
 domain: cloud.redhat.com
 layout: go.kubebuilder.io/v2
+projectName: cyndi
 repo: cyndi-operator
 resources:
 - group: cyndi

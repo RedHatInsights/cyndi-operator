@@ -1,0 +1,54 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+    operators.operatorframework.io/builder: operator-sdk-v1.0.1
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
+  name: cyndi.vX.Y.Z
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: CyndiPipeline is the Schema for the cyndipipelines API
+      displayName: Cyndi Pipeline
+      kind: CyndiPipeline
+      name: cyndipipelines.cyndi.cloud.redhat.com
+      version: v1alpha1
+    required:
+    - kind: KafkaConnector
+      name: kafkaconnectors.kafka.strimzi.io
+      version: v1alpha1
+  description: Data syndication between Host-based Inventory and application databases.
+  displayName: Cyndi
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: true
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - cyndi
+  links:
+  - name: GitHub repo
+    url: https://github.com/redhatinsights/cyndi-operator
+  maintainers:
+  - email: jozef@redhat.com
+    name: Jozef Hartinger
+  maturity: alpha
+  provider:
+    name: Red Hat
+    url: https://github.com/redhatinsights/cyndi-operator
+  version: 0.0.0
