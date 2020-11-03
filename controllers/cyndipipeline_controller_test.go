@@ -19,13 +19,11 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -49,40 +47,6 @@ import (
 /*
  * Tests for CyndiPipelineReconciler. ValidationController is mocked (see setPipelineValid)
  */
-
-type ConfigMap struct {
-	APIVersion string `yaml:"apiVersion"`
-	Data       struct {
-		ConnConfig                        string `yaml:"connector.config"`
-		DBSchema                          string `yaml:"db.schema"`
-		ValidationInterval                string `yaml:"validation.interval"`
-		ValidationAttemptsThreshold       string `yaml:"validation.attempts.threshold"`
-		ValidationPercentageThreshold     string `yaml:"validation.percentage.threshold"`
-		InitValidationInterval            string `yaml:"init.validation.interval"`
-		InitValidationAttemptsThreshold   string `yaml:"init.validation.attempts.threshold"`
-		InitValidationPrecentageThreshold string `yaml:"init.validation.percentage.threshold"`
-		ConnectCluster                    string `yaml:"connect.cluster"`
-		ConnectorTasksMax                 string `yaml:"connector.tasks.max"`
-	} `yaml:"data"`
-	Kind     string `yaml:"kind"`
-	Metadata struct {
-		Name string `yaml:"name"`
-	} `yaml:"metadata"`
-}
-
-func (c *ConfigMap) getConfigMap() (*ConfigMap, error) {
-
-	yamlFile, err := ioutil.ReadFile("../examples/cyndi.configmap.yml")
-	if err != nil {
-		return nil, err
-	}
-	err = yaml.Unmarshal(yamlFile, &c)
-	if err != nil {
-		return nil, err
-	}
-
-	return c, nil
-}
 
 func getDBParams() DBParams {
 	options := viper.New()
