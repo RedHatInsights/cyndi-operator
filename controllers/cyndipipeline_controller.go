@@ -187,8 +187,8 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, i.error(err, "Error checking for state deviation")
 	} else if problem != nil {
 		i.Log.Info("Refreshing pipeline due to state deviation", "reason", problem)
-		i.Instance.TransitionToNew()
 		i.eventWarning("Refreshing", "Refreshing pipeline due to state deviation: %s", problem)
+		i.Instance.TransitionToNew()
 		return i.updateStatusAndRequeue()
 	}
 
