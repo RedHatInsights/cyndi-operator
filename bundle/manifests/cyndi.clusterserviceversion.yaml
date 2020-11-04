@@ -29,6 +29,10 @@ spec:
       kind: CyndiPipeline
       name: cyndipipelines.cyndi.cloud.redhat.com
       version: v1alpha1
+    required:
+    - kind: KafkaConnector
+      name: kafkaconnectors.kafka.strimzi.io
+      version: v1alpha1
   description: Data syndication between Host-based Inventory and application databases.
   displayName: Cyndi
   icon:
@@ -106,7 +110,7 @@ spec:
                 - --max-concurrent-reconciles=2
                 command:
                 - /manager
-                image: quay.io/redhat_emp1/cyndi-operator:latest
+                image: quay.io/cloudservices/cyndi-operator:latest
                 imagePullPolicy: Always
                 name: manager
                 resources:
