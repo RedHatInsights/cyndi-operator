@@ -71,7 +71,7 @@ curl -L https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize
 chmod +x ./operator-sdk
 chmod +x ./kustomize
 export PATH=$PATH:.
-make bundle
+make bundle-build
 docker tag $BUNDLE_IMAGE:$current_commit $BUNDLE_IMAGE:latest
 
 log "Pushing the bundle $BUNDLE_IMAGE:$current_commit to repository"
