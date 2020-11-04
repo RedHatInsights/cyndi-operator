@@ -39,16 +39,14 @@ tar -C $GOUNPACK -xzf $GOUNPACK/go.tar.gz
 export PATH=${GOUNPACK}/go/bin:$PATH
 
 # Login to docker
-docker_conf="$PWD/.docker"
-export DOCKER_CONFIG=${docker_conf}
-mkdir -p "$docker_conf"
-docker_cmd="docker --config=$docker_conf"
+export DOCKER_CONFIG="$PWD/.docker"
+mkdir -p "$DOCKER_CONFIG"
 
-$docker_cmd login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
+docker login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
 
 # Find the CSV version from the previous bundle
 log "Pulling latest bundle image $BUNDLE_IMAGE"
-$docker_cmd pull $BUNDLE_IMAGE:latest && exists=1 || exists=0
+docker pull $BUNDLE_IMAGE:latest && exists=1 || exists=0
 
 if [ $exists -eq 1 ]; then
   log "Extracting previous version from bundle image"
@@ -83,7 +81,7 @@ make bundle-build
 docker tag $BUNDLE_IMAGE:$current_commit $BUNDLE_IMAGE:latest
 
 log "Pushing the bundle $BUNDLE_IMAGE:$current_commit to repository"
-$docker_cmd push $BUNDLE_IMAGE:$current_commit
+docker push $BUNDLE_IMAGE:$current_commit
 # Do not push the latest tag here.  If there is a problem creating the catalog then
 # pushing the latest tag here will mean subsequent runs will be extracting a bundle
 # version that isn't referenced in the catalog.  This will result in all future
@@ -95,7 +93,7 @@ chmod u+x ./opm
 
 # Create/push a new catalog via opm
 log "Pulling existing latest catalog $CATALOG_IMAGE"
-$docker_cmd pull $CATALOG_IMAGE:latest && exists=1 || exists=0
+docker pull $CATALOG_IMAGE:latest && exists=1 || exists=0
 if [ $exists -eq 1 ]; then
   from_arg="--from-index $CATALOG_IMAGE:latest"
 fi
@@ -113,9 +111,9 @@ fi
 docker tag $CATALOG_IMAGE:$current_commit $CATALOG_IMAGE:latest
 
 log "Pushing catalog $CATALOG_IMAGE:$current_commit to repository"
-$docker_cmd push $CATALOG_IMAGE:$current_commit
+docker push $CATALOG_IMAGE:$current_commit
 
 # Only put the latest tags once everything else has succeeded
 log "Pushing latest tags for $BUNDLE_IMAGE and $CATALOG_IMAGE"
-$docker_cmd push $CATALOG_IMAGE:latest
-$docker_cmd push $BUNDLE_IMAGE:latest
+docker push $CATALOG_IMAGE:latest
+docker push $BUNDLE_IMAGE:latest
