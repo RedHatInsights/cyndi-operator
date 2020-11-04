@@ -31,6 +31,9 @@ current_commit=$(git rev-parse --short=7 HEAD)
 version="0.1.$num_commits-git$current_commit"
 opm_version="1.14.0"
 
+GOPROXY=proxy.golang.org,direct
+go clean -modcache
+
 # Login to docker
 docker_conf="$PWD/.docker"
 mkdir -p "$docker_conf"
