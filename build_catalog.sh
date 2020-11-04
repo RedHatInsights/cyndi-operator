@@ -40,6 +40,7 @@ export PATH=${GOUNPACK}/go/bin:$PATH
 
 # Login to docker
 docker_conf="$PWD/.docker"
+export DOCKER_CONFIG=${docker_conf}
 mkdir -p "$docker_conf"
 docker_cmd="docker --config=$docker_conf"
 
