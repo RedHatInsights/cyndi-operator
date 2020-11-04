@@ -31,8 +31,12 @@ current_commit=$(git rev-parse --short=7 HEAD)
 version="0.1.$num_commits-git$current_commit"
 opm_version="1.14.0"
 
-GOPROXY=proxy.golang.org,direct
-go clean -modcache
+# workaround for https://github.com/golang/go/issues/38373
+GO_VERSION="1.15.3"
+GOUNPACK=$(mktemp -d)
+wget "https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O $GOUNPACK/go.tar.gz
+tar -C $GOUNPACK -xzf $GOUNPACK/go.tar.gz
+export PATH=${GOUNPACK}/go/bin:$PATH
 
 # Login to docker
 docker_conf="$PWD/.docker"
