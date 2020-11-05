@@ -18,6 +18,8 @@ objects:
   spec:
     sourceType: grpc
     image: ${IMAGE}:${IMAGE_TAG}
+    secrets:
+    - quay-cloudservices-pull
 
 - apiVersion: operators.coreos.com/v1
   kind: OperatorGroup
