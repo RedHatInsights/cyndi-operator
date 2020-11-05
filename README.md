@@ -163,6 +163,10 @@ The rest of this document assumes CodeReady Containers.
     oc port-forward svc/advisor-db 5433:5432 -n my-kafka-project &
     ```
 
+### Running the operator locally
+
+With the cluster set up it is now possible to install manifests and run the operator locally.
+
 1. Install CRDs
     ```
     make install
@@ -182,6 +186,22 @@ The rest of this document assumes CodeReady Containers.
     ```
     oc wait cyndi/example-pipeline --for=condition=Valid --timeout=300s -n my-kafka-project
     ```
+
+### Running the operator using OLM
+
+An alternative to running the operator locally is to install the operator to the cluster using OLM.
+
+1. Install OLM
+    ```
+    kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/crds.yaml
+    kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/olm.yaml
+    ```
+
+1. Install the operator
+    ```
+    oc process -f ../deploy/operator.yml -p TARGET_NAMESPACE=my-kafka-project -o yaml | oc apply -f -
+    ```
+
 
 ### Development
 
@@ -226,4 +246,9 @@ pgcli -h localhost -p 5432 -u insights insights
 Connect to advisor db
 ```
 pgcli -h localhost -p 5433 -u insights insights
+```
+
+Inspect index image
+```
+opm index export --index=quay.io/cloudservices/cyndi-operator-index:local -c podman
 ```
