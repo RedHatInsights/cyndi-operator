@@ -9,8 +9,22 @@ parameters:
   value: quay.io/cloudservices/cyndi-operator-index
 - name: TARGET_NAMESPACE
   value: cyndi
-objects:
+- name: RECONCILE_INTERVAL
+  value: "120"
+- name: VALIDATION_INTERVAL
+  value: "1800"
+- name: VALIDATION_INTERVAL_INIT
+  value: "60"
+- name: VALIDATION_PERCENTAGE_THRESHOLD
+  value: "5"
+- name: VALIDATION_ATTEMPTS_THRESHOLD
+  value: "3"
+- name: VALIDATION_ATTEMPTS_THRESHOLD_INIT
+  value: "15"
+- name: CONNECT_CLUSTER
+  value: "xjoin-kafka-connect-strimzi"
 
+objects:
 - apiVersion: operators.coreos.com/v1alpha1
   kind: CatalogSource
   metadata:
@@ -36,3 +50,17 @@ objects:
     name: cyndi
     source: cyndi-operator-source
     sourceNamespace: ${TARGET_NAMESPACE}
+
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: cyndi
+  data:
+    standard.interval: ${RECONCILE_INTERVAL}
+    validation.interval: ${VALIDATION_INTERVAL}
+    validation.attempts.threshold: ${VALIDATION_ATTEMPTS_THRESHOLD}
+    validation.percentage.threshold: ${VALIDATION_PERCENTAGE_THRESHOLD}
+    init.validation.interval: ${VALIDATION_INTERVAL_INIT}
+    init.validation.attempts.threshold: ${VALIDATION_ATTEMPTS_THRESHOLD_INIT}
+    init.validation.percentage.threshold: ${VALIDATION_PERCENTAGE_THRESHOLD}
+    connect.cluster: ${CONNECT_CLUSTER}
