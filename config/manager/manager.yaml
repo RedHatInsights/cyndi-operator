@@ -37,4 +37,7 @@ spec:
           requests:
             cpu: 100m
             memory: 2Gi
+        ports:
+        - containerPort: 8080
+          protocol: TCP
       terminationGracePeriodSeconds: 10
