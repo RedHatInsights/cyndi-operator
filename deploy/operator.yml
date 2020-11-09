@@ -64,3 +64,18 @@ objects:
     init.validation.attempts.threshold: ${VALIDATION_ATTEMPTS_THRESHOLD_INIT}
     init.validation.percentage.threshold: ${VALIDATION_PERCENTAGE_THRESHOLD}
     connect.cluster: ${CONNECT_CLUSTER}
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: cyndi-operator
+    labels:
+      control-plane: controller-manager
+  spec:
+    ports:
+    - name: https
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+    selector:
+      control-plane: controller-manager
