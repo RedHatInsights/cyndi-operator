@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: cyndi-operator
+
+parameters:
+- name: APP_NAME
+  required: true
+- name: INSIGHTS_ONLY
+  value: "false"
+- name: VALIDATION_THRESHOLD
+  value: "5"
+- name: MAX_AGE
+  value: "45"
+
+objects:
+- apiVersion: cyndi.cloud.redhat.com/v1alpha1
+  kind: CyndiPipeline
+  metadata:
+    name: ${APP_NAME}
+  spec:
+    appName: ${APP_NAME}
+    insightsOnly: ${{INSIGHTS_ONLY}}
+    validationThreshold: ${{VALIDATION_THRESHOLD}}
+    maxAge: ${{MAX_AGE}}
