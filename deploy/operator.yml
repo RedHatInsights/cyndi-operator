@@ -65,6 +65,8 @@ objects:
     init.validation.percentage.threshold: ${VALIDATION_PERCENTAGE_THRESHOLD}
     connect.cluster: ${CONNECT_CLUSTER}
 
+# TODO: move this into the bundle itself
+# depends on https://github.com/operator-framework/operator-sdk/pull/4137
 - apiVersion: v1
   kind: Service
   metadata:
