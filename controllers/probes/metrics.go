@@ -35,7 +35,16 @@ var (
 )
 
 func Init() {
-	metrics.Registry.MustRegister(hostCount, inconsistencyRatio, inconsistencyThreshold)
+	metrics.Registry.MustRegister(hostCount, inconsistencyRatio, inconsistencyThreshold, validationFailedCount, refreshCount)
+}
+
+func InitLabels(instance *cyndi.CyndiPipeline) {
+	appName := instance.Spec.AppName
+	hostCount.WithLabelValues(appName)
+	inconsistencyThreshold.WithLabelValues(appName)
+	inconsistencyRatio.WithLabelValues(appName)
+	validationFailedCount.WithLabelValues(appName)
+	refreshCount.WithLabelValues(appName)
 }
 
 func AppHostCount(instance *cyndi.CyndiPipeline, value int64) {

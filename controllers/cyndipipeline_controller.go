@@ -155,6 +155,8 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, nil
 	}
 
+	probes.InitLabels(i.Instance)
+
 	// STATE_NEW
 	if i.Instance.GetState() == cyndi.STATE_NEW {
 		if err := i.addFinalizer(); err != nil {
