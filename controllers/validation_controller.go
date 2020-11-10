@@ -134,6 +134,7 @@ func eventFilterPredicate() predicate.Predicate {
 
 func (r *ValidationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		Named("cyndi-validation").
 		For(&cyndi.CyndiPipeline{}).
 		WithEventFilter(eventFilterPredicate()).
 		Complete(r)

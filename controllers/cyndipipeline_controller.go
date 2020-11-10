@@ -278,6 +278,7 @@ func (i *ReconcileIteration) deleteStaleDependencies() (errors []error) {
 
 func (r *CyndiPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		Named("cyndi-controller").
 		For(&cyndi.CyndiPipeline{}).
 		Owns(connect.EmptyConnector()).
 		// trigger Reconcile if "cyndi" ConfigMap changes
