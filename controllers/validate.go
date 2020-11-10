@@ -4,12 +4,11 @@ import (
 	"cyndi-operator/controllers/probes"
 	"cyndi-operator/controllers/utils"
 	"math"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 const inventoryTableName = "public.hosts" // TODO: move
 const countMismatchThreshold = 0.5
+const idDiffMaxLength = 50
 
 func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mismatchCount int64, hostCount int64, err error) {
 	hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly)
@@ -48,18 +47,24 @@ func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mi
 		return false, -1, -1, -1, err
 	}
 
-	var r DiffReporter
-
 	i.Log.Info("Fetched host ids")
-	diff := cmp.Diff(hbiIds, appIds, cmp.Reporter(&r))
-	i.Log.Info(diff) // TODO
+	inHbiOnly := utils.Difference(hbiIds, appIds)
+	inAppOnly := utils.Difference(appIds, hbiIds)
+	mismatchCount = int64(len(inHbiOnly) + len(inAppOnly))
 
 	validationThresholdPercent := i.getValidationConfig().PercentageThreshold
 
-	idMismatchRatio := float64(len(r.diffs)) / math.Max(float64(len(hbiIds)), 1)
+	idMismatchRatio := float64(mismatchCount) / math.Max(float64(len(hbiIds)), 1)
 	result := (idMismatchRatio * 100) <= float64(validationThresholdPercent)
 
 	probes.ValidationFinished(i.Instance, i.getValidationConfig().PercentageThreshold, idMismatchRatio, result)
-	i.Log.Info("Validation results", "validationThresholdPercent", validationThresholdPercent, "idMismatchRatio", idMismatchRatio)
-	return result, idMismatchRatio, int64(len(r.diffs)), appHostCount, nil
+	i.Log.Info(
+		"Validation results",
+		"validationThresholdPercent", validationThresholdPercent,
+		"idMismatchRatio", idMismatchRatio,
+		// if the list is too long truncate it to first 50 ids to avoid log polution
+		"inHbiOnly", inHbiOnly[:utils.Min(idDiffMaxLength, len(inHbiOnly))],
+		"inAppOnly", inAppOnly[:utils.Min(idDiffMaxLength, len(inAppOnly))],
+	)
+	return result, idMismatchRatio, mismatchCount, appHostCount, nil
 }

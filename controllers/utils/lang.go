@@ -22,3 +22,31 @@ func Abs(x int64) int64 {
 
 	return x
 }
+
+type void struct{}
+
+func Difference(a, b []string) (diff []string) {
+	bMap := make(map[string]void, len(b))
+	diff = []string{}
+
+	for _, key := range b {
+		bMap[key] = void{}
+	}
+
+	// find missing values in a
+	for _, key := range a {
+		if _, ok := bMap[key]; !ok {
+			diff = append(diff, key)
+		}
+	}
+
+	return diff
+}
+
+func Min(x, y int) int {
+	if x < y {
+		return x
+	}
+
+	return y
+}
