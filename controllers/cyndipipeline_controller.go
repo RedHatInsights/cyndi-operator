@@ -245,7 +245,7 @@ func (i *ReconcileIteration) deleteStaleDependencies() (errors []error) {
 		tablesToKeep = append(tablesToKeep, *currentTable)
 	}
 
-	connectors, err := connect.GetConnectorsForApp(i.Client, i.Instance.Namespace, i.Instance.Spec.AppName)
+	connectors, err := connect.GetConnectorsForOwner(i.Client, i.Instance.Namespace, i.Instance.GetUIDString())
 	if err != nil {
 		errors = append(errors, err)
 	} else {
