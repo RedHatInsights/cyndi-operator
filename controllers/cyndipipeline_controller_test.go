@@ -259,7 +259,7 @@ var _ = Describe("Pipeline operations", func() {
 			reconcile()
 
 			pipeline = getPipeline(namespacedName)
-			connectors, err := connect.GetConnectorsForApp(test.Client, namespacedName.Namespace, namespacedName.Name)
+			connectors, err := connect.GetConnectorsForOwner(test.Client, namespacedName.Namespace, pipeline.GetUIDString())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(connectors.Items).To(HaveLen(1))
 			Expect(connectors.Items[0].GetName()).To(Equal(pipeline.Status.ConnectorName))
@@ -596,7 +596,7 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(errors.IsNotFound(err)).To(BeTrue())
 
-			connectors, err := connect.GetConnectorsForApp(test.Client, namespacedName.Namespace, namespacedName.Name)
+			connectors, err := connect.GetConnectorsForOwner(test.Client, namespacedName.Namespace, pipeline.GetUIDString())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(connectors.Items).To(BeEmpty())
 
@@ -631,7 +631,7 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(errors.IsNotFound(err)).To(BeTrue())
 
-			connectors, err := connect.GetConnectorsForApp(test.Client, namespacedName.Namespace, namespacedName.Name)
+			connectors, err := connect.GetConnectorsForOwner(test.Client, namespacedName.Namespace, pipeline.GetUIDString())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(connectors.Items).To(BeEmpty())
 

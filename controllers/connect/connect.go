@@ -24,6 +24,7 @@ const (
 	LabelInsightsOnly   = "cyndi/insightsOnly"
 	LabelMaxAge         = "cyndi/maxAge"
 	LabelStrimziCluster = "strimzi.io/cluster"
+	LabelOwner          = "cyndi/owner"
 )
 
 var connectorGVK = schema.GroupVersionKind{
@@ -132,6 +133,10 @@ func CreateConnector(c client.Client, name string, namespace string, config Conn
 		if err := controllerutil.SetControllerReference(owner, connector, ownerScheme); err != nil {
 			return err
 		}
+
+		labels := connector.GetLabels()
+		labels[LabelOwner] = string(owner.GetUID())
+		connector.SetLabels(labels)
 	}
 
 	return c.Create(context.TODO(), connector)
@@ -144,11 +149,11 @@ func GetConnector(c client.Client, name string, namespace string) (*unstructured
 	return connector, err
 }
 
-func GetConnectorsForApp(c client.Client, namespace string, appName string) (*unstructured.UnstructuredList, error) {
+func GetConnectorsForOwner(c client.Client, namespace string, owner string) (*unstructured.UnstructuredList, error) {
 	connectors := &unstructured.UnstructuredList{}
 	connectors.SetGroupVersionKind(connectorsGVK)
 
-	err := c.List(context.TODO(), connectors, client.InNamespace(namespace), client.MatchingLabels{LabelAppName: appName})
+	err := c.List(context.TODO(), connectors, client.InNamespace(namespace), client.MatchingLabels{LabelOwner: owner})
 	return connectors, err
 }
 

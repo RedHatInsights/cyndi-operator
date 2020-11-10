@@ -262,7 +262,7 @@ var _ = Describe("Integration tests", func() {
 			pipeline, err = utils.FetchCyndiPipeline(test.Client, namespacedName)
 			Expect(errors.IsNotFound(err)).To(BeTrue())
 
-			connectors, err := connect.GetConnectorsForApp(test.Client, namespacedName.Namespace, namespacedName.Name)
+			connectors, err := connect.GetConnectorsForOwner(test.Client, namespacedName.Namespace, pipeline.GetUIDString())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(connectors.Items).To(BeEmpty())
 

@@ -118,5 +118,5 @@ func TableNameToConnectorName(tableName string, appName string) string {
 }
 
 func ConnectorName(pipelineVersion string, appName string) string {
-	return fmt.Sprintf("syndication-pipeline-%s-%s", appName, strings.Replace(pipelineVersion, "_", "-", 1))
+	return fmt.Sprintf("cyndi-%s-%s", appName, strings.Replace(pipelineVersion, "_", "-", 1))
 }

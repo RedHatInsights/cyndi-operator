@@ -9,6 +9,7 @@ import (
 	"time"
 
 	. "cyndi-operator/controllers/config"
+	"cyndi-operator/controllers/utils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -48,6 +50,29 @@ func sampleConnectorConfig() ConnectorConfiguration {
 
 var _ = Describe("Connect", func() {
 	var namespace string
+
+	var createPipeline = func(appName string) *cyndi.CyndiPipeline {
+		pipeline := &cyndi.CyndiPipeline{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      appName,
+				Namespace: namespace,
+			},
+			Spec: cyndi.CyndiPipelineSpec{
+				AppName: appName,
+			},
+		}
+
+		err := test.Client.Create(context.TODO(), pipeline)
+		Expect(err).ToNot(HaveOccurred())
+
+		pipeline, err = utils.FetchCyndiPipeline(test.Client, types.NamespacedName{
+			Name:      appName,
+			Namespace: namespace,
+		})
+
+		Expect(err).ToNot(HaveOccurred())
+		return pipeline
+	}
 
 	BeforeEach(func() {
 		namespace = fmt.Sprintf("test-%d", time.Now().UnixNano())
@@ -175,6 +200,7 @@ var _ = Describe("Connect", func() {
 			connector, err := GetConnector(test.Client, connectorName, namespace)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(connector.GetName()).To(Equal(connectorName))
+			Expect(connector.GetLabels()[LabelOwner]).To(Equal(pipeline.GetUIDString()))
 
 			references := connector.GetOwnerReferences()
 			Expect(references).To(HaveLen(1))
@@ -184,7 +210,8 @@ var _ = Describe("Connect", func() {
 
 	Context("List Connectors", func() {
 		It("Lists 0 connectors in an empty namespace", func() {
-			connectors, err := GetConnectorsForApp(test.Client, namespace, "advisor")
+			pipeline := createPipeline("test-01")
+			connectors, err := GetConnectorsForOwner(test.Client, namespace, pipeline.GetUIDString())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(connectors.Items).To(HaveLen(0))
 		})
@@ -195,22 +222,28 @@ var _ = Describe("Connect", func() {
 			var patchConfig = sampleConnectorConfig()
 			patchConfig.AppName = "patch"
 
-			err := CreateConnector(test.Client, "advisor-01", namespace, advisorConfig, nil, nil)
+			var (
+				advisorPipeline    = createPipeline("advisor")
+				patchPipeline      = createPipeline("patch")
+				compliancePipeline = createPipeline("compliance")
+			)
+
+			err := CreateConnector(test.Client, "advisor-01", namespace, advisorConfig, advisorPipeline, scheme.Scheme)
 			Expect(err).ToNot(HaveOccurred())
-			err = CreateConnector(test.Client, "advisor-02", namespace, advisorConfig, nil, nil)
+			err = CreateConnector(test.Client, "advisor-02", namespace, advisorConfig, advisorPipeline, scheme.Scheme)
 			Expect(err).ToNot(HaveOccurred())
-			err = CreateConnector(test.Client, "patch-01", namespace, patchConfig, nil, nil)
+			err = CreateConnector(test.Client, "patch-01", namespace, patchConfig, patchPipeline, scheme.Scheme)
 			Expect(err).ToNot(HaveOccurred())
 
-			advisorConnectors, err := GetConnectorsForApp(test.Client, namespace, "advisor")
+			advisorConnectors, err := GetConnectorsForOwner(test.Client, namespace, advisorPipeline.GetUIDString())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(advisorConnectors.Items).To(HaveLen(2))
 
-			patchConnectors, err := GetConnectorsForApp(test.Client, namespace, "patch")
+			patchConnectors, err := GetConnectorsForOwner(test.Client, namespace, patchPipeline.GetUIDString())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(patchConnectors.Items).To(HaveLen(1))
 
-			complianceConnectors, err := GetConnectorsForApp(test.Client, namespace, "compliance")
+			complianceConnectors, err := GetConnectorsForOwner(test.Client, namespace, compliancePipeline.GetUIDString())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(complianceConnectors.Items).To(HaveLen(0))
 		})
