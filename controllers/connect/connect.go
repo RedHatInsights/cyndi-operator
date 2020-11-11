@@ -27,6 +27,8 @@ const (
 	LabelOwner          = "cyndi/owner"
 )
 
+const failed = "FAILED"
+
 var connectorGVK = schema.GroupVersionKind{
 	Group:   "kafka.strimzi.io",
 	Kind:    "KafkaConnector",
@@ -179,4 +181,26 @@ func DeleteConnector(c client.Client, name string, namespace string) error {
 	}
 
 	return nil
+}
+
+func IsFailed(connector *unstructured.Unstructured) bool {
+	connectorStatus, ok, err := unstructured.NestedString(connector.UnstructuredContent(), "status", "connectorStatus", "connector", "state")
+
+	if err == nil && ok && connectorStatus == failed {
+		return true
+	}
+
+	tasks, ok, err := unstructured.NestedSlice(connector.UnstructuredContent(), "status", "connectorStatus", "tasks")
+
+	if ok && err == nil {
+		for _, task := range tasks {
+			taskMap, ok := task.(map[string]interface{})
+
+			if ok && taskMap["state"] == failed {
+				return true
+			}
+		}
+	}
+
+	return false
 }
