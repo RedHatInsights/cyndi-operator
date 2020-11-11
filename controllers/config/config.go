@@ -57,6 +57,8 @@ func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm *corev1.ConfigMap) (*Cyn
 		return config, err
 	}
 
+	config.ConnectorAllowlistSystemProfile = getStringValue(cm, "connector.allowlist.sp", defaultAllowlistSystemProfile)
+
 	config.DBTableInitScript = getStringValue(cm, "db.schema", defaultDBTableInitScript)
 
 	if config.StandardInterval, err = getIntValue(cm, reconcileInterval, defaultStandardInterval); err != nil {

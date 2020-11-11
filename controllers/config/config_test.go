@@ -24,6 +24,7 @@ func assertDefaults(config *CyndiConfiguration) {
 	Expect(config.ConnectorTasksMax).To(Equal(defaultConnectorTasksMax))
 	Expect(config.ConnectorBatchSize).To(Equal(defaultConnectorBatchSize))
 	Expect(config.ConnectorMaxAge).To(Equal(defaultConnectorMaxAge))
+	Expect(config.ConnectorAllowlistSystemProfile).To(Equal(defaultAllowlistSystemProfile))
 	Expect(config.DBTableInitScript).To(Equal(defaultDBTableInitScript))
 	Expect(config.ValidationConfig).To(Equal(defaultValidationConfig))
 	Expect(config.ValidationConfigInit).To(Equal(defaultValidationConfigInit))
@@ -55,6 +56,7 @@ var _ = Describe("Config", func() {
 				"connector.tasks.max":                  "12",
 				"connector.batch.size":                 "13",
 				"connector.max.age":                    "14",
+				"connector.allowlist.sp":               "sap_system",
 				"db.schema":                            "CREATE TABLE hosts ()",
 				"standard.interval":                    "7200",
 				"validation.interval":                  "51",
@@ -75,6 +77,7 @@ var _ = Describe("Config", func() {
 		Expect(config.ConnectorTasksMax).To(Equal(int64(12)))
 		Expect(config.ConnectorBatchSize).To(Equal(int64(13)))
 		Expect(config.ConnectorMaxAge).To(Equal(int64(14)))
+		Expect(config.ConnectorAllowlistSystemProfile).To(Equal("sap_system"))
 		Expect(config.DBTableInitScript).To(Equal("CREATE TABLE hosts ()"))
 		Expect(config.StandardInterval).To(Equal(int64(7200)))
 		Expect(config.ValidationConfig.Interval).To(Equal(int64(51)))

@@ -40,16 +40,17 @@ var connectorsGVK = schema.GroupVersionKind{
 }
 
 type ConnectorConfiguration struct {
-	AppName      string
-	InsightsOnly bool
-	Cluster      string
-	Topic        string
-	TableName    string
-	DB           DBParams
-	TasksMax     int64
-	BatchSize    int64
-	MaxAge       int64
-	Template     string
+	AppName                string
+	InsightsOnly           bool
+	Cluster                string
+	Topic                  string
+	TableName              string
+	DB                     DBParams
+	TasksMax               int64
+	BatchSize              int64
+	MaxAge                 int64
+	Template               string
+	AllowlistSystemProfile string
 }
 
 func CheckIfConnectorExists(c client.Client, name string, namespace string) (bool, error) {
@@ -79,6 +80,7 @@ func newConnectorResource(name string, namespace string, config ConnectorConfigu
 	m["BatchSize"] = strconv.FormatInt(config.BatchSize, 10)
 	m["MaxAge"] = strconv.FormatInt(config.MaxAge, 10)
 	m["InsightsOnly"] = strconv.FormatBool(config.InsightsOnly)
+	m["AllowlistSP"] = config.AllowlistSystemProfile
 	tmpl, err := template.New("configTemplate").Parse(config.Template)
 	if err != nil {
 		return nil, err

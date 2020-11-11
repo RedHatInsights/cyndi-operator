@@ -39,7 +39,7 @@ const defaultConnectorTemplate = `{
 	"transforms.extractHost.field":"host",
 	"transforms.systemProfileFilter.type": "com.redhat.insights.kafka.connect.transforms.FilterFields$Value",
 	"transforms.systemProfileFilter.field": "system_profile",
-	"transforms.systemProfileFilter.allowlist": "sap_system,sap_sids",
+	"transforms.systemProfileFilter.allowlist": "{{.AllowlistSP}}",
 	"transforms.systemProfileToJson.type": "com.redhat.insights.kafka.connect.transforms.FieldToJson$Value",
 	"transforms.systemProfileToJson.originalField": "system_profile",
 	"transforms.systemProfileToJson.destinationField": "system_profile",
@@ -64,6 +64,7 @@ const defaultConnectorTemplate = `{
 const defaultConnectorTasksMax int64 = 16
 const defaultConnectorBatchSize int64 = 100
 const defaultConnectorMaxAge int64 = 45
+const defaultAllowlistSystemProfile = "sap_system,sap_sids"
 
 const defaultDBTableInitScript = `
 CREATE TABLE inventory.{{.TableName}} (

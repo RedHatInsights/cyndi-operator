@@ -23,6 +23,8 @@ parameters:
   value: "15"
 - name: CONNECT_CLUSTER
   value: "xjoin-kafka-connect-strimzi"
+- name: CONNECTOR_ALLOWLIST_SP
+  value: "sap_system,sap_sids"
 
 objects:
 - apiVersion: operators.coreos.com/v1alpha1
@@ -64,6 +66,7 @@ objects:
     init.validation.attempts.threshold: ${VALIDATION_ATTEMPTS_THRESHOLD_INIT}
     init.validation.percentage.threshold: ${VALIDATION_PERCENTAGE_THRESHOLD}
     connect.cluster: ${CONNECT_CLUSTER}
+    connector.allowlist.sp: ${CONNECTOR_ALLOWLIST_SP}
 
 # TODO: move this into the bundle itself
 # depends on https://github.com/operator-framework/operator-sdk/pull/4137

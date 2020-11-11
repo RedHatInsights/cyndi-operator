@@ -328,16 +328,17 @@ func (i *ReconcileIteration) removeFinalizer() error {
 
 func (i *ReconcileIteration) createConnector(name string) error {
 	var config = connect.ConnectorConfiguration{
-		AppName:      i.Instance.Spec.AppName,
-		InsightsOnly: i.Instance.Spec.InsightsOnly,
-		Cluster:      i.config.ConnectCluster,
-		Topic:        i.config.Topic,
-		TableName:    i.Instance.Status.TableName,
-		DB:           i.AppDBParams,
-		TasksMax:     i.config.ConnectorTasksMax,
-		BatchSize:    i.config.ConnectorBatchSize,
-		MaxAge:       i.config.ConnectorMaxAge,
-		Template:     i.config.ConnectorTemplate,
+		AppName:                i.Instance.Spec.AppName,
+		InsightsOnly:           i.Instance.Spec.InsightsOnly,
+		Cluster:                i.config.ConnectCluster,
+		Topic:                  i.config.Topic,
+		TableName:              i.Instance.Status.TableName,
+		DB:                     i.AppDBParams,
+		TasksMax:               i.config.ConnectorTasksMax,
+		BatchSize:              i.config.ConnectorBatchSize,
+		MaxAge:                 i.config.ConnectorMaxAge,
+		Template:               i.config.ConnectorTemplate,
+		AllowlistSystemProfile: i.config.ConnectorAllowlistSystemProfile,
 	}
 
 	return connect.CreateConnector(i.Client, name, i.Instance.Namespace, config, i.Instance, i.Scheme)

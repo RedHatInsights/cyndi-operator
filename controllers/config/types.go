@@ -17,11 +17,12 @@ type ValidationConfiguration struct {
 type CyndiConfiguration struct {
 	Topic string
 
-	ConnectCluster     string // TODO should go to CRD
-	ConnectorTemplate  string
-	ConnectorTasksMax  int64
-	ConnectorBatchSize int64
-	ConnectorMaxAge    int64 // TODO should go to CRD
+	ConnectCluster                  string
+	ConnectorTemplate               string
+	ConnectorTasksMax               int64
+	ConnectorBatchSize              int64
+	ConnectorMaxAge                 int64
+	ConnectorAllowlistSystemProfile string
 
 	DBTableInitScript string
 
