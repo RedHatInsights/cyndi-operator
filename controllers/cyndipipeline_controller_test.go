@@ -436,7 +436,7 @@ var _ = Describe("Pipeline operations", func() {
 			configMap := getConfigMap(namespacedName.Namespace)
 			pipelineVersion := pipeline.Status.PipelineVersion
 			tableName := pipeline.Status.TableName
-			Expect(pipeline.Status.CyndiConfigVersion).To(Equal(configMap.ObjectMeta.ResourceVersion))
+			Expect(pipeline.Status.CyndiConfigVersion).To(Equal("1768911245"))
 
 			// with pipeline in the Valid state, change the configmap
 			configMap.Data = map[string]string{"connect.cluster": "value2"}

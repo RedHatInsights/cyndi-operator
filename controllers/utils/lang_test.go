@@ -25,4 +25,16 @@ var _ = Describe("Lang", func() {
 			Expect(diff[0]).To(Equal("e"))
 		})
 	})
+
+	Describe("Omit", func() {
+		It("Leaves out given keys", func() {
+			value := make(map[string]string)
+			value["foo"] = "bar"
+			value["baz"] = "abcd"
+
+			result := Omit(value, "baz")
+			Expect(result).To(HaveKey("foo"))
+			Expect(result).ToNot(HaveKey("baz"))
+		})
+	})
 })

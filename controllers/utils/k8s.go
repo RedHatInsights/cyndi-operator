@@ -8,6 +8,9 @@ Utility functions for talking to the k8s API.
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"hash/fnv"
 
 	cyndi "cyndi-operator/api/v1alpha1"
 
@@ -38,4 +41,22 @@ func FetchCyndiPipelines(c client.Client, namespace string) (*cyndi.CyndiPipelin
 	list := &cyndi.CyndiPipelineList{}
 	err := c.List(context.TODO(), list)
 	return list, err
+}
+
+func ConfigMapHash(cm *corev1.ConfigMap, ignoredKeys ...string) string {
+	if cm == nil {
+		return "-1"
+	}
+
+	values := Omit(cm.Data, ignoredKeys...)
+
+	json, err := json.Marshal(values)
+
+	if err != nil {
+		return "-2"
+	}
+
+	algorithm := fnv.New32a()
+	algorithm.Write(json)
+	return fmt.Sprint(algorithm.Sum32())
 }

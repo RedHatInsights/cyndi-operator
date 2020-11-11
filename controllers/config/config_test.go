@@ -169,4 +169,27 @@ var _ = Describe("Config", func() {
 			Expect(config.ValidationConfigInit.PercentageThreshold).To(Equal(int64(7)))
 		})
 	})
+
+	It("Computes ConfigMap version", func() {
+		cm := &corev1.ConfigMap{
+			Data: map[string]string{
+				"connect.cluster":     "cluster01",
+				"validation.interval": "60",
+			},
+		}
+
+		config, err := BuildCyndiConfig(nil, cm)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(config.ConfigMapVersion).To(Equal("1480767004"))
+
+		cm.Data["connect.cluster"] = "cluster02"
+		config, err = BuildCyndiConfig(nil, cm)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(config.ConfigMapVersion).To(Equal("361613641"))
+
+		cm.Data["validation.interval"] = "120"
+		config, err = BuildCyndiConfig(nil, cm)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(config.ConfigMapVersion).To(Equal("361613641"))
+	})
 })
