@@ -384,6 +384,10 @@ func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
 
 	}
 
+	if connect.IsFailed(connector) {
+		return fmt.Errorf("Connector %s is in the FAILED state", i.Instance.Status.ConnectorName), nil
+	}
+
 	if connector.GetLabels()[connect.LabelAppName] != i.Instance.Spec.AppName {
 		return fmt.Errorf("App name disagrees (%s vs %s)", connector.GetLabels()[connect.LabelAppName], i.Instance.Spec.AppName), nil
 	}

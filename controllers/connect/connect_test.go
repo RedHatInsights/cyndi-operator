@@ -273,4 +273,79 @@ var _ = Describe("Connect", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
+
+	Describe("IsFailed", func() {
+		It("Does not consider an empty connector to be FAILED", func() {
+			connector, err := newConnectorResource("test01", namespace, sampleConnectorConfig())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(IsFailed(connector)).To(BeFalse())
+		})
+
+		It("Correctly flags a failed connector", func() {
+			connector := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{
+						"connectorStatus": map[string]interface{}{
+							"connector": map[string]interface{}{
+								"state": "FAILED",
+							},
+						},
+					},
+				},
+			}
+
+			Expect(IsFailed(connector)).To(BeTrue())
+		})
+
+		It("Correctly recognizes a running connector", func() {
+			connector := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{
+						"connectorStatus": map[string]interface{}{
+							"connector": map[string]interface{}{
+								"state": "RUNNING",
+							},
+							"tasks": []interface{}{
+								map[string]interface{}{
+									"state": "RUNNING",
+								},
+								map[string]interface{}{
+									"state": "RUNNING",
+								},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(IsFailed(connector)).To(BeFalse())
+		})
+
+		It("Correctly flags a connector with one failed task", func() {
+			connector := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{
+						"connectorStatus": map[string]interface{}{
+							"connector": map[string]interface{}{
+								"state": "RUNNING",
+							},
+							"tasks": []interface{}{
+								map[string]interface{}{
+									"state": "RUNNING",
+								},
+								map[string]interface{}{
+									"state": "RUNNING",
+								},
+								map[string]interface{}{
+									"state": "FAILED",
+								},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(IsFailed(connector)).To(BeTrue())
+		})
+	})
 })
