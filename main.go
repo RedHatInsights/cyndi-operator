@@ -30,7 +30,7 @@ import (
 
 	cyndi "cyndi-operator/api/v1alpha1"
 	"cyndi-operator/controllers"
-	"cyndi-operator/controllers/probes"
+	"cyndi-operator/controllers/metrics"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -99,7 +99,7 @@ func main() {
 	}
 	// +kubebuilder:scaffold:builder
 
-	probes.Init()
+	metrics.Init()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
