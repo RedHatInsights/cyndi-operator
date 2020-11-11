@@ -31,7 +31,14 @@ var (
 	refreshCount = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "cyndi_refresh_total",
 		Help: "The number of times this pipeline has been refreshed",
-	}, []string{"app"})
+	}, []string{"app", "reason"})
+)
+
+type RefreshReason string
+
+const (
+	REFRESH_INVALID_PIPELINE RefreshReason = "invalid"
+	REFRESH_STATE_DEVIATION  RefreshReason = "deviation"
 )
 
 func Init() {
@@ -44,7 +51,8 @@ func InitLabels(instance *cyndi.CyndiPipeline) {
 	inconsistencyThreshold.WithLabelValues(appName)
 	inconsistencyRatio.WithLabelValues(appName)
 	validationFailedCount.WithLabelValues(appName)
-	refreshCount.WithLabelValues(appName)
+	refreshCount.WithLabelValues(appName, string(REFRESH_INVALID_PIPELINE))
+	refreshCount.WithLabelValues(appName, string(REFRESH_STATE_DEVIATION))
 }
 
 func AppHostCount(instance *cyndi.CyndiPipeline, value int64) {
@@ -60,6 +68,6 @@ func ValidationFinished(instance *cyndi.CyndiPipeline, threshold int64, ratio fl
 	}
 }
 
-func PipelineRefreshed(instance *cyndi.CyndiPipeline) {
-	refreshCount.WithLabelValues(instance.Spec.AppName).Inc()
+func PipelineRefreshed(instance *cyndi.CyndiPipeline, reason RefreshReason) {
+	refreshCount.WithLabelValues(instance.Spec.AppName, string(reason)).Inc()
 }
