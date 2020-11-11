@@ -10,6 +10,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	reconcileInterval             = "standard.interval"
+	validationInterval            = "validation.interval"
+	validationAttemptsThreshold   = "validation.attempts.threshold"
+	validationPercentageThreshold = "validation.percentage.threshold"
+)
+
+// These keys are excluded when computing a ConfigMap hash.
+// Therefore, if they change that won't trigger a pipeline refresh
+var keysIgnoredByRefresh = []string{
+	reconcileInterval,
+	validationInterval,
+	validationAttemptsThreshold,
+	validationPercentageThreshold,
+	fmt.Sprintf("init.%s", validationInterval),
+	fmt.Sprintf("init.%s", validationAttemptsThreshold),
+	fmt.Sprintf("init.%s", validationPercentageThreshold),
+}
+
 func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm *corev1.ConfigMap) (*CyndiConfiguration, error) {
 	var err error
 	config := &CyndiConfiguration{}
@@ -40,7 +59,7 @@ func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm *corev1.ConfigMap) (*Cyn
 
 	config.DBTableInitScript = getStringValue(cm, "db.schema", defaultDBTableInitScript)
 
-	if config.StandardInterval, err = getIntValue(cm, "standard.interval", defaultStandardInterval); err != nil {
+	if config.StandardInterval, err = getIntValue(cm, reconcileInterval, defaultStandardInterval); err != nil {
 		return config, err
 	}
 
@@ -52,11 +71,7 @@ func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm *corev1.ConfigMap) (*Cyn
 		return config, err
 	}
 
-	if cm == nil {
-		config.ConfigMapVersion = "-1"
-	} else {
-		config.ConfigMapVersion = cm.ResourceVersion
-	}
+	config.ConfigMapVersion = utils.ConfigMapHash(cm, keysIgnoredByRefresh...)
 
 	return config, err
 }
@@ -95,17 +110,17 @@ func getValidationConfig(instance *cyndi.CyndiPipeline, cm *corev1.ConfigMap, pr
 		result = ValidationConfiguration{}
 	)
 
-	if result.Interval, err = getIntValue(cm, fmt.Sprintf("%svalidation.interval", prefix), defaultValue.Interval); err != nil {
+	if result.Interval, err = getIntValue(cm, fmt.Sprintf("%s%s", prefix, validationInterval), defaultValue.Interval); err != nil {
 		return result, err
 	}
 
-	if result.AttemptsThreshold, err = getIntValue(cm, fmt.Sprintf("%svalidation.attempts.threshold", prefix), defaultValue.AttemptsThreshold); err != nil {
+	if result.AttemptsThreshold, err = getIntValue(cm, fmt.Sprintf("%s%s", prefix, validationAttemptsThreshold), defaultValue.AttemptsThreshold); err != nil {
 		return result, err
 	}
 
 	if instance != nil && instance.Spec.ValidationThreshold != nil {
 		result.PercentageThreshold = *instance.Spec.ValidationThreshold
-	} else if result.PercentageThreshold, err = getIntValue(cm, fmt.Sprintf("%svalidation.percentage.threshold", prefix), defaultValue.PercentageThreshold); err != nil {
+	} else if result.PercentageThreshold, err = getIntValue(cm, fmt.Sprintf("%s%s", prefix, validationPercentageThreshold), defaultValue.PercentageThreshold); err != nil {
 		return result, err
 	}
 
