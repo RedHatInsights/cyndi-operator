@@ -71,9 +71,8 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		if err != nil {
 			return reconcile.Result{}, i.error(err, "Error checking for state deviation")
 		} else if problem != nil {
-			i.Log.Info("Refreshing pipeline due to state deviation", "reason", problem)
+			i.probeStateDeviationRefresh(problem.Error())
 			i.Instance.TransitionToNew()
-			i.eventWarning("Refreshing", "Refreshing pipeline due to state deviation: %s", problem)
 			return i.updateStatusAndRequeue()
 		}
 	}

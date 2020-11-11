@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"cyndi-operator/controllers/probes"
+	"cyndi-operator/controllers/metrics"
 	"cyndi-operator/controllers/utils"
 	"math"
 )
@@ -23,7 +23,7 @@ func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mi
 		return false, -1, -1, -1, err
 	}
 
-	probes.AppHostCount(i.Instance, appHostCount)
+	metrics.AppHostCount(i.Instance, appHostCount)
 
 	countMismatch := utils.Abs(hbiHostCount - appHostCount)
 	countMismatchRatio := float64(countMismatch) / math.Max(float64(hbiHostCount), 1)
@@ -33,7 +33,7 @@ func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mi
 	// if the counts are way off don't even bother comparing ids
 	if countMismatchRatio > countMismatchThreshold {
 		i.Log.Info("Count mismatch ratio is above threashold, exiting early", "countMismatchRatio", countMismatchRatio)
-		probes.ValidationFinished(i.Instance, i.getValidationConfig().PercentageThreshold, countMismatchRatio, false)
+		metrics.ValidationFinished(i.Instance, i.getValidationConfig().PercentageThreshold, countMismatchRatio, false)
 		return false, countMismatchRatio, countMismatch, appHostCount, nil
 	}
 
@@ -57,7 +57,7 @@ func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mi
 	idMismatchRatio := float64(mismatchCount) / math.Max(float64(len(hbiIds)), 1)
 	result := (idMismatchRatio * 100) <= float64(validationThresholdPercent)
 
-	probes.ValidationFinished(i.Instance, i.getValidationConfig().PercentageThreshold, idMismatchRatio, result)
+	metrics.ValidationFinished(i.Instance, i.getValidationConfig().PercentageThreshold, idMismatchRatio, result)
 	i.Log.Info(
 		"Validation results",
 		"validationThresholdPercent", validationThresholdPercent,

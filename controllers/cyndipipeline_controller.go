@@ -44,7 +44,7 @@ import (
 	"cyndi-operator/controllers/config"
 	connect "cyndi-operator/controllers/connect"
 	"cyndi-operator/controllers/database"
-	"cyndi-operator/controllers/probes"
+	"cyndi-operator/controllers/metrics"
 	"cyndi-operator/controllers/utils"
 )
 
@@ -155,7 +155,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, nil
 	}
 
-	probes.InitLabels(i.Instance)
+	metrics.InitLabels(i.Instance)
 
 	// STATE_NEW
 	if i.Instance.GetState() == cyndi.STATE_NEW {
@@ -166,9 +166,8 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		i.Instance.Status.CyndiConfigVersion = i.config.ConfigMapVersion
 
 		pipelineVersion := fmt.Sprintf("1_%s", strconv.FormatInt(time.Now().UnixNano(), 10))
-		i.Log.Info("New pipeline version", "version", pipelineVersion)
 		i.Instance.TransitionToInitialSync(pipelineVersion)
-		i.eventNormal("InitialSync", "Starting data synchronization to %s", i.Instance.Status.TableName)
+		i.probeStartingInitialSync()
 
 		err = i.AppDb.CreateTable(cyndi.TableName(pipelineVersion), i.config.DBTableInitScript)
 		if err != nil {
@@ -188,8 +187,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	if err != nil {
 		return reconcile.Result{}, i.error(err, "Error checking for state deviation")
 	} else if problem != nil {
-		i.Log.Info("Refreshing pipeline due to state deviation", "reason", problem)
-		i.eventWarning("Refreshing", "Refreshing pipeline due to state deviation: %s", problem)
+		i.probeStateDeviationRefresh(problem.Error())
 		i.Instance.TransitionToNew()
 		return i.updateStatusAndRequeue()
 	}
@@ -212,15 +210,13 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 			// This pipeline never became valid.
 			if i.Instance.GetState() == cyndi.STATE_INITIAL_SYNC {
 				if err = i.updateViewIfHealthier(); err != nil {
-					// if this continue and do refresh, keeping the old table active
+					// if this fails continue and do refresh, keeping the old table active
 					i.Log.Error(err, "Failed to evaluate which table is healthier")
 				}
 			}
 
-			i.Log.Info("Pipeline failed to become valid. Refreshing.")
-			i.eventWarning("Refreshing", "Pipeline failed to become valid within given threshold")
 			i.Instance.TransitionToNew()
-			probes.PipelineRefreshed(i.Instance)
+			i.probePipelineDidNotBecomeValid()
 			return i.updateStatusAndRequeue()
 		}
 	}
