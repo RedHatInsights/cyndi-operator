@@ -33,7 +33,7 @@ func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mi
 	// if the counts are way off don't even bother comparing ids
 	if countMismatchRatio > countMismatchThreshold {
 		i.Log.Info("Count mismatch ratio is above threashold, exiting early", "countMismatchRatio", countMismatchRatio)
-		metrics.ValidationFinished(i.Instance, i.getValidationConfig().PercentageThreshold, countMismatchRatio, false)
+		metrics.ValidationFinished(i.Instance, i.getValidationConfig().PercentageThreshold, countMismatchRatio, countMismatch, false)
 		return false, countMismatchRatio, countMismatch, appHostCount, nil
 	}
 
@@ -57,7 +57,7 @@ func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mi
 	idMismatchRatio := float64(mismatchCount) / math.Max(float64(len(hbiIds)), 1)
 	result := (idMismatchRatio * 100) <= float64(validationThresholdPercent)
 
-	metrics.ValidationFinished(i.Instance, i.getValidationConfig().PercentageThreshold, idMismatchRatio, result)
+	metrics.ValidationFinished(i.Instance, i.getValidationConfig().PercentageThreshold, idMismatchRatio, mismatchCount, result)
 	i.Log.Info(
 		"Validation results",
 		"validationThresholdPercent", validationThresholdPercent,
