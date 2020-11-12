@@ -18,6 +18,11 @@ var (
 		Help: "The ratio of inconsistency of data between the source database and the application replica",
 	}, []string{"app"})
 
+	inconsistencyAbsolute = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "cyndi_inconsistency_total",
+		Help: "The total number of hosts that are not consistent with the origin",
+	}, []string{"app"})
+
 	inconsistencyThreshold = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "cyndi_inconsistency_threshold",
 		Help: "The threshold of inconsistency below which the pipeline is considered valid",
@@ -42,7 +47,7 @@ const (
 )
 
 func Init() {
-	metrics.Registry.MustRegister(hostCount, inconsistencyRatio, inconsistencyThreshold, validationFailedCount, refreshCount)
+	metrics.Registry.MustRegister(hostCount, inconsistencyRatio, inconsistencyAbsolute, inconsistencyThreshold, validationFailedCount, refreshCount)
 }
 
 func InitLabels(instance *cyndi.CyndiPipeline) {
@@ -50,6 +55,7 @@ func InitLabels(instance *cyndi.CyndiPipeline) {
 	hostCount.WithLabelValues(appName)
 	inconsistencyThreshold.WithLabelValues(appName)
 	inconsistencyRatio.WithLabelValues(appName)
+	inconsistencyAbsolute.WithLabelValues(appName)
 	validationFailedCount.WithLabelValues(appName)
 	refreshCount.WithLabelValues(appName, string(REFRESH_INVALID_PIPELINE))
 	refreshCount.WithLabelValues(appName, string(REFRESH_STATE_DEVIATION))
@@ -59,9 +65,10 @@ func AppHostCount(instance *cyndi.CyndiPipeline, value int64) {
 	hostCount.WithLabelValues(instance.Spec.AppName).Set(float64(value))
 }
 
-func ValidationFinished(instance *cyndi.CyndiPipeline, threshold int64, ratio float64, isValid bool) {
+func ValidationFinished(instance *cyndi.CyndiPipeline, threshold int64, ratio float64, inconsistentTotal int64, isValid bool) {
 	inconsistencyThreshold.WithLabelValues(instance.Spec.AppName).Set(float64(threshold) / 100)
 	inconsistencyRatio.WithLabelValues(instance.Spec.AppName).Set(ratio)
+	inconsistencyAbsolute.WithLabelValues(instance.Spec.AppName).Set(float64(inconsistentTotal))
 
 	if !isValid {
 		validationFailedCount.WithLabelValues(instance.Spec.AppName).Inc()
