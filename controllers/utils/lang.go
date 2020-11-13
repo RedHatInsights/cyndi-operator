@@ -1,5 +1,7 @@
 package utils
 
+import "reflect"
+
 /*
 
 Things that should have been in golang's standard library
@@ -73,4 +75,9 @@ func Min(x, y int) int {
 	}
 
 	return y
+}
+
+func IsNumber(x interface{}) bool {
+	kind := reflect.TypeOf(x).Kind()
+	return kind >= 2 && kind <= 16
 }

@@ -97,7 +97,7 @@ var _ = Describe("Connect", func() {
 				Template:     "{}",
 			}
 
-			err := CreateConnector(test.Client, connectorName, namespace, config, nil, nil)
+			_, err := CreateConnector(test.Client, connectorName, namespace, config, nil, nil, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			connector, err := GetConnector(test.Client, connectorName, namespace)
@@ -143,7 +143,7 @@ var _ = Describe("Connect", func() {
 				Template:     configTemplate,
 			}
 
-			err := CreateConnector(test.Client, connectorName, namespace, config, nil, nil)
+			_, err := CreateConnector(test.Client, connectorName, namespace, config, nil, nil, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			connector, err := GetConnector(test.Client, connectorName, namespace)
@@ -194,7 +194,7 @@ var _ = Describe("Connect", func() {
 				},
 			}
 
-			err := CreateConnector(test.Client, connectorName, namespace, config, pipeline, scheme.Scheme)
+			_, err := CreateConnector(test.Client, connectorName, namespace, config, pipeline, scheme.Scheme, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			connector, err := GetConnector(test.Client, connectorName, namespace)
@@ -228,11 +228,11 @@ var _ = Describe("Connect", func() {
 				compliancePipeline = createPipeline("compliance")
 			)
 
-			err := CreateConnector(test.Client, "advisor-01", namespace, advisorConfig, advisorPipeline, scheme.Scheme)
+			_, err := CreateConnector(test.Client, "advisor-01", namespace, advisorConfig, advisorPipeline, scheme.Scheme, false)
 			Expect(err).ToNot(HaveOccurred())
-			err = CreateConnector(test.Client, "advisor-02", namespace, advisorConfig, advisorPipeline, scheme.Scheme)
+			_, err = CreateConnector(test.Client, "advisor-02", namespace, advisorConfig, advisorPipeline, scheme.Scheme, false)
 			Expect(err).ToNot(HaveOccurred())
-			err = CreateConnector(test.Client, "patch-01", namespace, patchConfig, patchPipeline, scheme.Scheme)
+			_, err = CreateConnector(test.Client, "patch-01", namespace, patchConfig, patchPipeline, scheme.Scheme, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			advisorConnectors, err := GetConnectorsForOwner(test.Client, namespace, advisorPipeline.GetUIDString())
@@ -252,7 +252,7 @@ var _ = Describe("Connect", func() {
 	Context("Delete Connector", func() {
 		It("Deletes a connector", func() {
 			name := "connector-to-be-deleted-01"
-			err := CreateConnector(test.Client, name, namespace, sampleConnectorConfig(), nil, nil)
+			_, err := CreateConnector(test.Client, name, namespace, sampleConnectorConfig(), nil, nil, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = GetConnector(test.Client, name, namespace)

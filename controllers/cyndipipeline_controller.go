@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -174,7 +176,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 			return reconcile.Result{}, i.error(err, "Error creating table")
 		}
 
-		err = i.createConnector(cyndi.ConnectorName(pipelineVersion, i.Instance.Spec.AppName))
+		_, err = i.createConnector(cyndi.ConnectorName(pipelineVersion, i.Instance.Spec.AppName), false)
 		if err != nil {
 			return reconcile.Result{}, i.error(err, "Error creating connector")
 		}
@@ -326,7 +328,7 @@ func (i *ReconcileIteration) removeFinalizer() error {
 	return i.Client.Update(context.TODO(), i.Instance)
 }
 
-func (i *ReconcileIteration) createConnector(name string) error {
+func (i *ReconcileIteration) createConnector(name string, dryRun bool) (*unstructured.Unstructured, error) {
 	var config = connect.ConnectorConfiguration{
 		AppName:                i.Instance.Spec.AppName,
 		InsightsOnly:           i.Instance.Spec.InsightsOnly,
@@ -341,7 +343,7 @@ func (i *ReconcileIteration) createConnector(name string) error {
 		AllowlistSystemProfile: i.config.ConnectorAllowlistSystemProfile,
 	}
 
-	return connect.CreateConnector(i.Client, name, i.Instance.Namespace, config, i.Instance, i.Scheme)
+	return connect.CreateConnector(i.Client, name, i.Instance.Namespace, config, i.Instance, i.Scheme, dryRun)
 }
 
 func (i *ReconcileIteration) recreateViewIfNeeded() (bool, error) {
@@ -404,7 +406,22 @@ func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
 		return fmt.Errorf("MaxAge changed from %s to %d", connector.GetLabels()[connect.LabelMaxAge], i.config.ConnectorMaxAge), nil
 	}
 
-	// TODO: this should be expanded to fully cover the connector
+	// compares the spec of the existing connector with the spec we would create if we were creating a new connector now
+	newConnector, err := i.createConnector(i.Instance.Status.ConnectorName, true)
+	if err != nil {
+		return nil, err
+	}
+
+	currentConnectorConfig, _, err1 := unstructured.NestedMap(connector.UnstructuredContent(), "spec", "config")
+	newConnectorConfig, _, err2 := unstructured.NestedMap(newConnector.UnstructuredContent(), "spec", "config")
+
+	if err1 == nil && err2 == nil {
+		diff := cmp.Diff(currentConnectorConfig, newConnectorConfig, NumberNormalizer)
+
+		if len(diff) > 0 {
+			return fmt.Errorf("Connector configuration has changed: %s", diff), nil
+		}
+	}
 
 	return nil, nil
 }

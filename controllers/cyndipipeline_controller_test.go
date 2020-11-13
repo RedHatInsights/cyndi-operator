@@ -460,6 +460,37 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(*table).To(Equal(pipeline.Status.ActiveTableName))
 		})
 
+		It("Triggers refresh if database secret changes", func() {
+			createPipeline(namespacedName)
+			reconcile()
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+			pipelineVersion := pipeline.Status.PipelineVersion
+
+			// with pipeline in the Valid state, change the db secret
+			db.Exec("CREATE ROLE cyndi_admin; GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA inventory TO cyndi_admin;")
+			db.Exec("CREATE USER cyndi123 WITH PASSWORD 'havefun' IN ROLE cyndi_admin;")
+			dbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, utils.AppDbSecretName(namespacedName.Name))
+			Expect(err).ToNot(HaveOccurred())
+			dbSecret.Data["db.user"] = []byte("cyndi123")
+			dbSecret.Data["db.password"] = []byte("havefun")
+			err = test.Client.Update(context.TODO(), dbSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			reconcile()
+
+			// as a result, the pipeline should start re-sync to reflect the change
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
+			Expect(pipeline.GetValid()).To(Equal(metav1.ConditionUnknown))
+			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
+		})
+
 		It("Triggers refresh if table disappears", func() {
 			createPipeline(namespacedName)
 			reconcile()

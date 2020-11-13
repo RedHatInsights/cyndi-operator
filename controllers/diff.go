@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"cyndi-operator/controllers/utils"
 	"fmt"
 	"strings"
 
@@ -30,3 +31,10 @@ func (r *DiffReporter) PopStep() {
 func (r *DiffReporter) String() string {
 	return strings.Join(r.diffs, "\n")
 }
+
+// normalizes different number types (e.g. float64 vs int64) by converting them to their string representation
+var NumberNormalizer = cmp.FilterValues(func(x, y interface{}) bool {
+	return utils.IsNumber(x) || utils.IsNumber(y)
+}, cmp.Transformer("NormalizeNumbers", func(in interface{}) string {
+	return fmt.Sprintf("%v", in)
+}))
