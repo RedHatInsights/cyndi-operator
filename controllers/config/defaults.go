@@ -58,7 +58,10 @@ const defaultConnectorTemplate = `{
 	"errors.retry.delay.max.ms": 60000,
 	"errors.retry.timeout": 600000,
 	"errors.log.enable":true,
-	"errors.log.include.messages":true
+	"errors.log.include.messages":true,
+
+	"connection.attempts": 60,
+	"connection.backoff.ms": 10000
 }`
 
 const defaultConnectorTasksMax int64 = 16
