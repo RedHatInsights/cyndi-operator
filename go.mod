@@ -6,7 +6,7 @@ require (
 	github.com/go-logr/logr v0.2.1
 	github.com/go-logr/zapr v0.2.0
 	github.com/gofrs/uuid v3.3.0+incompatible
-	github.com/google/go-cmp v0.4.0
+	github.com/google/go-cmp v0.5.3
 	github.com/google/gops v0.3.10 // indirect
 	github.com/jackc/pgx v3.6.2+incompatible
 	github.com/onsi/ginkgo v1.11.0

@@ -126,16 +126,16 @@ func newConnectorResource(name string, namespace string, config ConnectorConfigu
 	return u, nil
 }
 
-func CreateConnector(c client.Client, name string, namespace string, config ConnectorConfiguration, owner metav1.Object, ownerScheme *runtime.Scheme) error {
+func CreateConnector(c client.Client, name string, namespace string, config ConnectorConfiguration, owner metav1.Object, ownerScheme *runtime.Scheme, dryRun bool) (*unstructured.Unstructured, error) {
 	connector, err := newConnectorResource(name, namespace, config)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if owner != nil {
 		if err := controllerutil.SetControllerReference(owner, connector, ownerScheme); err != nil {
-			return err
+			return nil, err
 		}
 
 		labels := connector.GetLabels()
@@ -143,7 +143,11 @@ func CreateConnector(c client.Client, name string, namespace string, config Conn
 		connector.SetLabels(labels)
 	}
 
-	return c.Create(context.TODO(), connector)
+	if dryRun {
+		return connector, nil
+	}
+
+	return connector, c.Create(context.TODO(), connector)
 }
 
 // TODO move to k8s?
