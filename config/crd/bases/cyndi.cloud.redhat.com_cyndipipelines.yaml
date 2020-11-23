@@ -72,6 +72,9 @@ spec:
               connectCluster:
                 minLength: 1
                 type: string
+              dbSecret:
+                minLength: 1
+                type: string
               insightsOnly:
                 default: false
                 type: boolean

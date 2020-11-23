@@ -101,7 +101,7 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 		return i, err
 	}
 
-	if i.AppDBParams, err = config.LoadSecret(i.Client, i.Instance.Namespace, utils.AppDbSecretName(i.Instance.Spec.AppName)); err != nil {
+	if i.AppDBParams, err = config.LoadSecret(i.Client, i.Instance.Namespace, utils.AppDbSecretName(i.Instance.Spec)); err != nil {
 		return i, err
 	}
 
