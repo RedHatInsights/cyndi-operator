@@ -12,6 +12,8 @@ parameters:
   value: "5"
 - name: MAX_AGE
   value: "45"
+- name: SOURCE_TOPIC
+  value: "platform.inventory.events"
 
 objects:
 - apiVersion: cyndi.cloud.redhat.com/v1alpha1
@@ -23,3 +25,4 @@ objects:
     insightsOnly: ${{INSIGHTS_ONLY}}
     validationThreshold: ${{VALIDATION_THRESHOLD}}
     maxAge: ${{MAX_AGE}}
+    topic: ${HBI_TOPIC}

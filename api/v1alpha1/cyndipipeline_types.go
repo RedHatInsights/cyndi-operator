@@ -44,6 +44,10 @@ type CyndiPipelineSpec struct {
 	// +kubebuilder:validation:Min:=0
 	// +kubebuilder:validation:Max:=100
 	ValidationThreshold *int64 `json:"validationThreshold,omitempty"`
+
+	// +optional
+	// +kubebuilder:validation:MinLength:=1
+	Topic *string `json:"topic,omitempty"`
 }
 
 // CyndiPipelineStatus defines the observed state of CyndiPipeline
