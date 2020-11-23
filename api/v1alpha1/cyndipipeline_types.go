@@ -48,6 +48,10 @@ type CyndiPipelineSpec struct {
 	// +optional
 	// +kubebuilder:validation:MinLength:=1
 	Topic *string `json:"topic,omitempty"`
+
+	// +optional
+	// +kubebuilder:validation:MinLength:=1
+	DbSecret *string `json:"dbSecret,omitempty"`
 }
 
 // CyndiPipelineStatus defines the observed state of CyndiPipeline

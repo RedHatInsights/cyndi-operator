@@ -192,7 +192,7 @@ var _ = Describe("Pipeline operations", func() {
 		dbParams = getDBParams()
 
 		createDbSecret(namespacedName.Namespace, "host-inventory-db", dbParams)
-		createDbSecret(namespacedName.Namespace, utils.AppDbSecretName(namespacedName.Name), dbParams)
+		createDbSecret(namespacedName.Namespace, utils.AppDefaultDbSecretName(namespacedName.Name), dbParams)
 
 		db = database.NewAppDatabase(&dbParams)
 		err := db.Connect()
@@ -239,6 +239,25 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(connector.GetLabels()["cyndi/appName"]).To(Equal(namespacedName.Name))
 			Expect(connector.GetLabels()["cyndi/insightsOnly"]).To(Equal("false"))
 			Expect(connector.GetLabels()["strimzi.io/cluster"]).To(Equal("test01"))
+		})
+
+		It("Considers db secret name configuration", func() {
+			// remove the app db secret and create a secret with non-standard name
+			appDbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, utils.AppDefaultDbSecretName(namespacedName.Name))
+			Expect(err).ToNot(HaveOccurred())
+			err = test.Client.Delete(context.TODO(), appDbSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			secretName := "application-database"
+			createDbSecret(namespacedName.Namespace, secretName, dbParams)
+
+			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{DbSecret: &secretName})
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			exists, err := db.CheckIfTableExists(pipeline.Status.TableName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exists).To(BeTrue())
 		})
 
 		It("Removes stale connectors", func() {
@@ -474,7 +493,7 @@ var _ = Describe("Pipeline operations", func() {
 			// with pipeline in the Valid state, change the db secret
 			db.Exec("CREATE ROLE cyndi_admin; GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA inventory TO cyndi_admin;")
 			db.Exec("CREATE USER cyndi123 WITH PASSWORD 'havefun' IN ROLE cyndi_admin;")
-			dbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, utils.AppDbSecretName(namespacedName.Name))
+			dbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, utils.AppDbSecretName(pipeline.Spec))
 			Expect(err).ToNot(HaveOccurred())
 			dbSecret.Data["db.user"] = []byte("cyndi123")
 			dbSecret.Data["db.password"] = []byte("havefun")
@@ -672,7 +691,7 @@ var _ = Describe("Pipeline operations", func() {
 
 	Describe("Failures", func() {
 		It("Fails if App DB secret is missing", func() {
-			appDbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, utils.AppDbSecretName(namespacedName.Name))
+			appDbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, utils.AppDefaultDbSecretName(namespacedName.Name))
 			Expect(err).ToNot(HaveOccurred())
 			err = test.Client.Delete(context.TODO(), appDbSecret)
 			Expect(err).ToNot(HaveOccurred())
@@ -687,7 +706,7 @@ var _ = Describe("Pipeline operations", func() {
 		})
 
 		It("Fails if App DB secret is misconfigured", func() {
-			appDbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, utils.AppDbSecretName(namespacedName.Name))
+			appDbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, utils.AppDefaultDbSecretName(namespacedName.Name))
 			Expect(err).ToNot(HaveOccurred())
 
 			appDbSecret.Data["db.host"] = []byte("localhost")
