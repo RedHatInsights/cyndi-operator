@@ -171,6 +171,25 @@ var _ = Describe("Config", func() {
 			Expect(config.ValidationConfig.PercentageThreshold).To(Equal(int64(7)))
 			Expect(config.ValidationConfigInit.PercentageThreshold).To(Equal(int64(7)))
 		})
+
+		It("Overrides Topic", func() {
+			cm := &corev1.ConfigMap{
+				Data: map[string]string{
+					"connector.topic": "platform.inventory.events",
+				},
+			}
+
+			value := "platform.inventory.events-test"
+			pipeline := cyndi.CyndiPipeline{
+				Spec: cyndi.CyndiPipelineSpec{
+					Topic: &value,
+				},
+			}
+
+			config, err := BuildCyndiConfig(&pipeline, cm)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(config.Topic).To(Equal(value))
+		})
 	})
 
 	It("Computes ConfigMap version", func() {

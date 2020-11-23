@@ -33,7 +33,11 @@ func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm *corev1.ConfigMap) (*Cyn
 	var err error
 	config := &CyndiConfiguration{}
 
-	config.Topic = getStringValue(cm, "connector.topic", defaultTopic)
+	if instance != nil && instance.Spec.Topic != nil {
+		config.Topic = *instance.Spec.Topic
+	} else {
+		config.Topic = getStringValue(cm, "connector.topic", defaultTopic)
+	}
 
 	if instance != nil && instance.Spec.ConnectCluster != nil {
 		config.ConnectCluster = *instance.Spec.ConnectCluster

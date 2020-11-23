@@ -78,6 +78,9 @@ spec:
               maxAge:
                 format: int64
                 type: integer
+              topic:
+                minLength: 1
+                type: string
               validationThreshold:
                 format: int64
                 type: integer
