@@ -25,4 +25,4 @@ objects:
     insightsOnly: ${{INSIGHTS_ONLY}}
     validationThreshold: ${{VALIDATION_THRESHOLD}}
     maxAge: ${{MAX_AGE}}
-    topic: ${HBI_TOPIC}
+    topic: ${SOURCE_TOPIC}
