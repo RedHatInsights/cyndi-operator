@@ -24,7 +24,7 @@ parameters:
 - name: CONNECT_CLUSTER
   value: "xjoin-kafka-connect-strimzi"
 - name: CONNECTOR_ALLOWLIST_SP
-  value: "sap_system,sap_sids"
+  value: "sap_system,sap_sids,owner_id"
 
 objects:
 - apiVersion: operators.coreos.com/v1alpha1

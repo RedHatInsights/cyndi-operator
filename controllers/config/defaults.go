@@ -67,7 +67,7 @@ const defaultConnectorTemplate = `{
 const defaultConnectorTasksMax int64 = 16
 const defaultConnectorBatchSize int64 = 100
 const defaultConnectorMaxAge int64 = 45
-const defaultAllowlistSystemProfile = "sap_system,sap_sids"
+const defaultAllowlistSystemProfile = "sap_system,sap_sids,owner_id"
 
 const defaultDBTableInitScript = `
 CREATE TABLE inventory.{{.TableName}} (
