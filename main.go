@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"os"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -58,12 +59,15 @@ func main() {
 	devMode := os.Getenv("DEV_MODE") == "true"
 	ctrl.SetLogger(zap.New(zap.UseDevMode(devMode)))
 
+	renewDeadline := 60 * time.Second
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "212d6419.cloud.redhat.com",
+		RenewDeadline:      &renewDeadline,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
