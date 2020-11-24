@@ -333,7 +333,7 @@ var _ = Describe("Pipeline operations", func() {
 			reconcile()
 
 			setPipelineValid(namespacedName, false, func(pipeline *cyndi.CyndiPipeline) {
-				pipeline.Status.ValidationFailedCount = 16
+				pipeline.Status.ValidationFailedCount = 31
 			})
 
 			reconcile()

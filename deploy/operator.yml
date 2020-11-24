@@ -20,7 +20,7 @@ parameters:
 - name: VALIDATION_ATTEMPTS_THRESHOLD
   value: "3"
 - name: VALIDATION_ATTEMPTS_THRESHOLD_INIT
-  value: "15"
+  value: "30"
 - name: CONNECT_CLUSTER
   value: "xjoin-kafka-connect-strimzi"
 - name: CONNECTOR_ALLOWLIST_SP
