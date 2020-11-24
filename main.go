@@ -60,6 +60,7 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseDevMode(devMode)))
 
 	renewDeadline := 60 * time.Second
+	leaseDuration := 90 * time.Second
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
@@ -68,6 +69,7 @@ func main() {
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "212d6419.cloud.redhat.com",
 		RenewDeadline:      &renewDeadline,
+		LeaseDuration:      &leaseDuration,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
