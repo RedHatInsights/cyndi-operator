@@ -55,8 +55,8 @@ Typical flow
 * [Strimzi-managed](https://strimzi.io/docs/operators/latest/quickstart.html) Kafka Connect cluster is running in the OpenShift cluster
 * A PostgreSQL database to be used as the target database
   * [Onboarding process](https://platform-docs.cloud.paas.psi.redhat.com/backend/inventory.html#onboarding-process) has been completed on the target database
-  An OpenShift secret with database credentials is stored in the pipeline namespace and named `{appName}-db`, where `appName` is the name used in pipeline definition
-* An OpenShift secret named `host-inventory-db` containing Inventory database credentials (used for validation)
+  An OpenShift secret with database credentials is stored in the pipeline namespace and named `{appName}-db`, where `appName` is the name used in pipeline definition. If needed, the name of the secret used can be changed by setting `dbSecret` in the `CyndiPipeline` spec.
+* An OpenShift secret named `host-inventory-db` containing Inventory database credentials (used for validation). The name of the secret used can be changed by setting `inventory.dbSecret` in the cyndi `ConfigMap`, or by setting `inventoryDbSecret` in the `CyndiPipeline` spec.
 
 
 ## Implementation
