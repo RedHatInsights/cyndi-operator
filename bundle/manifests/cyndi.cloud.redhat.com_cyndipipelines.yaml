@@ -75,6 +75,12 @@ spec:
               validationThreshold:
                 format: int64
                 type: integer
+              dbSecret:
+                minLength: 1
+                type: string
+              inventoryDbSecret:
+                minLength: 1
+                type: string
             required:
             - appName
             type: object

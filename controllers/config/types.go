@@ -24,6 +24,9 @@ type CyndiConfiguration struct {
 	ConnectorMaxAge                 int64
 	ConnectorAllowlistSystemProfile string
 
+	// the secret for the inventory DB we should connect to when validating
+	InventoryDbSecret string
+
 	DBTableInitScript string
 
 	// How often the Reconcile function should run even if there is no event

@@ -45,6 +45,12 @@ func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm *corev1.ConfigMap) (*Cyn
 		config.ConnectCluster = getStringValue(cm, "connect.cluster", defaultConnectCluster)
 	}
 
+	if instance != nil && instance.Spec.InventoryDbSecret != nil {
+		config.InventoryDbSecret = *instance.Spec.InventoryDbSecret
+	} else {
+		config.InventoryDbSecret = getStringValue(cm, "inventory.dbSecret", defaultInventoryDbSecret)
+	}
+
 	config.ConnectorTemplate = getStringValue(cm, "connector.config", defaultConnectorTemplate)
 
 	if config.ConnectorTasksMax, err = getIntValue(cm, "connector.tasks.max", defaultConnectorTasksMax); err != nil {

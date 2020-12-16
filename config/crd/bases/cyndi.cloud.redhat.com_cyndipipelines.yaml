@@ -78,6 +78,9 @@ spec:
               insightsOnly:
                 default: false
                 type: boolean
+              inventoryDbSecret:
+                minLength: 1
+                type: string
               maxAge:
                 format: int64
                 type: integer
