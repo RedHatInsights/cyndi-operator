@@ -28,6 +28,7 @@ func assertDefaults(config *CyndiConfiguration) {
 	Expect(config.DBTableInitScript).To(Equal(defaultDBTableInitScript))
 	Expect(config.ValidationConfig).To(Equal(defaultValidationConfig))
 	Expect(config.ValidationConfigInit).To(Equal(defaultValidationConfigInit))
+	Expect(config.InventoryDbSecret).To(Equal(defaultInventoryDbSecret))
 }
 
 var _ = Describe("Config", func() {
@@ -65,6 +66,7 @@ var _ = Describe("Config", func() {
 				"init.validation.interval":             "54",
 				"init.validation.attempts.threshold":   "55",
 				"init.validation.percentage.threshold": "56",
+				"inventory.dbSecret":                   "some-secret",
 			},
 		}
 
@@ -86,6 +88,7 @@ var _ = Describe("Config", func() {
 		Expect(config.ValidationConfigInit.Interval).To(Equal(int64(54)))
 		Expect(config.ValidationConfigInit.AttemptsThreshold).To(Equal(int64(55)))
 		Expect(config.ValidationConfigInit.PercentageThreshold).To(Equal(int64(56)))
+		Expect(config.InventoryDbSecret).To(Equal("some-secret"))
 	})
 
 	DescribeTable("Errors on invalid value",
@@ -130,6 +133,25 @@ var _ = Describe("Config", func() {
 			config, err := BuildCyndiConfig(&pipeline, cm)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(config.ConnectCluster).To(Equal("cluster02"))
+		})
+
+		It("Overrides InventoryDbSecret", func() {
+			cm := &corev1.ConfigMap{
+				Data: map[string]string{
+					"inventory.dbSecret": "cm-secret-name",
+				},
+			}
+
+			value := "pipeline-secret-name"
+			pipeline := cyndi.CyndiPipeline{
+				Spec: cyndi.CyndiPipelineSpec{
+					InventoryDbSecret: &value,
+				},
+			}
+
+			config, err := BuildCyndiConfig(&pipeline, cm)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(config.InventoryDbSecret).To(Equal("pipeline-secret-name"))
 		})
 
 		It("Overrides MaxAge", func() {
