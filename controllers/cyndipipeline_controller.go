@@ -97,7 +97,7 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 		return i, err
 	}
 
-	if i.HBIDBParams, err = config.LoadSecret(i.Client, i.Instance.Namespace, "host-inventory-db"); err != nil {
+	if i.HBIDBParams, err = config.LoadSecret(i.Client, i.Instance.Namespace, i.config.InventoryDbSecret); err != nil {
 		return i, err
 	}
 

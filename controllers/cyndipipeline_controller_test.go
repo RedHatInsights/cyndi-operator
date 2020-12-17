@@ -260,6 +260,25 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(exists).To(BeTrue())
 		})
 
+		It("Considers inventory db secret name configuration", func() {
+			// remove the app db secret and create a secret with non-standard name
+			inventoryDbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, "host-inventory-db")
+			Expect(err).ToNot(HaveOccurred())
+			err = test.Client.Delete(context.TODO(), inventoryDbSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			secretName := "new-inventory-db-secret"
+			createDbSecret(namespacedName.Namespace, secretName, dbParams)
+
+			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InventoryDbSecret: &secretName})
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			exists, err := db.CheckIfTableExists(pipeline.Status.TableName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exists).To(BeTrue())
+		})
+
 		It("Removes stale connectors", func() {
 			createPipeline(namespacedName)
 			reconcile()

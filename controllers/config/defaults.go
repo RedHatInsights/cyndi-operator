@@ -2,6 +2,7 @@ package config
 
 const defaultTopic = "platform.inventory.events"
 const defaultConnectCluster = "xjoin-kafka-connect-strimzi"
+const defaultInventoryDbSecret = "host-inventory-db"
 
 const defaultConnectorTemplate = `{
 	"connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
