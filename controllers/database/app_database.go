@@ -97,8 +97,15 @@ func (db *AppDatabase) DeleteTable(tableName string) error {
 }
 
 func (db *AppDatabase) UpdateView(tableName string) error {
-	_, err := db.Exec(fmt.Sprintf(viewTemplate, tableName, cullingStaleWarningOffset, cullingCulledOffset))
-	return err
+	if _, err := db.Exec(fmt.Sprintf(viewTemplate, tableName, cullingStaleWarningOffset, cullingCulledOffset)); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(`GRANT SELECT ON inventory.hosts TO cyndi_reader`); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (db *AppDatabase) GetCurrentTable() (table *string, err error) {
