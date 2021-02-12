@@ -43,6 +43,7 @@ var _ = Describe("Database", func() {
 		err := db.Connect()
 		Expect(err).ToNot(HaveOccurred())
 
+		_, _ = db.Exec(`CREATE ROLE cyndi_reader;`)
 		_, err = db.Exec(`DROP SCHEMA IF EXISTS "inventory" CASCADE; CREATE SCHEMA "inventory";`)
 		Expect(err).ToNot(HaveOccurred())
 

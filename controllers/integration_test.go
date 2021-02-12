@@ -78,6 +78,7 @@ var _ = Describe("Integration tests", func() {
 		err := appDb.Connect()
 		Expect(err).ToNot(HaveOccurred())
 
+		_, _ = appDb.Exec(`CREATE ROLE cyndi_reader;`)
 		_, err = appDb.Exec(`DROP SCHEMA IF EXISTS "inventory" CASCADE; CREATE SCHEMA "inventory";`)
 		Expect(err).ToNot(HaveOccurred())
 
