@@ -145,3 +145,10 @@ endif
 .PHONY: bundle-build
 bundle-build: bundle
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMAGE):$(BUNDLE_IMAGE_TAG) .
+
+# Create a release manifest file
+release: manifests kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default > manifest.yaml
+
+
