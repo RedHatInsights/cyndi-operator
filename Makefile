@@ -149,5 +149,5 @@ bundle-build: bundle
 # Create a release manifest file
 release: bundle
 	rm ./bundle/manifests/cyndi.clusterserviceversion.yaml
-	for file in ./bundle/manifests/*.yaml; do cat ./bundle/manifests/*.yaml > manifest.yaml; echo "---" >> manifest.yaml; done
+	./combine_manifests.sh
 	$(KUSTOMIZE) build ./config/default >> manifest.yaml
