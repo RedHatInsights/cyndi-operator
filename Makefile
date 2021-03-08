@@ -145,3 +145,9 @@ endif
 .PHONY: bundle-build
 bundle-build: bundle
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMAGE):$(BUNDLE_IMAGE_TAG) .
+
+# Create a release manifest file
+release: bundle
+	rm ./bundle/manifests/cyndi.clusterserviceversion.yaml
+	for file in ./bundle/manifests/*.yaml; do cat ./bundle/manifests/*.yaml > manifest.yaml; echo "---" >> manifest.yaml; done
+	$(KUSTOMIZE) build ./config/default >> manifest.yaml
