@@ -23,6 +23,10 @@ spec:
           env:
           - name: SQLALCHEMY_ENGINE_LOG_LEVEL
             value: INFO
+          - name: INVENTORY_DB_HOST
+            value: inventory-db
+          - name: INVENTORY_DB_PORT
+            value: "5432"
         failurePolicy: Abort
     resources: {}
     type: Recreate
@@ -47,6 +51,11 @@ spec:
           valueFrom:
             secretKeyRef:
               key: db.host
+              name: host-inventory-db
+        - name: INVENTORY_DB_PORT
+          valueFrom:
+            secretKeyRef:
+              key: db.port
               name: host-inventory-db
         - name: INVENTORY_DB_USER
           valueFrom:
@@ -76,7 +85,7 @@ spec:
           value: "false"
         - name: KAFKA_HOST_EGRESS_TOPIC
           value: platform.inventory.events
-        image: quay.io/cloudservices/insights-inventory:635f6d4
+        image: quay.io/cloudservices/insights-inventory:latest
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
