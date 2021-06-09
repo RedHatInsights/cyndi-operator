@@ -127,3 +127,21 @@ spec:
   selector:
     name: advisor-db
   type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: advisor
+  name: advisor-db-nodeport
+spec:
+  ports:
+  - name: port1
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+    nodePort: 30123
+  selector:
+    name: advisor-db
+  type: NodePort

@@ -5,6 +5,7 @@ import (
 	"cyndi-operator/controllers/config"
 	"cyndi-operator/controllers/utils"
 	"fmt"
+	"strings"
 	"text/template"
 )
 
@@ -29,12 +30,30 @@ FROM inventory.%[1]s`
 const cullingStaleWarningOffset = "7"
 const cullingCulledOffset = "14"
 
+const initialPassword = "havefun"
+
 func NewAppDatabase(config *config.DBParams) *AppDatabase {
 	return &AppDatabase{
 		BaseDatabase: BaseDatabase{
 			Config: config,
 		},
 	}
+}
+
+func (db *AppDatabase) Connect() (err error) {
+	err = db.BaseDatabase.Connect()
+
+	// auth error may indicate the database user is still using the initial password
+	// let's try rotating it
+	if err != nil && strings.Contains(err.Error(), "28P01") {
+		if err = db.rotatePassword(); err != nil {
+			return
+		}
+
+		err = db.BaseDatabase.Connect()
+	}
+
+	return err
 }
 
 func (db *AppDatabase) CheckIfTableExists(tableName string) (bool, error) {
@@ -151,4 +170,19 @@ func (db *AppDatabase) GetCyndiTables() (tables []string, err error) {
 	}
 
 	return tables, nil
+}
+
+func (db *AppDatabase) rotatePassword() (err error) {
+	newPassword := db.Config.Password
+	db.Config.Password = initialPassword
+
+	if err = db.BaseDatabase.Connect(); err != nil {
+		return
+	}
+
+	defer db.BaseDatabase.Close()
+
+	query := fmt.Sprintf("ALTER ROLE %s WITH PASSWORD '%s'", db.Config.User, newPassword)
+	_, err = db.Exec(query)
+	return
 }
