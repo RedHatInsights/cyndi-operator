@@ -25,6 +25,10 @@ parameters:
   value: "xjoin-kafka-connect-strimzi"
 - name: CONNECTOR_ALLOWLIST_SP
   value: "sap_system,sap_sids"
+- name: SSL_MODE
+  value: verify-full
+- name: SSL_ROOT_CERT
+  value: /opt/kafka/external-configuration/rds-client-ca/rds-cacert
 
 objects:
 - apiVersion: operators.coreos.com/v1alpha1
@@ -75,7 +79,7 @@ objects:
         "key.converter": "org.apache.kafka.connect.storage.StringConverter",
         "value.converter": "org.apache.kafka.connect.json.JsonConverter",
         "value.converter.schemas.enable": false,
-        "connection.url": "jdbc:postgresql://{{.DBHostname}}:{{.DBPort}}/{{.DBName}}",
+        "connection.url": "jdbc:postgresql://{{.DBHostname}}:{{.DBPort}}/{{.DBName}}?sslmode=${SSL_MODE}&sslrootcert=${SSL_ROOT_CERT}",
         "connection.user": "{{.DBUser}}",
         "connection.password": "{{.DBPassword}}",
         "dialect.name": "EnhancedPostgreSqlDatabaseDialect",
