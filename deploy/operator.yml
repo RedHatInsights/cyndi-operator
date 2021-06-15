@@ -95,15 +95,15 @@ objects:
         {{ if eq .InsightsOnly "true" }}
         "transforms": "timestampFilter,insightsFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,injectSchemaKey,injectSchemaValue",
         "transforms.insightsFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
-        "transforms.insightsFilter.predicate": "!!record.headers().lastWithName('insights_id').value()",
+        "transforms.insightsFilter.if": "!!record.headers().lastWithName('insights_id').value()",
         {{ else  }}
         "transforms": "timestampFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,injectSchemaKey,injectSchemaValue",
         {{ end }}
 
         "transforms.timestampFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
-        "transforms.timestampFilter.predicate": "(Date.now() - record.timestamp()) < {{.MaxAge}} * 24 * 60 * 60 * 1000",
+        "transforms.timestampFilter.if": "(Date.now() - record.timestamp()) < {{.MaxAge}} * 24 * 60 * 60 * 1000",
         "transforms.deleteToTombstone.type":"com.redhat.insights.kafka.connect.transforms.DropIf$Value",
-        "transforms.deleteToTombstone.predicate": "'delete'.equals(record.headers().lastWithName('event_type').value())",
+        "transforms.deleteToTombstone.if": "'delete'.equals(record.headers().lastWithName('event_type').value())",
         "transforms.extractHost.type":"org.apache.kafka.connect.transforms.ExtractField$Value",
         "transforms.extractHost.field":"host",
         "transforms.systemProfileFilter.type": "com.redhat.insights.kafka.connect.transforms.FilterFields$Value",
