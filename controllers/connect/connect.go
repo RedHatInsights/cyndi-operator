@@ -32,13 +32,13 @@ const failed = "FAILED"
 var connectorGVK = schema.GroupVersionKind{
 	Group:   "kafka.strimzi.io",
 	Kind:    "KafkaConnector",
-	Version: "v1alpha1",
+	Version: "v1beta2",
 }
 
 var connectorsGVK = schema.GroupVersionKind{
 	Group:   "kafka.strimzi.io",
 	Kind:    "KafkaConnectorList",
-	Version: "v1alpha1",
+	Version: "v1beta2",
 }
 
 type ConnectorConfiguration struct {
