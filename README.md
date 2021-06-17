@@ -136,9 +136,9 @@ The rest of this document assumes CodeReady Containers.
 1. Log in to the cluster as kubeadmin (oc login -u kubeadmin -p ...)
    You'll find the exact command to use in the CRC startup log
 
-1. Create a `my-kafka-project` namespace
+1. Create a `cyndi` namespace
     ```
-    oc create ns my-kafka-project
+    oc create ns cyndi
     ```
 
 1. Log in to https://quay.io/
@@ -147,7 +147,7 @@ The rest of this document assumes CodeReady Containers.
 
 1. Install the quay secret to the cluster
     ```
-    oc apply -n my-kafka-project -f <secret name>.yml
+    oc apply -n cyndi -f <secret name>.yml
     ```
 
 1. In the `dev` folder run
@@ -158,8 +158,8 @@ The rest of this document assumes CodeReady Containers.
 
 1. Set up port-forwarding to database pods
     ```
-    oc port-forward svc/inventory-db 5432:5432 -n my-kafka-project &
-    oc port-forward svc/advisor-db 5433:5432 -n my-kafka-project &
+    oc port-forward svc/inventory-db 5432:5432 -n cyndi &
+    oc port-forward svc/advisor-db 5433:5432 -n cyndi &
     ```
 
 ### Running the operator locally
@@ -183,7 +183,7 @@ With the cluster set up it is now possible to install manifests and run the oper
 
     Optionally, you can wait for the pipeline to become valid with
     ```
-    oc wait cyndi/example-pipeline --for=condition=Valid --timeout=300s -n my-kafka-project
+    oc wait cyndi/example-pipeline --for=condition=Valid --timeout=300s -n cyndi
     ```
 
 ### Running the operator using OLM
@@ -198,7 +198,7 @@ An alternative to running the operator locally is to install the operator to the
 
 1. Install the operator
     ```
-    oc process -f ../deploy/operator.yml -p TARGET_NAMESPACE=my-kafka-project -o yaml | oc apply -f -
+    oc process -f ../deploy/operator.yml -p TARGET_NAMESPACE=cyndi -o yaml | oc apply -f -
     ```
 
 
@@ -223,17 +223,17 @@ Then, the CR can be managed via Kubernetes commands like normal.
 
 Create a host
 ```
-KAFKA_BOOTSTRAP_SERVERS=192.168.130.11:$(oc get service my-cluster-kafka-external-bootstrap -n my-kafka-project -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}') python utils/kafka_producer.py
+KAFKA_BOOTSTRAP_SERVERS=192.168.130.11:$(oc get service my-cluster-kafka-nodeport-0 -n cyndi -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}') python utils/kafka_producer.py
 ```
 
 List hosts
 ```
-curl -H 'x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjAwMDAwMDEiLCAidHlwZSI6IlVzZXIifX0K' http://api.crc.testing:$(oc get service insights-inventory-public -n my-kafka-project -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}')/api/inventory/v1/hosts
+curl -H 'x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjAwMDAwMDEiLCAidHlwZSI6IlVzZXIifX0K' http://api.crc.testing:$(oc get service insights-inventory-public -n cyndi -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}')/api/inventory/v1/hosts
 ```
 
 Inspect Kafka Connect cluster
 ```
-oc port-forward svc/my-connect-cluster-connect-api 8083:8083 -n my-kafka-project
+oc port-forward svc/my-connect-cluster-connect-api 8083:8083 -n cyndi
 ```
 then access the kafka connect API at http://localhost:8083/connectors
 

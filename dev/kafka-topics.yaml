@@ -1,0 +1,25 @@
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  labels:
+    strimzi.io/cluster: my-cluster
+  name: platform.inventory.events
+  namespace: cyndi
+spec:
+  partitions: 1
+  replicas: 1
+  topicName: platform.inventory.events
+
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  labels:
+    strimzi.io/cluster: my-cluster
+  name: platform.cyndi.dlq
+  namespace: cyndi
+spec:
+  partitions: 1
+  replicas: 1
+  topicName: platform.cyndi.dlq

@@ -6,49 +6,48 @@ fi
 PULL_SECRET=$1
 
 oc whoami || exit 1
-oc get secret $1 -n my-kafka-project || exit 1
+oc get secret $1 -n cyndi || exit 1
 
-oc secrets link -n my-kafka-project default $PULL_SECRET --for=pull
+oc secrets link -n cyndi default $PULL_SECRET --for=pull
 
 oc create ns kafka
 
-oc apply -f install/cluster-operator/ -n kafka
+oc project cyndi
 
-oc apply -f install/cluster-operator/020-RoleBinding-strimzi-cluster-operator.yaml -n my-kafka-project
-oc apply -f install/cluster-operator/032-RoleBinding-strimzi-cluster-operator-topic-operator-delegation.yaml -n my-kafka-project
-oc apply -f install/cluster-operator/031-RoleBinding-strimzi-cluster-operator-entity-operator-delegation.yaml -n my-kafka-project
+oc apply -f amq-streams.yaml
+oc wait subscription amq-streams --for=condition=CatalogSourcesUnhealthy=false -n openshift-operators
+oc wait crd -l app=strimzi --for=condition=Established
 
-sleep 10
+oc apply -n cyndi -f cluster.yml
+oc wait kafka/my-cluster --for=condition=Ready --timeout=300s -n cyndi
 
-oc project my-kafka-project
+oc apply -f inventory-db.secret.yml -n cyndi
+oc apply -f advisor-db-init.yml -n cyndi
+oc apply -f inventory-db.yaml -n cyndi
 
-oc create -n my-kafka-project -f cluster.yml
-oc wait kafka/my-cluster --for=condition=Ready --timeout=300s -n my-kafka-project
+oc wait deployment/inventory-db --for=condition=Available --timeout=300s -n cyndi
 
-oc apply -f inventory-db.secret.yml -n my-kafka-project
-oc apply -f advisor-db-init.yml -n my-kafka-project
-oc apply -f inventory-db.yaml -n my-kafka-project
+oc apply -f inventory-mq.yml -n cyndi
+oc apply -f inventory-api.yml -n cyndi
 
-oc wait deployment/inventory-db --for=condition=Available --timeout=300s -n my-kafka-project
+oc wait dc/inventory-mq-pmin --for=condition=Available --timeout=300s -n cyndi
+oc wait deployment/insights-inventory --for=condition=Available --timeout=300s -n cyndi
 
-oc apply -f inventory-mq.yml -n my-kafka-project
-oc apply -f inventory-api.yml -n my-kafka-project
+oc apply -f advisor-db.secret.yml -n cyndi
+oc apply -f advisor-db.yaml -n cyndi
+oc wait deployment/advisor-db --for=condition=Available --timeout=300s -n cyndi
 
-oc wait dc/inventory-mq-pmin --for=condition=Available --timeout=300s -n my-kafka-project
-oc wait deployment/insights-inventory --for=condition=Available --timeout=300s -n my-kafka-project
+oc apply -f kafka-user.yaml -n cyndi
+oc wait kafkauser/kafka-cyndi --for=condition=Ready --timeout=300s -n cyndi
 
-oc apply -f advisor-db.secret.yml -n my-kafka-project
-oc apply -f advisor-db.yaml -n my-kafka-project
-oc wait deployment/advisor-db --for=condition=Available --timeout=300s -n my-kafka-project
+oc apply -f kafka-topics.yaml
+oc wait kafkatopic/platform.cyndi.dlq --for=condition=Ready --timeout=300s -n cyndi
 
-oc apply -f kafka-connect.yaml -n my-kafka-project
+oc apply -f kafka-connect.yaml -n cyndi
+oc wait kafkaconnect/xjoin-kafka-connect-strimzi --for=condition=Ready --timeout=300s -n cyndi
 
-sleep 1
 
-oc secrets link xjoin-kafka-connect-strimzi-connect $PULL_SECRET --for=pull -n my-kafka-project
 
-oc scale --replicas=1 kafkaconnect xjoin-kafka-connect-strimzi
-oc wait kafkaconnect/xjoin-kafka-connect-strimzi --for=condition=Ready --timeout=300s -n my-kafka-project
 
 
 
