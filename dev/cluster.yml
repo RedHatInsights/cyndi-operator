@@ -1,17 +1,30 @@
-apiVersion: kafka.strimzi.io/v1beta1
+apiVersion: kafka.strimzi.io/v1beta2
 kind: Kafka
 metadata:
   name: my-cluster
 spec:
   kafka:
     replicas: 1
+    authorization:
+      type: simple
+      superUsers:
+        - ANONYMOUS
     listeners:
-      plain: {}
-      tls: {}
-      external:
-        type: nodeport
+      - name: plain
+        port: 9092
+        type: internal
         tls: false
-        overrides:
+      - name: auth
+        port: 9093
+        type: internal
+        tls: false
+        authentication:
+          type: scram-sha-512
+      - name: nodeport
+        type: nodeport
+        port: 9094
+        tls: false
+        configuration:
           brokers:
           - broker: 0
             advertisedHost: "192.168.130.11"

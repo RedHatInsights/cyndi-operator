@@ -1,0 +1,44 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: kafka-cyndi
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    acls:
+    # topics
+    - resource:
+        name: 'platform.inventory.events'
+        patternType: literal
+        type: topic
+      operation: Read
+
+    - resource:
+        name: 'platform.cyndi.dlq'
+        patternType: literal
+        type: topic
+      operation: All
+
+    # connect offset, storage and config topics
+    - resource:
+        name: 'cyndi-connect'
+        patternType: prefix
+        type: topic
+      operation: All
+
+    # connect cluster consumer group
+    - resource:
+        name: cyndi-connect
+        patternType: literal
+        type: group
+      operation: All
+    # connector consumer groups
+    - resource:
+        name: connect-cyndi
+        patternType: prefix
+        type: group
+      operation: All
+    type: simple
