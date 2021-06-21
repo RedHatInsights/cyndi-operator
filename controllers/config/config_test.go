@@ -43,7 +43,7 @@ var _ = Describe("Config", func() {
 			Data: map[string]string{},
 		}
 
-		config, err := BuildCyndiConfig(nil, cm)
+		config, err := BuildCyndiConfig(nil, cm.Data)
 		Expect(err).ToNot(HaveOccurred())
 		assertDefaults(config)
 	})
@@ -70,7 +70,7 @@ var _ = Describe("Config", func() {
 			},
 		}
 
-		config, err := BuildCyndiConfig(nil, cm)
+		config, err := BuildCyndiConfig(nil, cm.Data)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(config.Topic).To(Equal("platform.inventory.host-egress"))
@@ -99,7 +99,7 @@ var _ = Describe("Config", func() {
 				},
 			}
 
-			_, err := BuildCyndiConfig(nil, cm)
+			_, err := BuildCyndiConfig(nil, cm.Data)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(fmt.Sprintf(`"%s" is not a valid value for "%s"`, "abc", key)))
 		},
@@ -130,7 +130,7 @@ var _ = Describe("Config", func() {
 				},
 			}
 
-			config, err := BuildCyndiConfig(&pipeline, cm)
+			config, err := BuildCyndiConfig(&pipeline, cm.Data)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(config.ConnectCluster).To(Equal("cluster02"))
 		})
@@ -149,7 +149,7 @@ var _ = Describe("Config", func() {
 				},
 			}
 
-			config, err := BuildCyndiConfig(&pipeline, cm)
+			config, err := BuildCyndiConfig(&pipeline, cm.Data)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(config.InventoryDbSecret).To(Equal("pipeline-secret-name"))
 		})
@@ -168,7 +168,7 @@ var _ = Describe("Config", func() {
 				},
 			}
 
-			config, err := BuildCyndiConfig(&pipeline, cm)
+			config, err := BuildCyndiConfig(&pipeline, cm.Data)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(config.ConnectorMaxAge).To(Equal(int64(9)))
 		})
@@ -188,7 +188,7 @@ var _ = Describe("Config", func() {
 				},
 			}
 
-			config, err := BuildCyndiConfig(&pipeline, cm)
+			config, err := BuildCyndiConfig(&pipeline, cm.Data)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(config.ValidationConfig.PercentageThreshold).To(Equal(int64(7)))
 			Expect(config.ValidationConfigInit.PercentageThreshold).To(Equal(int64(7)))
@@ -208,7 +208,7 @@ var _ = Describe("Config", func() {
 				},
 			}
 
-			config, err := BuildCyndiConfig(&pipeline, cm)
+			config, err := BuildCyndiConfig(&pipeline, cm.Data)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(config.Topic).To(Equal(value))
 		})
@@ -222,17 +222,17 @@ var _ = Describe("Config", func() {
 			},
 		}
 
-		config, err := BuildCyndiConfig(nil, cm)
+		config, err := BuildCyndiConfig(nil, cm.Data)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(config.ConfigMapVersion).To(Equal("1480767004"))
 
 		cm.Data["connect.cluster"] = "cluster02"
-		config, err = BuildCyndiConfig(nil, cm)
+		config, err = BuildCyndiConfig(nil, cm.Data)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(config.ConfigMapVersion).To(Equal("361613641"))
 
 		cm.Data["validation.interval"] = "120"
-		config, err = BuildCyndiConfig(nil, cm)
+		config, err = BuildCyndiConfig(nil, cm.Data)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(config.ConfigMapVersion).To(Equal("361613641"))
 	})

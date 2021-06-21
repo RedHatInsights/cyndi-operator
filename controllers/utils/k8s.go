@@ -43,12 +43,12 @@ func FetchCyndiPipelines(c client.Client, namespace string) (*cyndi.CyndiPipelin
 	return list, err
 }
 
-func ConfigMapHash(cm *corev1.ConfigMap, ignoredKeys ...string) string {
-	if cm == nil {
+func ConfigMapHash(cm map[string]string, ignoredKeys ...string) string {
+	if len(cm) == 0 {
 		return "-1"
 	}
 
-	values := Omit(cm.Data, ignoredKeys...)
+	values := Omit(cm, ignoredKeys...)
 
 	json, err := json.Marshal(values)
 
