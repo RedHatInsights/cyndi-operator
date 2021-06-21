@@ -14,7 +14,7 @@ type BaseDatabase struct {
 	connection *pgx.Conn
 }
 
-const connectionStringTemplate = "host=%s user=%s password=%s dbname=%s port=%s"
+const connectionStringTemplate = "postgresql://%s:%s@%s:%s/%s?sslmode=%s&sslrootcert=%s"
 
 func NewBaseDatabase(config *config.DBParams) Database {
 	return &BaseDatabase{
@@ -132,13 +132,16 @@ func (db *BaseDatabase) GetHostIds(table string, insightsOnly bool) ([]string, e
 func GetConnection(params *DBParams) (connection *pgx.Conn, err error) {
 	connStr := fmt.Sprintf(
 		connectionStringTemplate,
-		params.Host,
 		params.User,
 		params.Password,
+		params.Host,
+		params.Port,
 		params.Name,
-		params.Port)
+		params.SSLMode,
+		params.SSLRootCert,
+	)
 
-	if config, err := pgx.ParseDSN(connStr); err != nil {
+	if config, err := pgx.ParseConnectionString(connStr); err != nil {
 		return nil, err
 	} else {
 		if connection, err = pgx.Connect(config); err != nil {

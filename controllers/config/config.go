@@ -82,6 +82,9 @@ func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm map[string]string) (*Cyn
 		return config, err
 	}
 
+	config.SSLMode = getStringValue(cm, "db.ssl.mode", defaultSSLMode)
+	config.SSLRootCert = getStringValue(cm, "db.ssl.root.cert", defaultSSLRootCert)
+
 	config.ConfigMapVersion = utils.ConfigMapHash(cm, keysIgnoredByRefresh...)
 
 	return config, err
@@ -138,7 +141,7 @@ func getValidationConfig(instance *cyndi.CyndiPipeline, cm map[string]string, pr
 	return result, err
 }
 
-func LoadSecret(c client.Client, namespace string, name string) (DBParams, error) {
+func LoadDBSecret(config *CyndiConfiguration, c client.Client, namespace string, name string) (DBParams, error) {
 	secret, err := utils.FetchSecret(c, namespace, name)
 
 	if err != nil {
@@ -146,5 +149,11 @@ func LoadSecret(c client.Client, namespace string, name string) (DBParams, error
 	}
 
 	params, err := ParseDBSecret(secret)
+
+	if config != nil {
+		params.SSLMode = config.SSLMode
+		params.SSLRootCert = config.SSLRootCert
+	}
+
 	return params, err
 }

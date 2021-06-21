@@ -1,11 +1,13 @@
 package config
 
 type DBParams struct {
-	Name     string
-	Host     string
-	Port     string
-	User     string
-	Password string
+	Name        string
+	Host        string
+	Port        string
+	User        string
+	Password    string
+	SSLMode     string
+	SSLRootCert string
 }
 
 type ValidationConfiguration struct {
@@ -36,4 +38,7 @@ type CyndiConfiguration struct {
 	ValidationConfigInit ValidationConfiguration
 
 	ConfigMapVersion string
+
+	SSLMode     string
+	SSLRootCert string
 }
