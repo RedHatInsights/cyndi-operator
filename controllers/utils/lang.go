@@ -81,3 +81,23 @@ func IsNumber(x interface{}) bool {
 	kind := reflect.TypeOf(x).Kind()
 	return kind >= 2 && kind <= 16
 }
+
+/*
+ * Merge string maps into a single one.
+ * If keys overlap then the value from the map later in the argument list overrides the previous value for the given key.
+ */
+func Merge(maps ...map[string]string) map[string]string {
+	result := make(map[string]string)
+
+	for _, instance := range maps {
+		if instance == nil {
+			continue
+		}
+
+		for k, v := range instance {
+			result[k] = v
+		}
+	}
+
+	return result
+}

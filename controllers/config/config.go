@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strconv"
 
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -29,7 +28,7 @@ var keysIgnoredByRefresh = []string{
 	fmt.Sprintf("init.%s", validationPercentageThreshold),
 }
 
-func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm *corev1.ConfigMap) (*CyndiConfiguration, error) {
+func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm map[string]string) (*CyndiConfiguration, error) {
 	var err error
 	config := &CyndiConfiguration{}
 
@@ -88,24 +87,24 @@ func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm *corev1.ConfigMap) (*Cyn
 	return config, err
 }
 
-func getStringValue(cm *corev1.ConfigMap, key string, defaultValue string) string {
+func getStringValue(cm map[string]string, key string, defaultValue string) string {
 	if cm == nil {
 		return defaultValue
 	}
 
-	if value, ok := cm.Data[key]; ok {
+	if value, ok := cm[key]; ok {
 		return value
 	}
 
 	return defaultValue
 }
 
-func getIntValue(cm *corev1.ConfigMap, key string, defaultValue int64) (int64, error) {
+func getIntValue(cm map[string]string, key string, defaultValue int64) (int64, error) {
 	if cm == nil {
 		return defaultValue, nil
 	}
 
-	if value, ok := cm.Data[key]; ok {
+	if value, ok := cm[key]; ok {
 		if parsed, err := strconv.ParseInt(value, 10, 64); err != nil {
 			return -1, fmt.Errorf(`"%s" is not a valid value for "%s"`, value, key)
 		} else {
@@ -116,7 +115,7 @@ func getIntValue(cm *corev1.ConfigMap, key string, defaultValue int64) (int64, e
 	return defaultValue, nil
 }
 
-func getValidationConfig(instance *cyndi.CyndiPipeline, cm *corev1.ConfigMap, prefix string, defaultValue ValidationConfiguration) (ValidationConfiguration, error) {
+func getValidationConfig(instance *cyndi.CyndiPipeline, cm map[string]string, prefix string, defaultValue ValidationConfiguration) (ValidationConfiguration, error) {
 	var (
 		err    error
 		result = ValidationConfiguration{}
