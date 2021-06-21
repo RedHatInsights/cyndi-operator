@@ -83,6 +83,9 @@ func newConnectorResource(name string, namespace string, config ConnectorConfigu
 	m["MaxAge"] = strconv.FormatInt(config.MaxAge, 10)
 	m["InsightsOnly"] = strconv.FormatBool(config.InsightsOnly)
 	m["AllowlistSP"] = config.AllowlistSystemProfile
+	m["SSLMode"] = config.DB.SSLMode
+	m["SSLRootCert"] = config.DB.SSLRootCert
+
 	tmpl, err := template.New("configTemplate").Parse(config.Template)
 	if err != nil {
 		return nil, err

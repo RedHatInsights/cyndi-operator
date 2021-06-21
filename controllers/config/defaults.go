@@ -11,7 +11,7 @@ const defaultConnectorTemplate = `{
 	"key.converter": "org.apache.kafka.connect.storage.StringConverter",
 	"value.converter": "org.apache.kafka.connect.json.JsonConverter",
 	"value.converter.schemas.enable": false,
-	"connection.url": "jdbc:postgresql://{{.DBHostname}}:{{.DBPort}}/{{.DBName}}",
+	"connection.url": "jdbc:postgresql://{{.DBHostname}}:{{.DBPort}}/{{.DBName}}?sslmode={{.SSLMode}}&sslrootcert={{.SSLRootCert}}",
 	"connection.user": "{{.DBUser}}",
 	"connection.password": "{{.DBPassword}}",
 	"dialect.name": "EnhancedPostgreSqlDatabaseDialect",
@@ -69,6 +69,9 @@ const defaultConnectorTasksMax int64 = 16
 const defaultConnectorBatchSize int64 = 100
 const defaultConnectorMaxAge int64 = 45
 const defaultAllowlistSystemProfile = "sap_system,sap_sids"
+
+const defaultSSLMode = "disable"
+const defaultSSLRootCert = "none"
 
 const defaultDBTableInitScript = `
 CREATE TABLE inventory.{{.TableName}} (
