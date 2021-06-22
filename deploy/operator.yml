@@ -57,6 +57,15 @@ objects:
     name: cyndi
     source: cyndi-operator-source
     sourceNamespace: ${SOURCE_NAMESPACE}
+    config:
+      volumes:
+      - name: rds-client-ca
+        secret:
+          secretName: rds-client-ca
+          optional: true
+      volumeMounts:
+      - mountPath: /opt/kafka/external-configuration/rds-client-ca
+        name: rds-client-ca
 
 - apiVersion: v1
   kind: ConfigMap
