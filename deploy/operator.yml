@@ -83,20 +83,3 @@ objects:
     connector.allowlist.sp: ${CONNECTOR_ALLOWLIST_SP}
     db.ssl.mode: ${SSL_MODE}
     db.ssl.root.cert: ${SSL_ROOT_CERT}
-
-# TODO: move this into the bundle itself
-# depends on https://github.com/operator-framework/operator-sdk/pull/4137
-- apiVersion: v1
-  kind: Service
-  metadata:
-    name: cyndi-operator
-    labels:
-      control-plane: controller-manager
-  spec:
-    ports:
-    - name: https
-      protocol: TCP
-      port: 8080
-      targetPort: 8080
-    selector:
-      control-plane: controller-manager
