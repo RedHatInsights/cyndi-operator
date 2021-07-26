@@ -31,6 +31,8 @@ parameters:
   value: verify-full
 - name: SSL_ROOT_CERT
   value: /opt/kafka/external-configuration/rds-client-ca/rds-cacert
+- name: EPHEMERAL
+  value: "false"
 
 objects:
 - apiVersion: operators.coreos.com/v1alpha1
@@ -58,6 +60,9 @@ objects:
     source: cyndi-operator-source
     sourceNamespace: ${SOURCE_NAMESPACE}
     config:
+      env:
+        - name: EPHEMERAL
+          value: ${EPHEMERAL}
       volumes:
       - name: rds-client-ca
         secret:

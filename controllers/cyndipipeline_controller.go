@@ -18,7 +18,9 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 
@@ -30,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -137,19 +138,24 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 	// remove any stale dependencies
 	// if we're shutting down this removes all dependencies
-	errors := i.deleteStaleDependencies()
+	deleteDepErrors := i.deleteStaleDependencies()
 
-	for _, err := range errors {
+	for _, err := range deleteDepErrors {
 		i.error(err, "Error deleting stale dependency")
 	}
 
 	// STATE_REMOVED
+	ephemeral, err := strconv.ParseBool(os.Getenv("EPHEMERAL"))
+	if err != nil {
+		return reconcile.Result{}, errors.New("unable to parse boolean environment variable: EPHEMERAL")
+	}
+
 	if i.Instance.GetState() == cyndi.STATE_REMOVED {
-		if len(errors) > 0 {
-			return reconcile.Result{}, errors[0]
+		if len(deleteDepErrors) > 0 && !ephemeral {
+			return reconcile.Result{}, deleteDepErrors[0]
 		}
 
-		if err = i.removeFinalizer(); err != nil {
+		if err = i.removeFinalizer(); err != nil && !ephemeral {
 			return reconcile.Result{}, i.error(err, "Error removing finalizer")
 		}
 
@@ -378,7 +384,7 @@ func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
 
 	connector, err := connect.GetConnector(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8errors.IsNotFound(err) {
 			return fmt.Errorf("Connector %s not found in %s", i.Instance.Status.ConnectorName, i.Instance.Namespace), nil
 		}
 
