@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx"
@@ -39,6 +40,10 @@ func (db *BaseDatabase) Close() error {
 }
 
 func (db *BaseDatabase) RunQuery(query string) (*pgx.Rows, error) {
+	if db.connection == nil {
+		return nil, errors.New("cannot run query because there is no database connection")
+	}
+
 	rows, err := db.connection.Query(query)
 
 	if err != nil {
@@ -49,6 +54,10 @@ func (db *BaseDatabase) RunQuery(query string) (*pgx.Rows, error) {
 }
 
 func (db *BaseDatabase) Exec(query string) (result pgx.CommandTag, err error) {
+	if db.connection == nil {
+		return result, errors.New("cannot run query because there is no database connection")
+	}
+
 	result, err = db.connection.Exec(query)
 
 	if err != nil {

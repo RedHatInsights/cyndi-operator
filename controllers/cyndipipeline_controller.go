@@ -121,6 +121,10 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 
 func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
+
+	//capture errors until the finalizer completed
+	var setupErrors []error
+
 	reqLogger := log.WithValues("Pipeline", request.Name, "Namespace", request.Namespace)
 	reqLogger.Info("Reconciling CyndiPipeline")
 
@@ -128,7 +132,8 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	defer i.Close()
 
 	if err != nil {
-		return reconcile.Result{}, i.error(err)
+		i.error(err)
+		setupErrors = append(setupErrors, err)
 	}
 
 	// Request object not found, could have been deleted after reconcile request.
@@ -138,9 +143,9 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 	// remove any stale dependencies
 	// if we're shutting down this removes all dependencies
-	deleteDepErrors := i.deleteStaleDependencies()
+	setupErrors = append(setupErrors, i.deleteStaleDependencies()...)
 
-	for _, err := range deleteDepErrors {
+	for _, err := range setupErrors {
 		i.error(err, "Error deleting stale dependency")
 	}
 
@@ -151,16 +156,21 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	if i.Instance.GetState() == cyndi.STATE_REMOVED {
-		if len(deleteDepErrors) > 0 && !ephemeral {
-			return reconcile.Result{}, deleteDepErrors[0]
+		if len(setupErrors) > 0 && !ephemeral {
+			return reconcile.Result{}, setupErrors[0]
 		}
 
-		if err = i.removeFinalizer(); err != nil && !ephemeral {
+		if err = i.removeFinalizer(); err != nil {
 			return reconcile.Result{}, i.error(err, "Error removing finalizer")
 		}
 
 		i.Log.Info("Successfully finalized CyndiPipeline")
 		return reconcile.Result{}, nil
+	}
+
+	//finalizer is complete so throw any errors that previously occurred
+	if len(setupErrors) > 0 {
+		return reconcile.Result{}, setupErrors[0]
 	}
 
 	metrics.InitLabels(i.Instance)
