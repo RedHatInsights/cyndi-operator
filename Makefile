@@ -51,7 +51,12 @@ run: generate fmt vet manifests
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 delve: generate fmt vet manifests
-	dlv debug ./main.go --headless --accept-multiclient --listen=:2345 --api-version=2
+	which dlv; dlv version; dlv debug ./main.go --headless --accept-multiclient --listen=:2345 --api-version=2
+
+delve-test: generate fmt vet manifests
+	mkdir -p $(ENVTEST_ASSETS_DIR)
+	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
+	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); which dlv; dlv version; dlv test ./controllers --headless --accept-multiclient --listen=:2345 --api-version=2
 
 # Install CRDs into a cluster
 install: manifests kustomize
