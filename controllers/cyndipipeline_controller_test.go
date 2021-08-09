@@ -723,7 +723,7 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(err.Error()).To(Equal(`secrets "test-pipeline-01-db" not found`))
 
 			recorder, _ := r.Recorder.(*record.FakeRecorder)
-			Expect(recorder.Events).To(HaveLen(1))
+			Expect(recorder.Events).To(HaveLen(4))
 		})
 
 		It("Fails if App DB secret is misconfigured", func() {
@@ -741,7 +741,7 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(err.Error()).To(HavePrefix(`Error connecting to localhost:55432/test as postgres`))
 
 			recorder, _ := r.Recorder.(*record.FakeRecorder)
-			Expect(recorder.Events).To(HaveLen(1))
+			Expect(recorder.Events).To(HaveLen(4))
 		})
 
 		It("Fails if the configmap is misconfigured", func() {
@@ -753,7 +753,7 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(err.Error()).To(Equal(fmt.Sprintf(`Error parsing cyndi configmap in %s: "abcd" is not a valid value for "standard.interval"`, namespacedName.Namespace)))
 
 			recorder, _ := r.Recorder.(*record.FakeRecorder)
-			Expect(recorder.Events).To(HaveLen(1))
+			Expect(recorder.Events).To(HaveLen(4))
 		})
 
 		It("Fails if DB table cannot be created", func() {
