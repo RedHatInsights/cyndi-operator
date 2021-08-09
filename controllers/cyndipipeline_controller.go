@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -86,6 +85,7 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 		Client:           r.Client,
 		Clientset:        r.Clientset,
 		Scheme:           r.Scheme,
+		AppDb:            &database.AppDatabase{},
 		Log:              reqLogger,
 		Now:              time.Now().Format(time.RFC3339),
 		GetRequeueInterval: func(Instance *ReconcileIteration) int64 {
@@ -132,7 +132,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	defer i.Close()
 
 	if err != nil {
-		i.error(err)
+		_ = i.error(err)
 		setupErrors = append(setupErrors, err)
 	}
 
@@ -146,13 +146,13 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	setupErrors = append(setupErrors, i.deleteStaleDependencies()...)
 
 	for _, err := range setupErrors {
-		i.error(err, "Error deleting stale dependency")
+		_ = i.error(err, "Error deleting stale dependency")
 	}
 
 	// STATE_REMOVED
 	ephemeral, err := strconv.ParseBool(os.Getenv("EPHEMERAL"))
 	if err != nil {
-		return reconcile.Result{}, errors.New("unable to parse boolean environment variable: EPHEMERAL")
+		ephemeral = false
 	}
 
 	if i.Instance.GetState() == cyndi.STATE_REMOVED {
