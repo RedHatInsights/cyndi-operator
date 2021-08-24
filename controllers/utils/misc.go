@@ -1,8 +1,9 @@
 package utils
 
 import (
-	cyndi "cyndi-operator/api/v1alpha1"
 	"fmt"
+
+	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
 )
 
 const inventorySchema = "inventory"

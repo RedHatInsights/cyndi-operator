@@ -27,7 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	cyndi "cyndi-operator/api/v1alpha1"
+	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -36,11 +36,11 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 
-	. "cyndi-operator/controllers/config"
-	connect "cyndi-operator/controllers/connect"
-	"cyndi-operator/controllers/database"
-	"cyndi-operator/controllers/utils"
-	"cyndi-operator/test"
+	. "github.com/RedHatInsights/cyndi-operator/controllers/config"
+	connect "github.com/RedHatInsights/cyndi-operator/controllers/connect"
+	"github.com/RedHatInsights/cyndi-operator/controllers/database"
+	"github.com/RedHatInsights/cyndi-operator/controllers/utils"
+	"github.com/RedHatInsights/cyndi-operator/test"
 	// +kubebuilder:scaffold:imports
 )
 

@@ -42,12 +42,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	cyndi "cyndi-operator/api/v1alpha1"
-	"cyndi-operator/controllers/config"
-	connect "cyndi-operator/controllers/connect"
-	"cyndi-operator/controllers/database"
-	"cyndi-operator/controllers/metrics"
-	"cyndi-operator/controllers/utils"
+	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
+	"github.com/RedHatInsights/cyndi-operator/controllers/config"
+	connect "github.com/RedHatInsights/cyndi-operator/controllers/connect"
+	"github.com/RedHatInsights/cyndi-operator/controllers/database"
+	"github.com/RedHatInsights/cyndi-operator/controllers/metrics"
+	"github.com/RedHatInsights/cyndi-operator/controllers/utils"
 )
 
 // CyndiPipelineReconciler reconciles a CyndiPipeline object

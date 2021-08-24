@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"hash/fnv"
 
-	cyndi "cyndi-operator/api/v1alpha1"
+	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"

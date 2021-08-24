@@ -4,7 +4,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
-	cyndi "cyndi-operator/api/v1alpha1"
+	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
 )
 
 var (

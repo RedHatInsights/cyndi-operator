@@ -1,9 +1,10 @@
 package controllers
 
 import (
-	"cyndi-operator/controllers/config"
-	"cyndi-operator/controllers/utils"
 	"fmt"
+
+	"github.com/RedHatInsights/cyndi-operator/controllers/config"
+	"github.com/RedHatInsights/cyndi-operator/controllers/utils"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )

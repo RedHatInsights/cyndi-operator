@@ -2,16 +2,17 @@ package controllers
 
 import (
 	"context"
-	cyndi "cyndi-operator/api/v1alpha1"
-	"cyndi-operator/controllers/database"
-	"cyndi-operator/controllers/utils"
-	"cyndi-operator/test"
 	"fmt"
+
+	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
+	"github.com/RedHatInsights/cyndi-operator/controllers/database"
+	"github.com/RedHatInsights/cyndi-operator/controllers/utils"
+	"github.com/RedHatInsights/cyndi-operator/test"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "cyndi-operator/controllers/config"
+	. "github.com/RedHatInsights/cyndi-operator/controllers/config"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

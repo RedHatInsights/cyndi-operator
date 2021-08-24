@@ -2,11 +2,12 @@ package database
 
 import (
 	"bytes"
-	"cyndi-operator/controllers/config"
-	"cyndi-operator/controllers/utils"
 	"fmt"
 	"strings"
 	"text/template"
+
+	"github.com/RedHatInsights/cyndi-operator/controllers/config"
+	"github.com/RedHatInsights/cyndi-operator/controllers/utils"
 )
 
 type AppDatabase struct {

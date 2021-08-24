@@ -6,8 +6,8 @@ import (
 
 	"github.com/jackc/pgx"
 
-	"cyndi-operator/controllers/config"
-	. "cyndi-operator/controllers/config"
+	"github.com/RedHatInsights/cyndi-operator/controllers/config"
+	. "github.com/RedHatInsights/cyndi-operator/controllers/config"
 )
 
 type BaseDatabase struct {

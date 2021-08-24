@@ -1,7 +1,7 @@
 package database
 
 import (
-	. "cyndi-operator/controllers/config"
+	. "github.com/RedHatInsights/cyndi-operator/controllers/config"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
