@@ -1,4 +1,4 @@
-module cyndi-operator
+module github.com/RedHatInsights/cyndi-operator
 
 go 1.13
 
