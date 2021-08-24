@@ -1,11 +1,12 @@
 package config
 
 import (
-	"cyndi-operator/test"
 	"fmt"
 	"testing"
 
-	cyndi "cyndi-operator/api/v1alpha1"
+	"github.com/RedHatInsights/cyndi-operator/test"
+
+	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

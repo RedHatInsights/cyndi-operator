@@ -1,9 +1,10 @@
 package database
 
 import (
-	"cyndi-operator/test"
 	"fmt"
 	"testing"
+
+	"github.com/RedHatInsights/cyndi-operator/test"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

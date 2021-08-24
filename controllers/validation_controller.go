@@ -2,9 +2,10 @@ package controllers
 
 import (
 	"context"
-	cyndi "cyndi-operator/api/v1alpha1"
-	"cyndi-operator/controllers/database"
 	"fmt"
+
+	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
+	"github.com/RedHatInsights/cyndi-operator/controllers/database"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

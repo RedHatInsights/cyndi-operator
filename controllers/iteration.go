@@ -2,12 +2,13 @@ package controllers
 
 import (
 	"context"
-	cyndi "cyndi-operator/api/v1alpha1"
-	"cyndi-operator/controllers/config"
-	"cyndi-operator/controllers/database"
 	"fmt"
 	"strings"
 	"time"
+
+	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
+	"github.com/RedHatInsights/cyndi-operator/controllers/config"
+	"github.com/RedHatInsights/cyndi-operator/controllers/database"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"

@@ -1,6 +1,6 @@
 package controllers
 
-import "cyndi-operator/controllers/metrics"
+import "github.com/RedHatInsights/cyndi-operator/controllers/metrics"
 
 func (i *ReconcileIteration) probeStartingInitialSync() {
 	i.Log.Info("New pipeline version", "version", i.Instance.Status.PipelineVersion)

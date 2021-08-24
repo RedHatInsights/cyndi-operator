@@ -1,10 +1,11 @@
 package config
 
 import (
-	cyndi "cyndi-operator/api/v1alpha1"
-	"cyndi-operator/controllers/utils"
 	"fmt"
 	"strconv"
+
+	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
+	"github.com/RedHatInsights/cyndi-operator/controllers/utils"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

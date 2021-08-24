@@ -1,9 +1,10 @@
 package controllers
 
 import (
-	"cyndi-operator/controllers/utils"
 	"fmt"
 	"strings"
+
+	"github.com/RedHatInsights/cyndi-operator/controllers/utils"
 
 	"github.com/google/go-cmp/cmp"
 )

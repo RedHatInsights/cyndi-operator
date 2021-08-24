@@ -2,14 +2,15 @@ package connect
 
 import (
 	"context"
-	cyndi "cyndi-operator/api/v1alpha1"
-	"cyndi-operator/test"
 	"fmt"
 	"testing"
 	"time"
 
-	. "cyndi-operator/controllers/config"
-	"cyndi-operator/controllers/utils"
+	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
+	"github.com/RedHatInsights/cyndi-operator/test"
+
+	. "github.com/RedHatInsights/cyndi-operator/controllers/config"
+	"github.com/RedHatInsights/cyndi-operator/controllers/utils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

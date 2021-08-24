@@ -29,9 +29,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	cyndi "cyndi-operator/api/v1alpha1"
-	"cyndi-operator/controllers"
-	"cyndi-operator/controllers/metrics"
+	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
+	"github.com/RedHatInsights/cyndi-operator/controllers"
+	"github.com/RedHatInsights/cyndi-operator/controllers/metrics"
 	// +kubebuilder:scaffold:imports
 )
 

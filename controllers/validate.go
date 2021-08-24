@@ -1,9 +1,10 @@
 package controllers
 
 import (
-	"cyndi-operator/controllers/metrics"
-	"cyndi-operator/controllers/utils"
 	"math"
+
+	"github.com/RedHatInsights/cyndi-operator/controllers/metrics"
+	"github.com/RedHatInsights/cyndi-operator/controllers/utils"
 )
 
 const inventoryTableName = "public.hosts" // TODO: move

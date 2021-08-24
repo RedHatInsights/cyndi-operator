@@ -1,9 +1,10 @@
 package database
 
 import (
-	. "cyndi-operator/controllers/config"
 	"fmt"
 	"time"
+
+	. "github.com/RedHatInsights/cyndi-operator/controllers/config"
 
 	"github.com/spf13/viper"
 )
