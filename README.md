@@ -107,7 +107,8 @@ The threshold causes the validation to pass as long as the ratio of invalid reco
 
 ## Development
 
-### Setting up the development environment
+
+### <a name='devenv'></a> Setting up the development environment
 
 [CodeReady Containers](https://developers.redhat.com/products/codeready-containers/overview) can be used as the Kubernetes cluster.
 Note that it requires a lot of RAM (over 20 GB on my machine).
@@ -218,6 +219,13 @@ It can also be run locally with `make run ENABLE_WEBHOOKS=false`.
 
 After everything is running, create a new Custom Resource via `kubectl apply -f config/samples/example-pipeline.yaml`.
 Then, the CR can be managed via Kubernetes commands like normal.
+
+### Running the tests
+
+1. [Setup the dev environment](#devenv)
+2. Forward ports via `dev/forward-ports.sh`
+3. Add a test database to the HBI DB `create database test with template insights;`
+4. Run the tests with `make test`
 
 ### Useful commands
 
