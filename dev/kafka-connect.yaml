@@ -12,7 +12,36 @@ spec:
   version: 2.6.2
   replicas: 1
   bootstrapServers: my-cluster-kafka-bootstrap:9093
+  externalConfiguration:
+    env:
+      - name: ADVISOR_DB_NAME
+        valueFrom:
+          secretKeyRef:
+            key: db.name
+            name: advisor-db
+      - name: ADVISOR_DB_HOSTNAME
+        valueFrom:
+          secretKeyRef:
+            key: db.host
+            name: advisor-db
+      - name: ADVISOR_DB_USERNAME
+        valueFrom:
+          secretKeyRef:
+            key: db.user
+            name: advisor-db
+      - name: ADVISOR_DB_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            key: db.password
+            name: advisor-db
+      - name: ADVISOR_DB_PORT
+        valueFrom:
+          secretKeyRef:
+            key: db.port
+            name: advisor-db
   config:
+    config.providers: env
+    config.providers.env.class: com.redhat.insights.kafka.config.providers.EnvironmentConfigProvider
     group.id: cyndi-connect
     offset.storage.topic: cyndi-connect-offsets
     offset.storage.replication.factor: 1

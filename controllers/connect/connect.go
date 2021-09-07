@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"text/template"
@@ -73,12 +74,16 @@ func newConnectorResource(name string, namespace string, config ConnectorConfigu
 	m := make(map[string]string)
 	m["TableName"] = config.TableName
 	m["Topic"] = config.Topic
-	m["DBPort"] = config.DB.Port
-	m["DBHostname"] = config.DB.Host
-	m["DBName"] = config.DB.Name
-	m["DBUser"] = config.DB.User
-	m["DBPassword"] = config.DB.Password
-	m["TasksMax"] = strconv.FormatInt(config.TasksMax, 10) // TODO: why int64?
+
+	appNameFormatted := strings.ReplaceAll(config.AppName, "-", "_")
+	appNameFormatted = strings.ToUpper(appNameFormatted)
+
+	m["DBPort"] = fmt.Sprintf("${env:%s_DB_PORT}", appNameFormatted)
+	m["DBHostname"] = fmt.Sprintf("${env:%s_DB_HOSTNAME}", appNameFormatted)
+	m["DBName"] = fmt.Sprintf("${env:%s_DB_NAME}", appNameFormatted)
+	m["DBUser"] = fmt.Sprintf("${env:%s_DB_USERNAME}", appNameFormatted)
+	m["DBPassword"] = fmt.Sprintf("${env:%s_DB_PASSWORD}", appNameFormatted)
+	m["TasksMax"] = strconv.FormatInt(config.TasksMax, 10)
 	m["BatchSize"] = strconv.FormatInt(config.BatchSize, 10)
 	m["MaxAge"] = strconv.FormatInt(config.MaxAge, 10)
 	m["InsightsOnly"] = strconv.FormatBool(config.InsightsOnly)
