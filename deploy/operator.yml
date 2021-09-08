@@ -88,3 +88,4 @@ objects:
     connector.allowlist.sp: ${CONNECTOR_ALLOWLIST_SP}
     db.ssl.mode: ${SSL_MODE}
     db.ssl.root.cert: ${SSL_ROOT_CERT}
+    refresh: "1631104137"
