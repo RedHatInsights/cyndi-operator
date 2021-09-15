@@ -29,8 +29,8 @@ type ValidationReconciler struct {
 	CheckResourceDeviation bool
 }
 
-func (r *ValidationReconciler) setup(reqLogger logr.Logger, request ctrl.Request) (ReconcileIteration, error) {
-	i, err := r.CyndiPipelineReconciler.setup(reqLogger, request)
+func (r *ValidationReconciler) setup(reqLogger logr.Logger, request ctrl.Request, ctx context.Context) (ReconcileIteration, error) {
+	i, err := r.CyndiPipelineReconciler.setup(reqLogger, request, ctx)
 
 	if err != nil || i.Instance == nil {
 		return i, err
@@ -49,11 +49,11 @@ func (r *ValidationReconciler) setup(reqLogger logr.Logger, request ctrl.Request
 	return i, err
 }
 
-func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
+func (r *ValidationReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	reqLogger := r.Log.WithValues("Pipeline", request.Name, "Namespace", request.Namespace)
 
-	i, err := r.setup(reqLogger, request)
+	i, err := r.setup(reqLogger, request, ctx)
 	defer i.Close()
 
 	if err != nil {
@@ -116,14 +116,14 @@ func (r *ValidationReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 func eventFilterPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			if e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration() {
+			if e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration() {
 				return true // Pipeline definition changed
 			}
 
-			old, ok1 := e.ObjectOld.(*cyndi.CyndiPipeline)
-			new, ok2 := e.ObjectNew.(*cyndi.CyndiPipeline)
+			oldPipeline, ok1 := e.ObjectOld.(*cyndi.CyndiPipeline)
+			newPipeline, ok2 := e.ObjectNew.(*cyndi.CyndiPipeline)
 
-			if ok1 && ok2 && old.Status.InitialSyncInProgress == false && new.Status.InitialSyncInProgress == true {
+			if ok1 && ok2 && oldPipeline.Status.InitialSyncInProgress == false && newPipeline.Status.InitialSyncInProgress == true {
 				return true // pipeline refresh happened - validate the new pipeline
 			}
 

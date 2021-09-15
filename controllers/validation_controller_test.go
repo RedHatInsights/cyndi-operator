@@ -107,7 +107,7 @@ var _ = Describe("Validation controller", func() {
 	})
 
 	var reconcile = func() (result ctrl.Result) {
-		result, err := r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+		result, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: namespacedName})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(result.Requeue).To(BeFalse())
 		return
@@ -335,7 +335,7 @@ var _ = Describe("Validation controller", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			createPipeline(namespacedName)
-			_, err = r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			_, err = r.Reconcile(context.Background(), ctrl.Request{NamespacedName: namespacedName})
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(HavePrefix(`Error connecting to localhost:55432/test as postgres`))
 

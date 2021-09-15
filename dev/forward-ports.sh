@@ -20,7 +20,7 @@ kubectl port-forward "$HBI_DB_SVC" 5432:5432 -n "$PROJECT_NAME" >/dev/null 2>&1 
 kubectl port-forward "$CONNECT_SVC" 8083:8083 -n "$PROJECT_NAME" >/dev/null 2>&1 &
 kubectl port-forward "$KAFKA_SVC" 9092:9092 -n "$PROJECT_NAME" >/dev/null 2>&1 &
 kubectl port-forward "$KAFKA_SVC" 29092:9092 -n "$PROJECT_NAME" >/dev/null 2>&1 &
-kubectl port-forward "$HBI_SVC" 8080:8080 -n "$PROJECT_NAME" >/dev/null 2>&1 &
+kubectl port-forward "$HBI_SVC" 8081:8080 -n "$PROJECT_NAME" >/dev/null 2>&1 &
 kubectl port-forward "$ADVISOR_DB_SVC" 5433:5432 -n "$PROJECT_NAME" >/dev/null 2>&1 &
 
 

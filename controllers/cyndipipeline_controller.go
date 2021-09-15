@@ -59,11 +59,11 @@ type CyndiPipelineReconciler struct {
 	Recorder  record.EventRecorder
 }
 
-const cyndipipelineFinalizer = "finalizer.cyndi.cloud.redhat.com"
+const cyndipipelineFinalizer = "cyndi.cloud.redhat.com/finalizer"
 
 var log = logf.Log.WithName("controller_cyndipipeline")
 
-func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Request) (ReconcileIteration, error) {
+func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Request, ctx context.Context) (ReconcileIteration, error) {
 
 	i := ReconcileIteration{}
 
@@ -92,6 +92,7 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 			return i.config.StandardInterval
 		},
 		Recorder: r.Recorder,
+		ctx:      ctx,
 	}
 
 	if err = i.parseConfig(); err != nil {
@@ -119,7 +120,7 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 // +kubebuilder:rbac:groups=kafka.strimzi.io,resources=kafkaconnectors;kafkaconnectors/finalizers,verbs=*
 // +kubebuilder:rbac:groups="",resources=configmaps;secrets,verbs=get;list;watch
 
-func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
+func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 
 	//capture errors until the finalizer completed
@@ -128,7 +129,7 @@ func (r *CyndiPipelineReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	reqLogger := log.WithValues("Pipeline", request.Name, "Namespace", request.Namespace)
 	reqLogger.Info("Reconciling CyndiPipeline")
 
-	i, err := r.setup(reqLogger, request)
+	i, err := r.setup(reqLogger, request, ctx)
 	defer i.Close()
 
 	if err != nil {
@@ -298,42 +299,39 @@ func (r *CyndiPipelineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&cyndi.CyndiPipeline{}).
 		Owns(connect.EmptyConnector()).
 		// trigger Reconcile if "cyndi" ConfigMap changes
-		Watches(&source.Kind{Type: &v1.ConfigMap{}}, &handler.EnqueueRequestsFromMapFunc{
-			ToRequests: handler.ToRequestsFunc(
-				func(configMap handler.MapObject) []reconcile.Request {
-					requests := []reconcile.Request{}
+		Watches(&source.Kind{Type: &v1.ConfigMap{}}, handler.EnqueueRequestsFromMapFunc(func(configMap client.Object) []reconcile.Request {
+			var requests []reconcile.Request
 
-					if configMap.Meta.GetName() != configMapName {
-						return requests
-					}
+			if configMap.GetName() != configMapName {
+				return requests
+			}
 
-					// cyndi configmap changed - let's Reconcile all CyndiPipelines in the given namespace
-					pipelines, err := utils.FetchCyndiPipelines(r.Client, configMap.Meta.GetNamespace())
-					if err != nil {
-						r.Log.Error(err, "Failed to fetch CyndiPipelines", "namespace", configMap.Meta.GetNamespace())
-						return requests
-					}
+			// cyndi configmap changed - let's Reconcile all CyndiPipelines in the given namespace
+			pipelines, err := utils.FetchCyndiPipelines(r.Client, configMap.GetNamespace())
+			if err != nil {
+				r.Log.Error(err, "Failed to fetch CyndiPipelines", "namespace", configMap.GetNamespace())
+				return requests
+			}
 
-					for _, pipeline := range pipelines.Items {
-						requests = append(requests, reconcile.Request{
-							NamespacedName: types.NamespacedName{
-								Namespace: configMap.Meta.GetNamespace(),
-								Name:      pipeline.GetName(),
-							},
-						})
-					}
+			for _, pipeline := range pipelines.Items {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: configMap.GetNamespace(),
+						Name:      pipeline.GetName(),
+					},
+				})
+			}
 
-					r.Log.Info("Cyndi ConfigMap changed. Reconciling CyndiPipelines", "namespace", configMap.Meta.GetNamespace(), "pipelines", requests)
-					return requests
-				}),
-		}).
+			r.Log.Info("Cyndi ConfigMap changed. Reconciling CyndiPipelines", "namespace", configMap.GetNamespace(), "pipelines", requests)
+			return requests
+		})).
 		Complete(r)
 }
 
 func (i *ReconcileIteration) addFinalizer() error {
 	if !utils.ContainsString(i.Instance.GetFinalizers(), cyndipipelineFinalizer) {
 		controllerutil.AddFinalizer(i.Instance, cyndipipelineFinalizer)
-		return i.Client.Update(context.TODO(), i.Instance)
+		return i.Client.Update(i.ctx, i.Instance)
 	}
 
 	return nil
@@ -341,11 +339,11 @@ func (i *ReconcileIteration) addFinalizer() error {
 
 func (i *ReconcileIteration) removeFinalizer() error {
 	controllerutil.RemoveFinalizer(i.Instance, cyndipipelineFinalizer)
-	return i.Client.Update(context.TODO(), i.Instance)
+	return i.Client.Update(i.ctx, i.Instance)
 }
 
 func (i *ReconcileIteration) createConnector(name string, dryRun bool) (*unstructured.Unstructured, error) {
-	var config = connect.ConnectorConfiguration{
+	var connectorConfig = connect.ConnectorConfiguration{
 		AppName:                i.Instance.Spec.AppName,
 		InsightsOnly:           i.Instance.Spec.InsightsOnly,
 		Cluster:                i.config.ConnectCluster,
@@ -359,7 +357,7 @@ func (i *ReconcileIteration) createConnector(name string, dryRun bool) (*unstruc
 		AllowlistSystemProfile: i.config.ConnectorAllowlistSystemProfile,
 	}
 
-	return connect.CreateConnector(i.Client, name, i.Instance.Namespace, config, i.Instance, i.Scheme, dryRun)
+	return connect.CreateConnector(i.Client, name, i.Instance.Namespace, connectorConfig, i.Instance, i.Scheme, dryRun)
 }
 
 func (i *ReconcileIteration) recreateViewIfNeeded() (bool, error) {

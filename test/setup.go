@@ -8,6 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 
+	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -15,10 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
 )
 
 var Client client.Client
@@ -40,8 +37,6 @@ func getRootDir() string {
  */
 func Setup(t *testing.T, suiteName string) {
 	var _ = BeforeSuite(func(done Done) {
-		logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
-
 		By("bootstrapping test environment")
 		testEnv = &envtest.Environment{
 			CRDDirectoryPaths: []string{filepath.Join(getRootDir(), "config", "crd", "bases"), filepath.Join(getRootDir(), "test", "crd")},

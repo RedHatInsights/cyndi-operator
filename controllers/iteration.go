@@ -26,6 +26,7 @@ type ReconcileIteration struct {
 	// Do not alter this copy
 	// Used for tracking of whether Reconcile actually changed the state or not
 	OriginalInstance *cyndi.CyndiPipeline
+	ctx              context.Context
 
 	Recorder  record.EventRecorder
 	Scheme    *runtime.Scheme

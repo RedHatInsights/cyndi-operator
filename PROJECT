@@ -1,11 +1,13 @@
 domain: cloud.redhat.com
-layout: go.kubebuilder.io/v2
+layout: go.kubebuilder.io/v3
 projectName: cyndi
 repo: cyndi-operator
 resources:
 - group: cyndi
   kind: CyndiPipeline
   version: v1alpha1
-version: 3-alpha
+version: 3
 plugins:
-  go.operator-sdk.io/v2-alpha: {}
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+

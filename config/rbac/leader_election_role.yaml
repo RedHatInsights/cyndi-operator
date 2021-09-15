@@ -5,29 +5,41 @@ metadata:
   name: leader-election-role
 rules:
 - apiGroups:
-  - ""
+    - ""
   resources:
-  - configmaps
+    - configmaps
   verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
 - apiGroups:
-  - ""
+    - coordination.k8s.io
   resources:
-  - configmaps/status
+    - leases
   verbs:
-  - get
-  - update
-  - patch
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
 - apiGroups:
-  - ""
+    - ""
   resources:
-  - events
+    - configmaps/status
   verbs:
-  - create
-  - patch
+    - get
+    - update
+    - patch
+- apiGroups:
+    - ""
+  resources:
+    - events
+  verbs:
+    - create
+    - patch

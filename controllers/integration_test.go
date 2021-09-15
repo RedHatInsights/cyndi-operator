@@ -37,7 +37,7 @@ var _ = Describe("Integration tests", func() {
 
 	var reconcile = func(reconcilers ...reconcile.Reconciler) (pipeline *cyndi.CyndiPipeline) {
 		for _, r := range reconcilers {
-			result, err := r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			result, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: namespacedName})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Requeue).To(BeFalse())
 		}
@@ -253,11 +253,11 @@ var _ = Describe("Integration tests", func() {
 			err := test.Client.Delete(context.TODO(), pipeline)
 			Expect(err).ToNot(HaveOccurred())
 
-			result, err := validationReconciler.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			result, err := validationReconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: namespacedName})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(BeZero())
 
-			result, err = cyndiReconciler.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			result, err = cyndiReconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: namespacedName})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(BeZero())
 

@@ -175,7 +175,7 @@ var _ = Describe("Pipeline operations", func() {
 	)
 
 	var reconcile = func() (result ctrl.Result) {
-		result, err := r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+		result, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: namespacedName})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(result.Requeue).To(BeFalse())
 		return
@@ -718,7 +718,7 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			createPipeline(namespacedName)
-			_, err = r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			_, err = r.Reconcile(context.Background(), ctrl.Request{NamespacedName: namespacedName})
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal(`secrets "test-pipeline-01-db" not found`))
 
@@ -736,7 +736,7 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			createPipeline(namespacedName)
-			_, err = r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			_, err = r.Reconcile(context.Background(), ctrl.Request{NamespacedName: namespacedName})
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(HavePrefix(`Error connecting to localhost:55432/test as postgres`))
 
@@ -748,7 +748,7 @@ var _ = Describe("Pipeline operations", func() {
 			createConfigMap(namespacedName.Namespace, "cyndi", map[string]string{"standard.interval": "abcd"})
 			createPipeline(namespacedName)
 
-			_, err := r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: namespacedName})
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal(fmt.Sprintf(`Error parsing cyndi configmap in %s: "abcd" is not a valid value for "standard.interval"`, namespacedName.Namespace)))
 
@@ -761,7 +761,7 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			createPipeline(namespacedName)
-			_, err = r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			_, err = r.Reconcile(context.Background(), ctrl.Request{NamespacedName: namespacedName})
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(HavePrefix("Error executing query"))
 
@@ -778,7 +778,7 @@ var _ = Describe("Pipeline operations", func() {
 			_, err := db.Exec("CREATE TABLE inventory.hosts ()")
 			Expect(err).ToNot(HaveOccurred())
 
-			_, err = r.Reconcile(ctrl.Request{NamespacedName: namespacedName})
+			_, err = r.Reconcile(context.Background(), ctrl.Request{NamespacedName: namespacedName})
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(HavePrefix("Error executing query"))
 
