@@ -32,7 +32,7 @@ version="0.1.$num_commits-git$current_commit"
 opm_version="1.14.0"
 
 # workaround for https://github.com/golang/go/issues/38373
-GO_VERSION="1.15.3"
+GO_VERSION="1.15.14"
 GOUNPACK=$(mktemp -d)
 wget -q "https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O $GOUNPACK/go.tar.gz
 tar -C $GOUNPACK -xzf $GOUNPACK/go.tar.gz
@@ -72,8 +72,9 @@ if [[ $prev_version != "" ]]; then
 fi
 export BUNDLE_IMAGE_TAG=$current_commit
 export VERSION=$version
-curl -L https://github.com/operator-framework/operator-sdk/releases/download/v1.0.1/operator-sdk-v1.0.1-x86_64-linux-gnu -o ./operator-sdk
-curl -L https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv3.8.5/kustomize_v3.8.5_linux_amd64.tar.gz | tar xzf - > kustomize
+curl -L https://github.com/operator-framework/operator-sdk/releases/download/v1.12.0/operator-sdk_linux_amd64 -o ./operator-sdk
+curl -LO https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.3.0/kustomize_v4.3.0_linux_amd64.tar.gz
+tar -xvf kustomize_v4.3.0_linux_amd64.tar.gz
 chmod +x ./operator-sdk
 chmod +x ./kustomize
 export PATH=$PATH:.
