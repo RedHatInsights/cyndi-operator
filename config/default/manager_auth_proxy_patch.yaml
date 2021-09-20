@@ -18,6 +18,7 @@ spec:
         - "--v=10"
         ports:
         - protocol: TCP
+          containerPort: 8443
           name: https
       - name: manager
         args:
