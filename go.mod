@@ -1,6 +1,6 @@
 module github.com/RedHatInsights/cyndi-operator
 
-go 1.13
+go 1.15
 
 require (
 	github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6 // indirect
