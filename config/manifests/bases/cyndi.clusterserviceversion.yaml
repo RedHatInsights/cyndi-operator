@@ -6,7 +6,7 @@ metadata:
     capabilities: Basic Install
     operators.operatorframework.io/builder: operator-sdk-v1.0.1
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-  name: cyndi.vX.Y.Z
+  name: cyndi.v0.0.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -17,11 +17,6 @@ spec:
       kind: CyndiPipeline
       name: cyndipipelines.cyndi.cloud.redhat.com
       version: v1alpha1
-    # commented-out so that strimzi is not pulled (we're using amq-streams for Kafka management)
-    #required:
-    #- kind: KafkaConnector
-    #  name: kafkaconnectors.kafka.strimzi.io
-    #  version: v1alpha1
   description: Data syndication between Host-based Inventory and application databases.
   displayName: Cyndi
   icon:
