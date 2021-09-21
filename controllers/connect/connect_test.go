@@ -160,9 +160,9 @@ var _ = Describe("Connect", func() {
 
 			Expect(spec["config"]).To(HaveKeyWithValue("tasks.max", "64"))
 			Expect(spec["config"]).To(HaveKeyWithValue("topics", "platform.inventory.events"))
-			Expect(spec["config"]).To(HaveKeyWithValue("connection.url", "jdbc:postgresql://db:5432/dbname"))
-			Expect(spec["config"]).To(HaveKeyWithValue("connection.user", "dbuser"))
-			Expect(spec["config"]).To(HaveKeyWithValue("connection.password", "dbpass"))
+			Expect(spec["config"]).To(HaveKeyWithValue("connection.url", "jdbc:postgresql://${env:ADVISOR_DB_HOSTNAME}:${env:ADVISOR_DB_PORT}/${env:ADVISOR_DB_NAME}"))
+			Expect(spec["config"]).To(HaveKeyWithValue("connection.user", "${env:ADVISOR_DB_USERNAME}"))
+			Expect(spec["config"]).To(HaveKeyWithValue("connection.password", "${env:ADVISOR_DB_PASSWORD}"))
 			Expect(spec["config"]).To(HaveKeyWithValue("batch.size", "10"))
 			Expect(spec["config"]).To(HaveKeyWithValue("table.name.format", "inventory.hosts001"))
 			Expect(spec["config"]).To(HaveKeyWithValue("max.age", "45"))
