@@ -9,7 +9,7 @@ import (
 
 const inventoryTableName = "public.hosts" // TODO: move
 const countMismatchThreshold = 0.5
-const idDiffMaxLength = 999999
+const idDiffMaxLength = 50
 
 func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mismatchCount int64, hostCount int64, err error) {
 	hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly)
