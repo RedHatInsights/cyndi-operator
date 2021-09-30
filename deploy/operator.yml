@@ -33,6 +33,8 @@ parameters:
   value: /opt/kafka/external-configuration/rds-client-ca/rds-cacert
 - name: EPHEMERAL
   value: "false"
+- name: REFRESH
+  value: "1633013215"
 
 objects:
 - apiVersion: operators.coreos.com/v1alpha1
@@ -88,4 +90,4 @@ objects:
     connector.allowlist.sp: ${CONNECTOR_ALLOWLIST_SP}
     db.ssl.mode: ${SSL_MODE}
     db.ssl.root.cert: ${SSL_ROOT_CERT}
-    refresh: "1633013215"
+    refresh: ${REFRESH}
