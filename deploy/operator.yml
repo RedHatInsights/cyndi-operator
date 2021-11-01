@@ -35,6 +35,14 @@ parameters:
   value: "false"
 - name: REFRESH
   value: "1633013215"
+- name: MANAGER_POD_CPU_REQUESTS
+  value: "500m"
+- name: MANAGER_POD_MEM_REQUESTS
+  value: "2Gi"
+- name: MANAGER_POD_CPU_LIMIT
+  value: "1"
+- name: MANAGER_POD_MEM_LIMIT
+  value: "4Gi"
 
 objects:
 - apiVersion: operators.coreos.com/v1alpha1
@@ -62,6 +70,13 @@ objects:
     source: cyndi-operator-source
     sourceNamespace: ${SOURCE_NAMESPACE}
     config:
+      resources:
+        limits:
+          cpu: ${MANAGER_POD_CPU_LIMIT}
+          memory: ${MANAGER_POD_MEM_LIMIT}
+        requests:
+          cpu: ${MANAGER_POD_CPU_REQUESTS}
+          memory: ${MANAGER_POD_MEM_REQUESTS}
       env:
         - name: EPHEMERAL
           value: ${EPHEMERAL}
