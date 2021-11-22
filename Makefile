@@ -147,15 +147,18 @@ KUSTOMIZE=$(shell which kustomize)
 endif
 
 # Generate bundle manifests and metadata, then validate generated files.
-.PHONY: bundle
 bundle: manifests
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-ifneq ($(origin REPLACE_VERSION), undefined)
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(REPLACE_VERSION) $(BUNDLE_METADATA_OPTS)
-endif
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
+ifneq ($(origin REPLACE_VERSION), undefined)
+	yq eval -i "(.spec.replaces) = \"cyndi-operator.v$(REPLACE_VERSION)\"" bundle/manifests/cyndi-operator.clusterserviceversion.yaml
+endif
+ifneq ($(origin SKIP_VERSION), undefined)
+	yq eval -i "(.metadata.annotations.\"olm.skipRange\") = \">=0.0.1 <$(SKIP_VERSION)\"" bundle/manifests/cyndi-operator.clusterserviceversion.yaml
+endif
+
 
 # Build the bundle image.
 .PHONY: bundle-build
