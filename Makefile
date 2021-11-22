@@ -153,10 +153,10 @@ bundle: manifests
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 ifneq ($(origin REPLACE_VERSION), undefined)
-	yq eval -i "(.spec.replaces) = \"cyndi-operator.v$(REPLACE_VERSION)\"" bundle/manifests/cyndi-operator.clusterserviceversion.yaml
+	yq eval -i "(.spec.replaces) = \"cyndi-operator.v$(REPLACE_VERSION)\"" bundle/manifests/cyndi.clusterserviceversion.yaml
 endif
 ifneq ($(origin SKIP_VERSION), undefined)
-	yq eval -i "(.metadata.annotations.\"olm.skipRange\") = \">=0.0.1 <$(SKIP_VERSION)\"" bundle/manifests/cyndi-operator.clusterserviceversion.yaml
+	yq eval -i "(.metadata.annotations.\"olm.skipRange\") = \">=0.0.1 <$(SKIP_VERSION)\"" bundle/manifests/cyndi.clusterserviceversion.yaml
 endif
 
 
