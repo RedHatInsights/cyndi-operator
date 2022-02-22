@@ -25,7 +25,8 @@ const viewTemplate = `CREATE OR REPLACE VIEW inventory.hosts AS SELECT
 	stale_timestamp + INTERVAL '1' DAY * '%[3]s' AS culled_timestamp,
 	tags,
 	system_profile,
-	insights_id
+	insights_id,
+	reporter
 FROM inventory.%[1]s`
 
 const cullingStaleWarningOffset = "7"

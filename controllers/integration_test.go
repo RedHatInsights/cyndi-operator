@@ -46,7 +46,7 @@ var _ = Describe("Integration tests", func() {
 	}
 
 	var seedAppTable = func(db database.Database, TestTable string, ids ...string) {
-		template := `INSERT INTO %s (id, account, display_name, tags, updated, created, stale_timestamp, system_profile) VALUES ('%s', '000001', 'test01', '{}', NOW(), NOW(), NOW(), '{}')`
+		template := `INSERT INTO %s (id, account, display_name, tags, updated, created, stale_timestamp, system_profile, reporter) VALUES ('%s', '000001', 'test01', '{}', NOW(), NOW(), NOW(), '{}', 'puptoo')`
 
 		for _, id := range ids {
 			_, err := db.Exec(fmt.Sprintf(template, TestTable, id))
