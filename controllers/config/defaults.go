@@ -22,14 +22,14 @@ const defaultConnectorTemplate = `{
 	"table.name.format": "inventory.{{.TableName}}",
 	"pk.mode": "record_key",
 	"pk.fields": "id",
-	"fields.whitelist": "account,display_name,tags,updated,created,stale_timestamp,system_profile,insights_id,reporter",
+	"fields.whitelist": "account,display_name,tags,updated,created,stale_timestamp,system_profile,insights_id,reporter,per_reporter_staleness",
 
 	{{ if eq .InsightsOnly "true" }}
-	"transforms": "timestampFilter,insightsFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,injectSchemaKey,injectSchemaValue",
+	"transforms": "timestampFilter,insightsFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,perReporterStalenessToJson,injectSchemaKey,injectSchemaValue",
 	"transforms.insightsFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
 	"transforms.insightsFilter.if": "!!record.headers().lastWithName('insights_id').value()",
 	{{ else  }}
-	"transforms": "timestampFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,injectSchemaKey,injectSchemaValue",
+	"transforms": "timestampFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,perReporterStalenessToJson,injectSchemaKey,injectSchemaValue",
 	{{ end }}
 
 	"transforms.timestampFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
@@ -47,10 +47,13 @@ const defaultConnectorTemplate = `{
 	"transforms.tagsToJson.type": "com.redhat.insights.kafka.connect.transforms.FieldToJson$Value",
 	"transforms.tagsToJson.originalField": "tags",
 	"transforms.tagsToJson.destinationField": "tags",
+	"transforms.perReporterStalenessToJson.type": "com.redhat.insights.kafka.connect.transforms.FieldToJson$Value",
+	"transforms.perReporterStalenessToJson.originalField": "per_reporter_staleness",
+	"transforms.perReporterStalenessToJson.destinationField": "per_reporter_staleness",
 	"transforms.injectSchemaKey.type": "com.redhat.insights.kafka.connect.transforms.InjectSchema$Key",
 	"transforms.injectSchemaKey.schema": "{\"type\":\"string\",\"optional\":false, \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=uuid\"}",
 	"transforms.injectSchemaValue.type": "com.redhat.insights.kafka.connect.transforms.InjectSchema$Value",
-	"transforms.injectSchemaValue.schema": "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"optional\":false,\"field\":\"account\"},{\"type\":\"string\",\"optional\":false,\"field\":\"display_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"tags\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":false,\"field\":\"updated\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"created\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"stale_timestamp\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"system_profile\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":true,\"field\":\"insights_id\"},{\"type\":\"string\",\"optional\":false,\"field\":\"reporter\"}],\"optional\":false}",
+	"transforms.injectSchemaValue.schema": "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"optional\":false,\"field\":\"account\"},{\"type\":\"string\",\"optional\":false,\"field\":\"display_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"tags\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":false,\"field\":\"updated\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"created\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"stale_timestamp\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"system_profile\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":true,\"field\":\"insights_id\"},{\"type\":\"string\",\"optional\":false,\"field\":\"reporter\"},{\"type\":\"string\",\"optional\":false,\"field\":\"per_reporter_staleness\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"}],\"optional\":false}",
 
 	"errors.tolerance": "all",
 	"errors.deadletterqueue.topic.name": "platform.cyndi.dlq",
@@ -84,7 +87,8 @@ CREATE TABLE inventory.{{.TableName}} (
 	stale_timestamp timestamp with time zone NOT NULL,
 	system_profile jsonb NOT NULL,
 	insights_id uuid,
-	reporter character varying(255) NOT NULL
+	reporter character varying(255) NOT NULL,
+	per_reporter_staleness jsonb NOT NULL
 );
 
 CREATE INDEX {{.TableName}}_account_index ON inventory.{{.TableName}}
@@ -107,6 +111,9 @@ inventory.{{.TableName}} (insights_id);
 
 CREATE INDEX {{.TableName}}_insights_reporter_index ON
 inventory.{{.TableName}} (reporter);
+
+CREATE INDEX {{.TableName}}_per_reporter_staleness_index ON inventory.{{.TableName}}
+USING GIN (per_reporter_staleness JSONB_PATH_OPS);
 `
 
 const defaultStandardInterval int64 = 120
