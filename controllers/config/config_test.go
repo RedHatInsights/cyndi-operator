@@ -49,7 +49,7 @@ var _ = Describe("Config", func() {
 		assertDefaults(config)
 	})
 
-	It("Overrides fields using ConfigMap", func() {
+	It("Overrides fields including sap_system using ConfigMap", func() {
 		cm := &corev1.ConfigMap{
 			Data: map[string]string{
 				"connector.topic":                      "platform.inventory.host-egress",
@@ -81,6 +81,94 @@ var _ = Describe("Config", func() {
 		Expect(config.ConnectorBatchSize).To(Equal(int64(13)))
 		Expect(config.ConnectorMaxAge).To(Equal(int64(14)))
 		Expect(config.ConnectorAllowlistSystemProfile).To(Equal("sap_system"))
+		Expect(config.DBTableInitScript).To(Equal("CREATE TABLE hosts ()"))
+		Expect(config.StandardInterval).To(Equal(int64(7200)))
+		Expect(config.ValidationConfig.Interval).To(Equal(int64(51)))
+		Expect(config.ValidationConfig.AttemptsThreshold).To(Equal(int64(52)))
+		Expect(config.ValidationConfig.PercentageThreshold).To(Equal(int64(53)))
+		Expect(config.ValidationConfigInit.Interval).To(Equal(int64(54)))
+		Expect(config.ValidationConfigInit.AttemptsThreshold).To(Equal(int64(55)))
+		Expect(config.ValidationConfigInit.PercentageThreshold).To(Equal(int64(56)))
+		Expect(config.InventoryDbSecret).To(Equal("some-secret"))
+	})
+
+	It("Overrides fields including host_type using ConfigMap", func() {
+		cm := &corev1.ConfigMap{
+			Data: map[string]string{
+				"connector.topic":                      "platform.inventory.host-egress",
+				"connect.cluster":                      "cluster01",
+				"connector.config":                     "{}",
+				"connector.tasks.max":                  "12",
+				"connector.batch.size":                 "13",
+				"connector.max.age":                    "14",
+				"connector.allowlist.sp":               "host_type",
+				"db.schema":                            "CREATE TABLE hosts ()",
+				"standard.interval":                    "7200",
+				"validation.interval":                  "51",
+				"validation.attempts.threshold":        "52",
+				"validation.percentage.threshold":      "53",
+				"init.validation.interval":             "54",
+				"init.validation.attempts.threshold":   "55",
+				"init.validation.percentage.threshold": "56",
+				"inventory.dbSecret":                   "some-secret",
+			},
+		}
+
+		config, err := BuildCyndiConfig(nil, cm.Data)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(config.Topic).To(Equal("platform.inventory.host-egress"))
+		Expect(config.ConnectCluster).To(Equal("cluster01"))
+		Expect(config.ConnectorTemplate).To(Equal("{}"))
+		Expect(config.ConnectorTasksMax).To(Equal(int64(12)))
+		Expect(config.ConnectorBatchSize).To(Equal(int64(13)))
+		Expect(config.ConnectorMaxAge).To(Equal(int64(14)))
+
+		Expect(config.ConnectorAllowlistSystemProfile).To(Equal("host_type"))
+		Expect(config.DBTableInitScript).To(Equal("CREATE TABLE hosts ()"))
+		Expect(config.StandardInterval).To(Equal(int64(7200)))
+		Expect(config.ValidationConfig.Interval).To(Equal(int64(51)))
+		Expect(config.ValidationConfig.AttemptsThreshold).To(Equal(int64(52)))
+		Expect(config.ValidationConfig.PercentageThreshold).To(Equal(int64(53)))
+		Expect(config.ValidationConfigInit.Interval).To(Equal(int64(54)))
+		Expect(config.ValidationConfigInit.AttemptsThreshold).To(Equal(int64(55)))
+		Expect(config.ValidationConfigInit.PercentageThreshold).To(Equal(int64(56)))
+		Expect(config.InventoryDbSecret).To(Equal("some-secret"))
+	})
+
+	It("Overrides fields including ansible using ConfigMap", func() {
+		cm := &corev1.ConfigMap{
+			Data: map[string]string{
+				"connector.topic":                      "platform.inventory.host-egress",
+				"connect.cluster":                      "cluster01",
+				"connector.config":                     "{}",
+				"connector.tasks.max":                  "12",
+				"connector.batch.size":                 "13",
+				"connector.max.age":                    "14",
+				"connector.allowlist.sp":               "ansible",
+				"db.schema":                            "CREATE TABLE hosts ()",
+				"standard.interval":                    "7200",
+				"validation.interval":                  "51",
+				"validation.attempts.threshold":        "52",
+				"validation.percentage.threshold":      "53",
+				"init.validation.interval":             "54",
+				"init.validation.attempts.threshold":   "55",
+				"init.validation.percentage.threshold": "56",
+				"inventory.dbSecret":                   "some-secret",
+			},
+		}
+
+		config, err := BuildCyndiConfig(nil, cm.Data)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(config.Topic).To(Equal("platform.inventory.host-egress"))
+		Expect(config.ConnectCluster).To(Equal("cluster01"))
+		Expect(config.ConnectorTemplate).To(Equal("{}"))
+		Expect(config.ConnectorTasksMax).To(Equal(int64(12)))
+		Expect(config.ConnectorBatchSize).To(Equal(int64(13)))
+		Expect(config.ConnectorMaxAge).To(Equal(int64(14)))
+
+		Expect(config.ConnectorAllowlistSystemProfile).To(Equal("ansible"))
 		Expect(config.DBTableInitScript).To(Equal("CREATE TABLE hosts ()"))
 		Expect(config.StandardInterval).To(Equal(int64(7200)))
 		Expect(config.ValidationConfig.Interval).To(Equal(int64(51)))
