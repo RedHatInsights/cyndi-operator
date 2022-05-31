@@ -81,7 +81,6 @@ const defaultDBTableInitScript = `
 CREATE TABLE inventory.{{.TableName}} (
 	id uuid PRIMARY KEY,
 	account character varying(10) NOT NULL,
-	org_id character varying(36),
 	display_name character varying(200) NOT NULL,
 	tags jsonb NOT NULL,
 	updated timestamp with time zone NOT NULL,
@@ -90,7 +89,8 @@ CREATE TABLE inventory.{{.TableName}} (
 	system_profile jsonb NOT NULL,
 	insights_id uuid,
 	reporter character varying(255) NOT NULL,
-	per_reporter_staleness jsonb NOT NULL
+	per_reporter_staleness jsonb NOT NULL,
+	org_id character varying(36)
 );
 
 CREATE INDEX {{.TableName}}_account_index ON inventory.{{.TableName}}

@@ -17,7 +17,6 @@ type AppDatabase struct {
 const viewTemplate = `CREATE OR REPLACE VIEW inventory.hosts AS SELECT
 	id,
 	account,
-	org_id,
 	display_name,
 	created,
 	updated,
@@ -28,7 +27,8 @@ const viewTemplate = `CREATE OR REPLACE VIEW inventory.hosts AS SELECT
 	system_profile,
 	insights_id,
 	reporter,
-	per_reporter_staleness
+	per_reporter_staleness,
+	org_id
 FROM inventory.%[1]s`
 
 const cullingStaleWarningOffset = "7"
