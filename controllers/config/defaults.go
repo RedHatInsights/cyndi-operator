@@ -76,11 +76,12 @@ const defaultAllowlistSystemProfile = "sap_system,sap_sids"
 const defaultSSLMode = "disable"
 const defaultSSLRootCert = "none"
 
+// initially every host may not include org_id
 const defaultDBTableInitScript = `
 CREATE TABLE inventory.{{.TableName}} (
 	id uuid PRIMARY KEY,
 	account character varying(10) NOT NULL,
-	org_id character varying(36),  #initially every host may not include org_id
+	org_id character varying(36),
 	display_name character varying(200) NOT NULL,
 	tags jsonb NOT NULL,
 	updated timestamp with time zone NOT NULL,
