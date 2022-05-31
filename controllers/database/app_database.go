@@ -17,6 +17,7 @@ type AppDatabase struct {
 const viewTemplate = `CREATE OR REPLACE VIEW inventory.hosts AS SELECT
 	id,
 	account,
+	org_id,
 	display_name,
 	created,
 	updated,
