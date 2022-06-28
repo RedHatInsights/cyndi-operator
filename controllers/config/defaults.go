@@ -71,7 +71,7 @@ const defaultConnectorTemplate = `{
 const defaultConnectorTasksMax int64 = 16
 const defaultConnectorBatchSize int64 = 100
 const defaultConnectorMaxAge int64 = 45
-const defaultAllowlistSystemProfile = "sap_system,sap_sids"
+const defaultAllowlistSystemProfile = "ansible,host_type,sap_system,sap_sids"
 
 const defaultSSLMode = "disable"
 const defaultSSLRootCert = "none"
