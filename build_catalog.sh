@@ -29,14 +29,14 @@ done
 num_commits=$(git rev-list $(git rev-list --max-parents=0 HEAD)..HEAD --count)
 current_commit=$(git rev-parse --short=7 HEAD)
 version="0.1.$num_commits-git$current_commit"
-opm_version="1.14.0"
+opm_version="1.24.0"
 
 # Download opm build
 curl -L https://github.com/operator-framework/operator-registry/releases/download/v$opm_version/linux-amd64-opm -o ./opm
 chmod u+x ./opm
 
 # workaround for https://github.com/golang/go/issues/38373
-GO_VERSION="1.15.14"
+GO_VERSION="1.17.12"
 GOUNPACK=$(mktemp -d)
 wget -q "https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O $GOUNPACK/go.tar.gz
 tar -C $GOUNPACK -xzf $GOUNPACK/go.tar.gz
@@ -72,12 +72,12 @@ fi
 ###############################
 #Uncomment to reset the catalog
 ###############################
-log "Resetting index"
-./opm index rm -f $CATALOG_IMAGE:latest -c docker --tag $CATALOG_IMAGE:latest -o cyndi-operator
-docker push $CATALOG_IMAGE:latest
-export SKIP_VERSION=$version
-prev_version=""
-unset REPLACE_VERSION
+#log "Resetting index"
+#./opm index rm -f $CATALOG_IMAGE:latest -c docker --tag $CATALOG_IMAGE:latest -o cyndi-operator
+#docker push $CATALOG_IMAGE:latest
+#export SKIP_VERSION=$version
+#prev_version=""
+#unset REPLACE_VERSION
 
 # Build/push the new bundle
 log "Creating bundle $BUNDLE_IMAGE:$current_commit"
