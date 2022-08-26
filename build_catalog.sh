@@ -72,10 +72,10 @@ fi
 ###############################
 #Uncomment to reset the catalog
 ###############################
-log "Resetting index"
-./opm index rm -f $CATALOG_IMAGE:latest -c docker --tag $CATALOG_IMAGE:latest -o cyndi-operator
-docker push $CATALOG_IMAGE:latest
-export SKIP_VERSION=$version
+#log "Resetting index"
+#./opm index rm -f $CATALOG_IMAGE:latest -c docker --tag $CATALOG_IMAGE:latest -o cyndi-operator
+#docker push $CATALOG_IMAGE:latest
+#export SKIP_VERSION=$version
 prev_version=""
 unset REPLACE_VERSION
 
