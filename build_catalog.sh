@@ -76,8 +76,8 @@ fi
 #./opm index rm -f $CATALOG_IMAGE:latest -c docker --tag $CATALOG_IMAGE:latest -o cyndi-operator
 #docker push $CATALOG_IMAGE:latest
 #export SKIP_VERSION=$version
-prev_version=""
-unset REPLACE_VERSION
+#prev_version=""
+#unset REPLACE_VERSION
 
 # Build/push the new bundle
 log "Creating bundle $BUNDLE_IMAGE:$current_commit"
