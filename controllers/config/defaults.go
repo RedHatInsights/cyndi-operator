@@ -57,7 +57,7 @@ const defaultConnectorTemplate = `{
 
 	"errors.tolerance": "all",
 	"errors.deadletterqueue.topic.name": "platform.cyndi.dlq",
-	"errors.deadletterqueue.topic.replication.factor": 1,
+	"errors.deadletterqueue.topic.replication.factor": 3,
 	"errors.deadletterqueue.context.headers.enable":true,
 	"errors.retry.delay.max.ms": 60000,
 	"errors.retry.timeout": 600000,
