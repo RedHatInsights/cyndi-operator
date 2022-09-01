@@ -80,7 +80,7 @@ const defaultSSLRootCert = "none"
 const defaultDBTableInitScript = `
 CREATE TABLE inventory.{{.TableName}} (
 	id uuid PRIMARY KEY,
-	account character varying(10) NOT NULL,
+	account character varying(10),
 	display_name character varying(200) NOT NULL,
 	tags jsonb NOT NULL,
 	updated timestamp with time zone NOT NULL,
