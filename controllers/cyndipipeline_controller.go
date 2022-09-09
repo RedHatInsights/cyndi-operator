@@ -344,18 +344,19 @@ func (i *ReconcileIteration) removeFinalizer() error {
 
 func (i *ReconcileIteration) createConnector(name string, dryRun bool) (*unstructured.Unstructured, error) {
 	var connectorConfig = connect.ConnectorConfiguration{
-		AppName:                i.Instance.Spec.AppName,
-		InsightsOnly:           i.Instance.Spec.InsightsOnly,
-		Cluster:                i.config.ConnectCluster,
-		Topic:                  i.config.Topic,
-		TableName:              i.Instance.Status.TableName,
-		DB:                     i.AppDBParams,
-		TasksMax:               i.config.ConnectorTasksMax,
-		BatchSize:              i.config.ConnectorBatchSize,
-		MaxAge:                 i.config.ConnectorMaxAge,
-		Template:               i.config.ConnectorTemplate,
-		AllowlistSystemProfile: i.config.ConnectorAllowlistSystemProfile,
-		TopicReplicationFactor: i.config.TopicReplicationFactor,
+		AppName:                  i.Instance.Spec.AppName,
+		InsightsOnly:             i.Instance.Spec.InsightsOnly,
+		Cluster:                  i.config.ConnectCluster,
+		Topic:                    i.config.Topic,
+		TableName:                i.Instance.Status.TableName,
+		DB:                       i.AppDBParams,
+		TasksMax:                 i.config.ConnectorTasksMax,
+		BatchSize:                i.config.ConnectorBatchSize,
+		MaxAge:                   i.config.ConnectorMaxAge,
+		Template:                 i.config.ConnectorTemplate,
+		AllowlistSystemProfile:   i.config.ConnectorAllowlistSystemProfile,
+		TopicReplicationFactor:   i.config.TopicReplicationFactor,
+		DeadLetterQueueTopicName: i.config.DeadLetterQueueTopicName,
 	}
 
 	return connect.CreateConnector(i.Client, name, i.Instance.Namespace, connectorConfig, i.Instance, i.Scheme, dryRun)

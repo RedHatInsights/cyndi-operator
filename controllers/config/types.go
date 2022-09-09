@@ -26,6 +26,7 @@ type CyndiConfiguration struct {
 	ConnectorMaxAge                 int64
 	ConnectorAllowlistSystemProfile string
 	TopicReplicationFactor          int64
+	DeadLetterQueueTopicName        string
 
 	// the secret for the inventory DB we should connect to when validating
 	InventoryDbSecret string

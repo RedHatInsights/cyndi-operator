@@ -51,13 +51,11 @@ func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm map[string]string) (*Cyn
 		config.InventoryDbSecret = getStringValue(cm, "inventory.dbSecret", defaultInventoryDbSecret)
 	}
 
-	if instance != nil && instance.Spec.TopicReplicationFactor != nil {
-		config.TopicReplicationFactor = *instance.Spec.TopicReplicationFactor
-	} else {
-		if config.TopicReplicationFactor, err = getIntValue(cm, "connector.topic.replication.factor", defaultTopicReplicationFactor); err != nil {
-			return config, err
-		}
+	if config.TopicReplicationFactor, err = getIntValue(cm, "connector.topic.replication.factor", defaultTopicReplicationFactor); err != nil {
+		return config, err
 	}
+
+	config.DeadLetterQueueTopicName = getStringValue(cm, "connector.deadletterqueue.topic.name", defaultDeadLetterQueueTopicName)
 
 	config.ConnectorTemplate = getStringValue(cm, "connector.config", defaultConnectorTemplate)
 
