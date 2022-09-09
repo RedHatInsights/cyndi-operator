@@ -55,6 +55,7 @@ type ConnectorConfiguration struct {
 	MaxAge                 int64
 	Template               string
 	AllowlistSystemProfile string
+	TopicReplicationFactor int64
 }
 
 func CheckIfConnectorExists(c client.Client, name string, namespace string) (bool, error) {

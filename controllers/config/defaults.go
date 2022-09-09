@@ -57,7 +57,7 @@ const defaultConnectorTemplate = `{
 
 	"errors.tolerance": "all",
 	"errors.deadletterqueue.topic.name": "platform.cyndi.dlq",
-	"errors.deadletterqueue.topic.replication.factor": 1,
+	"errors.deadletterqueue.topic.replication.factor": {{.TopicReplicationFactor}},
 	"errors.deadletterqueue.context.headers.enable":true,
 	"errors.retry.delay.max.ms": 60000,
 	"errors.retry.timeout": 600000,
@@ -71,6 +71,7 @@ const defaultConnectorTemplate = `{
 const defaultConnectorTasksMax int64 = 16
 const defaultConnectorBatchSize int64 = 100
 const defaultConnectorMaxAge int64 = 45
+const defaultTopicReplicationFactor int64 = 1
 const defaultAllowlistSystemProfile = "sap_system,sap_sids"
 
 const defaultSSLMode = "disable"

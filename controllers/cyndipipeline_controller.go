@@ -355,6 +355,7 @@ func (i *ReconcileIteration) createConnector(name string, dryRun bool) (*unstruc
 		MaxAge:                 i.config.ConnectorMaxAge,
 		Template:               i.config.ConnectorTemplate,
 		AllowlistSystemProfile: i.config.ConnectorAllowlistSystemProfile,
+		TopicReplicationFactor: i.config.TopicReplicationFactor,
 	}
 
 	return connect.CreateConnector(i.Client, name, i.Instance.Namespace, connectorConfig, i.Instance, i.Scheme, dryRun)
