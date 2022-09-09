@@ -31,6 +31,8 @@ func assertDefaults(config *CyndiConfiguration) {
 	Expect(config.ValidationConfigInit).To(Equal(defaultValidationConfigInit))
 	Expect(config.InventoryDbSecret).To(Equal(defaultInventoryDbSecret))
 	Expect(config.TopicReplicationFactor).To(Equal(defaultTopicReplicationFactor))
+	Expect(config.DeadLetterQueueTopicName).To(Equal(defaultDeadLetterQueueTopicName))
+
 }
 
 var _ = Describe("Config", func() {
@@ -70,6 +72,7 @@ var _ = Describe("Config", func() {
 				"init.validation.percentage.threshold": "56",
 				"inventory.dbSecret":                   "some-secret",
 				"connector.topic.replication.factor":   "2",
+				"connector.deadletterqueue.topic.name": "some-topic",
 			},
 		}
 
@@ -93,6 +96,7 @@ var _ = Describe("Config", func() {
 		Expect(config.ValidationConfigInit.PercentageThreshold).To(Equal(int64(56)))
 		Expect(config.InventoryDbSecret).To(Equal("some-secret"))
 		Expect(config.TopicReplicationFactor).To(Equal(int64(2)))
+		Expect(config.DeadLetterQueueTopicName).To(Equal("some-topic"))
 	})
 
 	DescribeTable("Errors on invalid value",
@@ -175,25 +179,6 @@ var _ = Describe("Config", func() {
 			config, err := BuildCyndiConfig(&pipeline, cm.Data)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(config.ConnectorMaxAge).To(Equal(int64(9)))
-		})
-
-		It("Overrides TopicReplicationFactor", func() {
-			cm := &corev1.ConfigMap{
-				Data: map[string]string{
-					"connector.topic.replication.factor": "1",
-				},
-			}
-
-			value := int64(3)
-			pipeline := cyndi.CyndiPipeline{
-				Spec: cyndi.CyndiPipelineSpec{
-					TopicReplicationFactor: &value,
-				},
-			}
-
-			config, err := BuildCyndiConfig(&pipeline, cm.Data)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(config.TopicReplicationFactor).To(Equal(int64(3)))
 		})
 
 		It("Overrides ValidationThreshold", func() {

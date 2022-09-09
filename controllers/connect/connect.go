@@ -44,18 +44,19 @@ var connectorsGVK = schema.GroupVersionKind{
 }
 
 type ConnectorConfiguration struct {
-	AppName                string
-	InsightsOnly           bool
-	Cluster                string
-	Topic                  string
-	TableName              string
-	DB                     DBParams
-	TasksMax               int64
-	BatchSize              int64
-	MaxAge                 int64
-	Template               string
-	AllowlistSystemProfile string
-	TopicReplicationFactor int64
+	AppName                  string
+	InsightsOnly             bool
+	Cluster                  string
+	Topic                    string
+	TableName                string
+	DB                       DBParams
+	TasksMax                 int64
+	BatchSize                int64
+	MaxAge                   int64
+	Template                 string
+	AllowlistSystemProfile   string
+	TopicReplicationFactor   int64
+	DeadLetterQueueTopicName string
 }
 
 func CheckIfConnectorExists(c client.Client, name string, namespace string) (bool, error) {

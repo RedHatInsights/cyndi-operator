@@ -56,7 +56,7 @@ const defaultConnectorTemplate = `{
 	"transforms.injectSchemaValue.schema": "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"optional\":true,\"field\":\"account\"},{\"type\":\"string\",\"optional\":true,\"field\":\"org_id\"},{\"type\":\"string\",\"optional\":false,\"field\":\"display_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"tags\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":false,\"field\":\"updated\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"created\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"stale_timestamp\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"system_profile\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":true,\"field\":\"insights_id\"},{\"type\":\"string\",\"optional\":false,\"field\":\"reporter\"},{\"type\":\"string\",\"optional\":false,\"field\":\"per_reporter_staleness\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"}],\"optional\":false}",
 
 	"errors.tolerance": "all",
-	"errors.deadletterqueue.topic.name": "platform.cyndi.dlq",
+	"errors.deadletterqueue.topic.name": "{{.DeadLetterQueueTopicName}}",
 	"errors.deadletterqueue.topic.replication.factor": {{.TopicReplicationFactor}},
 	"errors.deadletterqueue.context.headers.enable":true,
 	"errors.retry.delay.max.ms": 60000,
@@ -72,6 +72,7 @@ const defaultConnectorTasksMax int64 = 16
 const defaultConnectorBatchSize int64 = 100
 const defaultConnectorMaxAge int64 = 45
 const defaultTopicReplicationFactor int64 = 1
+const defaultDeadLetterQueueTopicName = "platform.cyndi.dlq"
 const defaultAllowlistSystemProfile = "sap_system,sap_sids"
 
 const defaultSSLMode = "disable"
