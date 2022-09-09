@@ -512,7 +512,7 @@ var _ = Describe("Pipeline operations", func() {
 			pipelineVersion := pipeline.Status.PipelineVersion
 
 			// with pipeline in the Valid state, change the db secret
-			db.Exec("CREATE ROLE cyndi_admin; GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA inventory TO cyndi_admin;")
+			db.Exec("CREATE ROLE cyndi_admin; GRANT ALL PRIVILEGES ON SCHEMA inventory TO cyndi_admin;")
 			db.Exec("CREATE USER cyndi123 WITH PASSWORD 'havefun' IN ROLE cyndi_admin;")
 			dbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, utils.AppDbSecretName(pipeline.Spec))
 			Expect(err).ToNot(HaveOccurred())
