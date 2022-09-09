@@ -107,6 +107,8 @@ func newConnectorResource(name string, namespace string, config ConnectorConfigu
 	m["AllowlistSP"] = config.AllowlistSystemProfile
 	m["SSLMode"] = config.DB.SSLMode
 	m["SSLRootCert"] = config.DB.SSLRootCert
+	m["TopicReplicationFactor"] = strconv.FormatInt(config.TopicReplicationFactor, 10)
+	m["DeadLetterQueueTopicName"] = config.DeadLetterQueueTopicName
 
 	tmpl, err := template.New("configTemplate").Parse(config.Template)
 	if err != nil {
