@@ -87,9 +87,6 @@ spec:
               topic:
                 minLength: 1
                 type: string
-              topicReplicationFactor:
-                format: int64
-                type: integer
               validationThreshold:
                 format: int64
                 type: integer
