@@ -56,6 +56,11 @@ type CyndiPipelineSpec struct {
 	// +optional
 	// +kubebuilder:validation:MinLength:=1
 	InventoryDbSecret *string `json:"inventoryDbSecret,omitempty"`
+
+	// +optional
+	// +kubebuilder:validation:Min:=1
+	// +kubebuilder:validation:Max:=3
+	TopicReplicationFactor *int64 `json:"topicReplicationFactor,omitempty"`
 }
 
 // CyndiPipelineStatus defines the observed state of CyndiPipeline

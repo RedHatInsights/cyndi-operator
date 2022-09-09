@@ -25,6 +25,7 @@ type CyndiConfiguration struct {
 	ConnectorBatchSize              int64
 	ConnectorMaxAge                 int64
 	ConnectorAllowlistSystemProfile string
+	TopicReplicationFactor          int64
 
 	// the secret for the inventory DB we should connect to when validating
 	InventoryDbSecret string
