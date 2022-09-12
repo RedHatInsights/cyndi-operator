@@ -43,6 +43,8 @@ parameters:
   value: "1"
 - name: MANAGER_POD_MEM_LIMIT
   value: "4Gi"
+- name: CONNECTOR_TOPIC
+  value: "platform.inventory.events"
 
 objects:
 - apiVersion: operators.coreos.com/v1alpha1
@@ -106,3 +108,4 @@ objects:
     db.ssl.mode: ${SSL_MODE}
     db.ssl.root.cert: ${SSL_ROOT_CERT}
     refresh: ${REFRESH}
+    connector.topic: ${CONNECTOR_TOPIC}
