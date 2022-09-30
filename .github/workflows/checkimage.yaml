@@ -14,7 +14,8 @@ jobs:
         run: sudo apt-get install -y skopeo
       - name: Check change
         run: |
-          base=$(grep -Po '(?<=FROM registry)(.*)' Dockerfile)
+          baseimage=$(grep -Po '(?<=FROM )(.* as builder)' Dockerfile)
+          base=${baseimage% as builder}
           skopeo inspect "docker://$base" | grep -Po '(?<="Digest": ")([^"]+)' > .baseimagedigest
       - name: Do change if the digest changed
         run: |
