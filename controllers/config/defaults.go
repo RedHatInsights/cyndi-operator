@@ -121,6 +121,9 @@ inventory.{{.TableName}} (reporter);
 
 CREATE INDEX {{.TableName}}_per_reporter_staleness_index ON inventory.{{.TableName}}
 USING GIN (per_reporter_staleness JSONB_PATH_OPS);
+
+CREATE INDEX {{.TableName}}_org_id_id_index ON inventory.{{.TableName}}
+(org_id,id)
 `
 
 const defaultStandardInterval int64 = 120
