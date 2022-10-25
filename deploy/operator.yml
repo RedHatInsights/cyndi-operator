@@ -109,3 +109,4 @@ objects:
     db.ssl.root.cert: ${SSL_ROOT_CERT}
     refresh: ${REFRESH}
     connector.topic: ${CONNECTOR_TOPIC}
+    connector.topic.replication.factor: 3
