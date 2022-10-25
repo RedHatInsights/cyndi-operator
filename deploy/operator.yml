@@ -45,6 +45,10 @@ parameters:
   value: "4Gi"
 - name: CONNECTOR_TOPIC
   value: "platform.inventory.events"
+- name: DLQ_TOPIC_NAME
+  value: "platform.cyndi.dlq"
+- name: DLQ_TOPIC_REPLICATION_FACTOR
+  value: "3"
 
 objects:
 - apiVersion: operators.coreos.com/v1alpha1
@@ -109,4 +113,5 @@ objects:
     db.ssl.root.cert: ${SSL_ROOT_CERT}
     refresh: ${REFRESH}
     connector.topic: ${CONNECTOR_TOPIC}
-    connector.topic.replication.factor: 3
+    connector.topic.replication.factor: ${DLQ_TOPIC_REPLICATION_FACTOR}
+    connector.deadletterqueue.topic.name: ${DLQ_TOPIC_NAME}
