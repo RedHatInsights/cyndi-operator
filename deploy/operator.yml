@@ -48,7 +48,7 @@ parameters:
 - name: DLQ_TOPIC_NAME
   value: "platform.cyndi.dlq"
 - name: DLQ_TOPIC_REPLICATION_FACTOR
-  value: "3"
+  value: "1"
 
 objects:
 - apiVersion: operators.coreos.com/v1alpha1
