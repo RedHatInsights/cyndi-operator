@@ -1,14 +1,14 @@
 Cyndi Operator
 ==============
 
-OpenShift operator that manages [Cyndi Pipelines](https://internal.cloud.redhat.com/docs/services/host-inventory/#host-data-syndication-aka-project-cyndi), i.e. data syndication between [Host-based Inventory](https://platform-docs.cloud.paas.psi.redhat.com/backend/inventory.html) and application databases.
+OpenShift operator that manages [Cyndi Pipelines](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html#cyndi), i.e. data syndication between [Host-based Inventory](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html) and application databases.
 
-A syndication pipeline consumes events from the [Inventory Event Interface](https://internal.cloud.redhat.com/docs/services/host-inventory/#event-interface) and materializes them in the target database.
+A syndication pipeline consumes events from the [Inventory Event Interface](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html#_event_interface) and materializes them in the target database.
 [Kafka Connect](https://docs.confluent.io/current/connect/index.html) is used for consuming of the events stream.
 [Custom transformations](https://github.com/redhatinsights/connect-transforms) are used to process the data.
 It is then written into the database using using [JDBC Sink Connector](https://docs.confluent.io/3.1.1/connect/connect-jdbc/docs/sink_connector.html).
 
-For more details about Host Data Syndication (a.k.a. Project Cyndi) see [platform documentation](https://internal.cloud.redhat.com/docs/services/host-inventory/#host-data-syndication-aka-project-cyndi)
+For more details about Host Data Syndication (a.k.a. Project Cyndi) see [platform documentation](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html#cyndi)
 
 ![Architecture](./docs/architecture.png "Cyndi Architecture")
 
@@ -54,7 +54,7 @@ Typical flow
 
 * [Strimzi-managed](https://strimzi.io/docs/operators/latest/quickstart.html) Kafka Connect cluster is running in the OpenShift cluster in the same namespace you intend to create `CyndiPipeline` resources in.
 * A PostgreSQL database to be used as the target database
-  * [Onboarding process](https://internal.cloud.redhat.com/docs/services/host-inventory/#onboarding-process) has been completed on the target database
+  * [Onboarding process](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html#_onboarding_process) has been completed on the target database
   An OpenShift secret with database credentials is stored in the Kafka Connect namespace and named `{appName}-db`, where `appName` is the name used in pipeline definition. If needed, the name of the secret used can be changed by setting `dbSecret` in the `CyndiPipeline` spec.
 * An OpenShift secret named `host-inventory-db` containing Inventory database credentials (used for validation) is present in the Kafka Connect namespace. The name of the secret used can be changed by setting `inventory.dbSecret` in the cyndi `ConfigMap`, or by setting `inventoryDbSecret` in the `CyndiPipeline` spec.
 
