@@ -1,9 +1,9 @@
 Cyndi Operator
 ==============
 
-OpenShift operator that manages [Cyndi Pipelines](https://internal.cloud.redhat.com/docs/services/host-inventory/#host-data-syndication-aka-project-cyndi), i.e. data syndication between [Host-based Inventory](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html) and application databases.
+OpenShift operator that manages [Cyndi Pipelines](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html#cyndi), i.e. data syndication between [Host-based Inventory](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html) and application databases.
 
-A syndication pipeline consumes events from the [Inventory Event Interface](https://internal.cloud.redhat.com/docs/services/host-inventory/#event-interface) and materializes them in the target database.
+A syndication pipeline consumes events from the [Inventory Event Interface](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html#_event_interface) and materializes them in the target database.
 [Kafka Connect](https://docs.confluent.io/current/connect/index.html) is used for consuming of the events stream.
 [Custom transformations](https://github.com/redhatinsights/connect-transforms) are used to process the data.
 It is then written into the database using using [JDBC Sink Connector](https://docs.confluent.io/3.1.1/connect/connect-jdbc/docs/sink_connector.html).
