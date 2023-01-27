@@ -1,14 +1,7 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.17.12 as builder
 
 USER 0
-
-# the latest go version available now is 1.18.9
-RUN microdnf install --setopt=tsflags=nodocs -y go-toolset-1.18.9 && \
-    microdnf install -y rsync tar procps-ng && \
-    microdnf upgrade -y && \
-    microdnf clean all
-
 WORKDIR /workspace
 # Copy the Go Modules manifests
 COPY go.mod go.mod
