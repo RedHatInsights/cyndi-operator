@@ -1,14 +1,7 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.17.12 as builder
 
 USER 0
-
-# the latest go version available now is 1.18.9
-RUN microdnf install --setopt=tsflags=nodocs -y go-toolset-1.18.9 && \
-    microdnf install -y rsync tar procps-ng && \
-    microdnf upgrade -y && \
-    microdnf clean all
-
 WORKDIR /workspace
 # Copy the Go Modules manifests
 COPY go.mod go.mod
@@ -27,8 +20,18 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager 
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+
+RUN microdnf install --setopt=tsflags=nodocs -y go-toolset-1.18.9 && \
+    microdnf install -y rsync tar procps-ng && \
+    microdnf upgrade -y && \
+    microdnf clean all
+
 WORKDIR /
+
+# TODO: remove go installation check 
+RUN go version
+
 COPY --from=builder /workspace/manager .
 USER nonroot:nonroot
 
