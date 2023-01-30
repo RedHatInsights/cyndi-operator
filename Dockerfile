@@ -29,9 +29,6 @@ RUN microdnf install --setopt=tsflags=nodocs -y go-toolset-1.18.9 && \
 
 WORKDIR /
 
-# TODO: remove go installation check 
-RUN go version
-
 COPY --from=builder /workspace/manager .
 USER nonroot:nonroot
 
