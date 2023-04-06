@@ -28,7 +28,8 @@ const viewTemplate = `CREATE OR REPLACE VIEW inventory.hosts AS SELECT
 	insights_id,
 	reporter,
 	per_reporter_staleness,
-	org_id
+	org_id,
+	groups
 FROM inventory.%[1]s`
 
 const cullingStaleWarningOffset = "7"
