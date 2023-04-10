@@ -259,3 +259,4 @@ Inspect index image
 ```
 opm index export --index=quay.io/cloudservices/cyndi-operator-index:local -c podman
 ```
+
