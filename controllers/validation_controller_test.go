@@ -97,7 +97,7 @@ var _ = Describe("Validation controller", func() {
 		err = hbiDb.Connect()
 		Expect(err).ToNot(HaveOccurred())
 
-		_, err = hbiDb.Exec(`DROP TABLE IF EXISTS public.hosts; CREATE TABLE public.hosts (id uuid PRIMARY KEY, canonical_facts jsonb);`)
+		_, err = hbiDb.Exec(`DROP TABLE IF EXISTS public.hosts CASCADE; CREATE TABLE public.hosts (id uuid PRIMARY KEY, canonical_facts jsonb);`)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
