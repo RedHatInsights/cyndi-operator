@@ -1,0 +1,21 @@
+# this is a wrapper around advisor used to run PR tests in ephemeral
+apiVersion: v1
+kind: Template
+metadata:
+  name: cyndi-test
+objects:
+  - apiVersion: cloud.redhat.com/v1alpha1
+    kind: ClowdApp
+    metadata:
+      name: cyndi-test
+    spec:
+      envName: ${ENV_NAME}
+      testing:
+        iqePlugin: cyndi
+      dependencies:
+        - advisor-backend
+
+parameters:
+  - description : ClowdEnvironment name
+    name: ENV_NAME
+    required: true
