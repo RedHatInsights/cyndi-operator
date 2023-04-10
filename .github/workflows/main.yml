@@ -7,7 +7,7 @@ on:
 jobs:
   testing:
     runs-on: ubuntu-20.04
-    container: golang:1.15
+    container: golang:1.18
     services:
       postgres:
         image: postgres
