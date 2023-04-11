@@ -30,7 +30,7 @@ func (instance *CyndiPipeline) GetState() PipelineState {
 		return STATE_NEW
 	case instance.IsValid():
 		return STATE_VALID
-	case instance.Status.InitialSyncInProgress == true:
+	case instance.Status.InitialSyncInProgress:
 		return STATE_INITIAL_SYNC
 	case instance.GetValid() == metav1.ConditionFalse:
 		return STATE_INVALID
@@ -39,11 +39,10 @@ func (instance *CyndiPipeline) GetState() PipelineState {
 	}
 }
 
-func (instance *CyndiPipeline) TransitionToNew() error {
+func (instance *CyndiPipeline) TransitionToNew() {
 	instance.ResetValid()
 	instance.Status.InitialSyncInProgress = false
 	instance.Status.PipelineVersion = ""
-	return nil
 }
 
 func (instance *CyndiPipeline) TransitionToInitialSync(pipelineVersion string) error {
@@ -114,7 +113,7 @@ func TableName(pipelineVersion string) string {
 }
 
 func TableNameToConnectorName(tableName string, appName string) string {
-	return ConnectorName(string(tableName[len(tablePrefix):len(tableName)]), appName)
+	return ConnectorName(string(tableName[len(tablePrefix):]), appName)
 }
 
 func ConnectorName(pipelineVersion string, appName string) string {

@@ -130,12 +130,10 @@ func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	reqLogger.Info("Reconciling CyndiPipeline")
 
 	i, err := r.setup(reqLogger, request, ctx)
-	defer i.Close()
-
 	if err != nil {
-		_ = i.error(err)
-		setupErrors = append(setupErrors, err)
+		setupErrors = append(setupErrors, i.error(err))
 	}
+	defer i.Close()
 
 	// Request object not found, could have been deleted after reconcile request.
 	if i.Instance == nil {
@@ -185,7 +183,9 @@ func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		i.Instance.Status.CyndiConfigVersion = i.config.ConfigMapVersion
 
 		pipelineVersion := fmt.Sprintf("1_%s", strconv.FormatInt(time.Now().UnixNano(), 10))
-		i.Instance.TransitionToInitialSync(pipelineVersion)
+		if err := i.Instance.TransitionToInitialSync(pipelineVersion); err != nil {
+			return reconcile.Result{}, i.error(err, "Error Transitioning to initial state")
+		}
 		i.probeStartingInitialSync()
 
 		err = i.AppDb.CreateTable(cyndi.TableName(pipelineVersion), i.config.DBTableInitScript)
@@ -388,7 +388,7 @@ func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
 	dbTableExists, err := i.AppDb.CheckIfTableExists(i.Instance.Status.TableName)
 	if err != nil {
 		return nil, err
-	} else if dbTableExists == false {
+	} else if !dbTableExists {
 		return fmt.Errorf("Database table %s not found", i.Instance.Status.TableName), nil
 	}
 
