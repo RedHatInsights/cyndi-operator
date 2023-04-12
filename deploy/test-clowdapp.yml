@@ -12,8 +12,6 @@ objects:
       envName: ${ENV_NAME}
       testing:
         iqePlugin: cyndi
-      dependencies:
-        - advisor-backend
 
 parameters:
   - description : ClowdEnvironment name
