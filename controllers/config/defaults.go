@@ -29,7 +29,7 @@ const defaultConnectorTemplate = `{
 	"transforms.insightsFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
 	"transforms.insightsFilter.if": "!!record.headers().lastWithName('insights_id').value()",
 	{{ else  }}
-	"transforms": "timestampFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,perReporterStalenessToJson,injectSchemaKey,injectSchemaValue",
+	"transforms": "timestampFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,perReporterStalenessToJson,groupsToJson,injectSchemaKey,injectSchemaValue",
 	{{ end }}
 
 	"transforms.timestampFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
@@ -50,6 +50,9 @@ const defaultConnectorTemplate = `{
 	"transforms.perReporterStalenessToJson.type": "com.redhat.insights.kafka.connect.transforms.FieldToJson$Value",
 	"transforms.perReporterStalenessToJson.originalField": "per_reporter_staleness",
 	"transforms.perReporterStalenessToJson.destinationField": "per_reporter_staleness",
+	"transforms.groupsToJson.type": "com.redhat.insights.kafka.connect.transforms.FieldToJson$Value",
+	"transforms.groupsToJson.originalField": "groups",
+	"transforms.groupsToJson.destinationField": "groups",
 	"transforms.injectSchemaKey.type": "com.redhat.insights.kafka.connect.transforms.InjectSchema$Key",
 	"transforms.injectSchemaKey.schema": "{\"type\":\"string\",\"optional\":false, \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=uuid\"}",
 	"transforms.injectSchemaValue.type": "com.redhat.insights.kafka.connect.transforms.InjectSchema$Value",
