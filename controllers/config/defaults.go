@@ -25,7 +25,7 @@ const defaultConnectorTemplate = `{
 	"fields.whitelist": "account,org_id,display_name,tags,updated,created,stale_timestamp,system_profile,insights_id,reporter,per_reporter_staleness,groups",
 
 	{{ if eq .InsightsOnly "true" }}
-	"transforms": "timestampFilter,insightsFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,perReporterStalenessToJson,injectSchemaKey,injectSchemaValue",
+	"transforms": "timestampFilter,insightsFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,perReporterStalenessToJson,groupsToJson,injectSchemaKey,injectSchemaValue",
 	"transforms.insightsFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
 	"transforms.insightsFilter.if": "!!record.headers().lastWithName('insights_id').value()",
 	{{ else  }}
