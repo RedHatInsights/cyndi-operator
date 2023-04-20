@@ -72,12 +72,12 @@ fi
 ###############################
 #Uncomment to reset the catalog
 ###############################
-#log "Resetting index"
-#./opm index rm -f $CATALOG_IMAGE:latest -c docker --tag $CATALOG_IMAGE:latest -o cyndi
-#docker push $CATALOG_IMAGE:latest
-#export SKIP_VERSION=$version
-#prev_version=""
-#unset REPLACE_VERSION
+log "Resetting index"
+./opm index rm -f $CATALOG_IMAGE:latest -c docker --tag $CATALOG_IMAGE:latest -o cyndi
+docker push $CATALOG_IMAGE:latest
+export SKIP_VERSION=$version
+prev_version=""
+unset REPLACE_VERSION
 
 # Build/push the new bundle
 log "Creating bundle $BUNDLE_IMAGE:$current_commit"
