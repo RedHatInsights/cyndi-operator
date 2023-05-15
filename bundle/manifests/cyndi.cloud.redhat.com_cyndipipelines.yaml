@@ -73,6 +73,11 @@ spec:
               dbSecret:
                 minLength: 1
                 type: string
+              indexes:
+                type: array
+                items:
+                  type: string
+                default: []
               insightsOnly:
                 default: false
                 type: boolean

@@ -188,9 +188,17 @@ func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		i.Instance.TransitionToInitialSync(pipelineVersion)
 		i.probeStartingInitialSync()
 
-		err = i.AppDb.CreateTable(cyndi.TableName(pipelineVersion), i.config.DBTableInitScript)
+		tableName := cyndi.TableName(pipelineVersion)
+		err = i.AppDb.CreateTable(tableName, i.config.DBTableInitScript)
 		if err != nil {
 			return reconcile.Result{}, i.error(err, "Error creating table")
+		}
+
+		for _, indexSpec := range i.Instance.Spec.Indexes {
+			err := i.AppDb.CreateIndex(tableName, indexSpec)
+			if err != nil {
+				return reconcile.Result{}, i.error(err, "Error creating index")
+			}
 		}
 
 		_, err = i.createConnector(cyndi.ConnectorName(pipelineVersion, i.Instance.Spec.AppName), false)
@@ -390,6 +398,18 @@ func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
 		return nil, err
 	} else if dbTableExists == false {
 		return fmt.Errorf("Database table %s not found", i.Instance.Status.TableName), nil
+	}
+
+	dbIndexes, err := i.AppDb.ListIndexes(i.Instance.Status.TableName)
+	if err != nil {
+		return nil, err
+	}
+	if diff, err := utils.AppDbIndexesDiffer(dbIndexes, i.Instance.Spec.Indexes, i.Instance.Status.TableName); err != nil {
+		return nil, err
+	} else {
+		if diff {
+			return fmt.Errorf("Indexes for table %s differ", i.Instance.Status.TableName), nil
+		}
 	}
 
 	connector, err := connect.GetConnector(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace)

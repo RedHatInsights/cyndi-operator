@@ -98,39 +98,6 @@ CREATE TABLE inventory.{{.TableName}} (
 	org_id character varying(36),
 	groups jsonb
 );
-
-CREATE INDEX {{.TableName}}_account_index ON inventory.{{.TableName}}
-(account);
-
-CREATE INDEX {{.TableName}}_org_id_index ON inventory.{{.TableName}}
-(org_id);
-
-CREATE INDEX {{.TableName}}_display_name_index ON inventory.{{.TableName}}
-(display_name);
-
-CREATE INDEX {{.TableName}}_tags_index ON inventory.{{.TableName}} USING GIN
-(tags JSONB_PATH_OPS);
-
-CREATE INDEX {{.TableName}}_stale_timestamp_index ON
-inventory.{{.TableName}} (stale_timestamp);
-
-CREATE INDEX {{.TableName}}_system_profile_index ON inventory.{{.TableName}}
-USING GIN (system_profile JSONB_PATH_OPS);
-
-CREATE INDEX {{.TableName}}_insights_id_index ON
-inventory.{{.TableName}} (insights_id);
-
-CREATE INDEX {{.TableName}}_insights_reporter_index ON
-inventory.{{.TableName}} (reporter);
-
-CREATE INDEX {{.TableName}}_per_reporter_staleness_index ON inventory.{{.TableName}}
-USING GIN (per_reporter_staleness JSONB_PATH_OPS);
-
-CREATE INDEX {{.TableName}}_org_id_id_index ON inventory.{{.TableName}}
-(org_id,id);
-
-CREATE INDEX {{.TableName}}_groups_index ON inventory.{{.TableName}}
-USING GIN (groups JSONB_PATH_OPS);
 `
 
 const defaultStandardInterval int64 = 120

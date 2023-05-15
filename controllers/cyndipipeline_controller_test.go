@@ -569,6 +569,25 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(pipeline.Status.ActiveTableName).To(Equal(tableName))
 		})
 
+		It("Triggers refresh if database index definitions change", func() {
+			createPipeline(namespacedName)
+			reconcile()
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+
+			pipeline.Spec.Indexes = []string{`CREATE INDEX {{.TableName}}_account_index ON inventory.{{.TableName}} (account)`}
+			err := test.Client.Update(context.TODO(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+		})
+
 		It("Triggers refresh if connector configuration disagrees", func() {
 			createPipeline(namespacedName)
 			reconcile()

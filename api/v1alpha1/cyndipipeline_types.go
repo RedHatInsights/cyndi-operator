@@ -33,6 +33,10 @@ type CyndiPipelineSpec struct {
 	InsightsOnly bool `json:"insightsOnly"`
 
 	// +optional
+	// +kubebuilder:default:={"CREATE INDEX {{.TableName}}_account_index ON inventory.{{.TableName}} USING btree (account)", "CREATE INDEX {{.TableName}}_org_id_index ON inventory.{{.TableName}} USING btree (org_id)", "CREATE INDEX {{.TableName}}_display_name_index ON inventory.{{.TableName}} USING btree (display_name)", "CREATE INDEX {{.TableName}}_tags_index ON inventory.{{.TableName}} USING gin (tags jsonb_path_ops)", "CREATE INDEX {{.TableName}}_stale_timestamp_index ON inventory.{{.TableName}} USING btree (stale_timestamp)", "CREATE INDEX {{.TableName}}_system_profile_index ON inventory.{{.TableName}} USING gin (system_profile jsonb_path_ops)", "CREATE INDEX {{.TableName}}_insights_id_index ON inventory.{{.TableName}} USING btree (insights_id)", "CREATE INDEX {{.TableName}}_insights_reporter_index ON inventory.{{.TableName}} USING btree (reporter)", "CREATE INDEX {{.TableName}}_per_reporter_staleness_index ON inventory.{{.TableName}} USING gin (per_reporter_staleness jsonb_path_ops)", "CREATE INDEX {{.TableName}}_org_id_id_index ON inventory.{{.TableName}} USING btree (org_id, id)", "CREATE INDEX {{.TableName}}_groups_index ON inventory.{{.TableName}} USING gin (groups jsonb_path_ops)"}
+	Indexes []string `json:"indexes,omitempty"`
+
+	// +optional
 	// +kubebuilder:validation:MinLength:=1
 	ConnectCluster *string `json:"connectCluster,omitempty"`
 

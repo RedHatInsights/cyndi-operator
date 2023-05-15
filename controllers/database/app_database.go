@@ -1,10 +1,8 @@
 package database
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
-	"text/template"
 
 	"github.com/RedHatInsights/cyndi-operator/controllers/config"
 	"github.com/RedHatInsights/cyndi-operator/controllers/utils"
@@ -90,20 +88,11 @@ func (db *AppDatabase) CheckIfTableExists(tableName string) (bool, error) {
 }
 
 func (db *AppDatabase) CreateTable(tableName string, script string) error {
-	m := make(map[string]string)
-	m["TableName"] = tableName
-	tmpl, err := template.New("dbSchema").Parse(script)
+	dbSchemaParsed, err := utils.AppSubstituteTable(script, tableName)
 	if err != nil {
 		return err
 	}
 
-	var dbSchemaBuffer bytes.Buffer
-	err = tmpl.Execute(&dbSchemaBuffer, m)
-	if err != nil {
-		return err
-	}
-
-	dbSchemaParsed := dbSchemaBuffer.String()
 	_, err = db.Exec(dbSchemaParsed)
 	return err
 }
@@ -118,6 +107,41 @@ func (db *AppDatabase) DeleteTable(tableName string) error {
 
 	query := fmt.Sprintf("DROP table %s CASCADE", utils.AppFullTableName(tableName))
 	_, err = db.Exec(query)
+	return err
+}
+
+func (db *AppDatabase) ListIndexes(tableName string) ([]string, error) {
+	query := fmt.Sprintf(
+		"SELECT indexdef FROM pg_indexes WHERE schemaname = 'inventory' AND tablename = '%s' AND indexname != '%s_pkey'",
+		tableName, tableName)
+
+	var indexes []string
+
+	rows, err := db.RunQuery(query)
+	if err != nil {
+		return indexes, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var indexDef string
+		err = rows.Scan(&indexDef)
+
+		if err != nil {
+			return indexes, err
+		}
+
+		indexes = append(indexes, indexDef)
+	}
+
+	return indexes, nil
+}
+
+func (db *AppDatabase) CreateIndex(tableName string, script string) error {
+	indexDef, err := utils.AppSubstituteTable(script, tableName)
+
+	_, err = db.Exec(indexDef)
 	return err
 }
 
