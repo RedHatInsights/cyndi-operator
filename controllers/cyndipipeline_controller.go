@@ -188,7 +188,7 @@ func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		i.Instance.TransitionToInitialSync(pipelineVersion)
 		i.probeStartingInitialSync()
 
-		err = i.AppDb.CreateTable(cyndi.TableName(pipelineVersion), i.config.DBTableInitScript)
+		err = i.AppDb.CreateTable(cyndi.TableName(pipelineVersion), i.config.DBTableInitScript+i.config.DBTableIndexSQL)
 		if err != nil {
 			return reconcile.Result{}, i.error(err, "Error creating table")
 		}
