@@ -74,6 +74,9 @@ spec:
               dbSecret:
                 minLength: 1
                 type: string
+              dbTableIndexSQL:
+                minLength: 1
+                type: string
               insightsOnly:
                 default: false
                 type: boolean

@@ -98,7 +98,9 @@ CREATE TABLE inventory.{{.TableName}} (
 	org_id character varying(36),
 	groups jsonb
 );
+`
 
+const defaultDBTableIndexSQL = `
 CREATE INDEX {{.TableName}}_account_index ON inventory.{{.TableName}}
 (account);
 

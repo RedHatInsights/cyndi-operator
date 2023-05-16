@@ -32,6 +32,7 @@ type CyndiConfiguration struct {
 	InventoryDbSecret string
 
 	DBTableInitScript string
+	DBTableIndexSQL   string
 
 	// How often the Reconcile function should run even if there is no event
 	StandardInterval int64
