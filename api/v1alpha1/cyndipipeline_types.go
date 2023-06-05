@@ -58,7 +58,7 @@ type CyndiPipelineSpec struct {
 	InventoryDbSecret *string `json:"inventoryDbSecret,omitempty"`
 
 	// +optional
-	// +kubebuilder:validation:MinLength:=1
+	// +kubebuilder:validation:MinLength:=0
 	DBTableIndexSQL string `json:"dbTableIndexSQL,omitempty"`
 }
 
