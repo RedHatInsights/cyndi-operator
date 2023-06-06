@@ -183,6 +183,7 @@ func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		}
 
 		i.Instance.Status.CyndiConfigVersion = i.config.ConfigMapVersion
+		i.Instance.Status.SpecHash = i.config.SpecHash
 
 		pipelineVersion := fmt.Sprintf("1_%s", strconv.FormatInt(time.Now().UnixNano(), 10))
 		i.Instance.TransitionToInitialSync(pipelineVersion)
@@ -383,6 +384,10 @@ func (i *ReconcileIteration) recreateViewIfNeeded() (bool, error) {
 func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
 	if i.Instance.Status.CyndiConfigVersion != i.config.ConfigMapVersion {
 		return fmt.Errorf("ConfigMap changed. New version is %s", i.config.ConfigMapVersion), nil
+	}
+
+	if i.Instance.Status.SpecHash != i.config.SpecHash {
+		return fmt.Errorf("Spec changed. New hash is %s", i.config.SpecHash), nil
 	}
 
 	dbTableExists, err := i.AppDb.CheckIfTableExists(i.Instance.Status.TableName)

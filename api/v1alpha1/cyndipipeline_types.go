@@ -74,6 +74,8 @@ type CyndiPipelineStatus struct {
 
 	CyndiConfigVersion string `json:"cyndiConfigVersion"`
 
+	SpecHash string `json:"specHash"`
+
 	InitialSyncInProgress bool `json:"initialSyncInProgress"`
 
 	// Name of the database table that is currently backing the "inventory.hosts" view

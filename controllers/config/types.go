@@ -42,6 +42,8 @@ type CyndiConfiguration struct {
 
 	ConfigMapVersion string
 
+	SpecHash string
+
 	SSLMode     string
 	SSLRootCert string
 }
