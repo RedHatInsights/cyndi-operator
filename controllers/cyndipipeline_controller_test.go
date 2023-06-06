@@ -500,6 +500,40 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(*table).To(Equal(pipeline.Status.ActiveTableName))
 		})
 
+		It("Triggers refresh if spec changes", func() {
+			createPipeline(namespacedName)
+			reconcile()
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+			pipelineVersion := pipeline.Status.PipelineVersion
+			tableName := pipeline.Status.TableName
+			Expect(pipeline.Status.CyndiConfigVersion).To(Equal("-1"))
+
+			// now change the DBTableIndexSQL field in the spec
+			pipeline, err := utils.FetchCyndiPipeline(test.Client, namespacedName)
+			Expect(err).ToNot(HaveOccurred())
+			pipeline.Spec.DBTableIndexSQL = "update test"
+			err = test.Client.Update(context.Background(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
+			Expect(pipeline.GetValid()).To(Equal(metav1.ConditionUnknown))
+			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
+
+			// ensure the view still points to the old table while the new one is being synchronized
+			table, err := db.GetCurrentTable()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(*table).To(Equal(tableName))
+			Expect(*table).To(Equal(pipeline.Status.ActiveTableName))
+		})
+
 		It("Triggers refresh if database secret changes", func() {
 			createPipeline(namespacedName)
 			reconcile()
