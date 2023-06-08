@@ -198,7 +198,6 @@ spec:
             - hostCount
             - initialSyncInProgress
             - pipelineVersion
-            - specHash
             - tableName
             - validationFailedCount
             type: object

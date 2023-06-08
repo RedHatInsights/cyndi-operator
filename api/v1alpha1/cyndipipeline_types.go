@@ -74,6 +74,7 @@ type CyndiPipelineStatus struct {
 
 	CyndiConfigVersion string `json:"cyndiConfigVersion"`
 
+	// +optional
 	SpecHash string `json:"specHash"`
 
 	InitialSyncInProgress bool `json:"initialSyncInProgress"`
