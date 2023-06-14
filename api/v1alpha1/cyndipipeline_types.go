@@ -60,6 +60,10 @@ type CyndiPipelineSpec struct {
 	// +optional
 	// +kubebuilder:validation:MinLength:=0
 	DBTableIndexSQL string `json:"dbTableIndexSQL,omitempty"`
+
+	// +optional
+	// +kubebuilder:validation:MinLength:=0
+	Refresh string `json:"refresh,omitempty"`
 }
 
 // CyndiPipelineStatus defines the observed state of CyndiPipeline
