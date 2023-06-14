@@ -107,60 +107,23 @@ The threshold causes the validation to pass as long as the ratio of invalid reco
 
 ## Development
 
+### New instructions
 
-### <a name='devenv'></a> Setting up the development environment
+1. Follow the [development environment instructions for the xjoin-operator](https://github.com/RedHatInsights/xjoin-operator#development).
 
-[CodeReady Containers](https://developers.redhat.com/products/codeready-containers/overview) can be used as the Kubernetes cluster.
-Note that it requires a lot of RAM (over 20 GB on my machine).
-[MiniKube](https://github.com/kubernetes/minikube/releases) is a less resource hungry option.
-The rest of this document assumes CodeReady Containers.
-
-1. Download an unpack [CodeReady Containers](https://developers.redhat.com/products/codeready-containers/overview)
-
-1. Append the following line into `/etc/hosts`
+2. Scale down the cyndi-operator deployment in kubernetes:
+    ```bash
+    kubectl scale --replicas=0 deployments/cyndi-operator-controller-manager -n cyndi-operator-system   
     ```
-    127.0.0.1 advisor-db inventory-db
+   
+3. Add the following to `/etc/hosts`
     ```
-
-1. Configure CRC to use 16G of memory
+    127.0.0.1 advisor-backend-db advisor-backend-db.test.svc advisor-db inventory-db
     ```
-    ./crc config set memory 16384
+   
+4. Forward ports
     ```
-
-1. Start CRC
-    ```
-    ./crc start
-    ```
-
-1. When prompted for a pull secret paste it (you obtained pull secret on step 1 when downloading CRC)
-
-1. Log in to the cluster as kubeadmin (oc login -u kubeadmin -p ...)
-   You'll find the exact command to use in the CRC startup log
-
-1. Create a `cyndi` namespace
-    ```
-    oc create ns cyndi
-    ```
-
-1. Log in to https://quay.io/
-   From Account settings download a kubernetes secret.
-   This secret is used to pull quay.io/cloudservices images
-
-1. Install the quay secret to the cluster
-    ```
-    oc apply -n cyndi -f <secret name>.yml
-    ```
-
-1. In the `dev` folder run
-    ```
-    ./run-admin.sh <secret name>
-    ```
-   and wait for it to finish
-
-1. Set up port-forwarding to database pods
-    ```
-    oc port-forward svc/inventory-db 5432:5432 -n cyndi &
-    oc port-forward svc/advisor-db 5433:5432 -n cyndi &
+    sudo -E kubefwd svc --kubeconfig ~/.kube/config -m 8080:8090 -m 8081:8091 -n test
     ```
 
 ### Running the operator locally
@@ -175,16 +138,6 @@ With the cluster set up it is now possible to install manifests and run the oper
 1. Run the operator
     ```
     make run ENABLE_WEBHOOKS=false
-    ```
-
-1. Finally, create a new pipeline
-    ```
-    oc apply -f ../config/samples/example-pipeline.yaml
-    ```
-
-    Optionally, you can wait for the pipeline to become valid with
-    ```
-    oc wait cyndi/example-pipeline --for=condition=Valid --timeout=300s -n cyndi
     ```
 
 ### Running the operator using OLM
@@ -224,8 +177,7 @@ Then, the CR can be managed via Kubernetes commands like normal.
 
 1. [Setup the dev environment](#devenv)
 2. Forward ports via `dev/forward-ports.sh`
-3. Add a test database to the HBI DB `create database test with template insights;`
-4. Run the tests with `make test`
+3. Run the tests with `make test`
 
 ### Useful commands
 
