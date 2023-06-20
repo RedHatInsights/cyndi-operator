@@ -8,7 +8,7 @@ import (
 )
 
 const inventoryTableName = "public.hosts" // TODO: move
-const countMismatchThreshold = 0.5
+const countMismatchThreshold = 0.9
 const idDiffMaxLength = 51
 
 func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mismatchCount int64, hostCount int64, err error) {
