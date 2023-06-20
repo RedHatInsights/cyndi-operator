@@ -1,14 +1,14 @@
 Cyndi Operator
 ==============
 
-OpenShift operator that manages [Cyndi Pipelines](https://internal.cloud.redhat.com/docs/services/host-inventory/#host-data-syndication-aka-project-cyndi), i.e. data syndication between [Host-based Inventory](https://platform-docs.cloud.paas.psi.redhat.com/backend/inventory.html) and application databases.
+OpenShift operator that manages [Cyndi Pipelines](https://internal.cloud.redhat.com/docs/services/host-inventory/#host-data-syndication-aka-project-cyndi), i.e. data syndication between [Host-based Inventory](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html) and application databases.
 
 A syndication pipeline consumes events from the [Inventory Event Interface](https://internal.cloud.redhat.com/docs/services/host-inventory/#event-interface) and materializes them in the target database.
 [Kafka Connect](https://docs.confluent.io/current/connect/index.html) is used for consuming of the events stream.
 [Custom transformations](https://github.com/redhatinsights/connect-transforms) are used to process the data.
 It is then written into the database using using [JDBC Sink Connector](https://docs.confluent.io/3.1.1/connect/connect-jdbc/docs/sink_connector.html).
 
-For more details about Host Data Syndication (a.k.a. Project Cyndi) see [platform documentation](https://internal.cloud.redhat.com/docs/services/host-inventory/#host-data-syndication-aka-project-cyndi)
+For more details about Host Data Syndication (a.k.a. Project Cyndi) see [platform documentation](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html#cyndi)
 
 ![Architecture](./docs/architecture.png "Cyndi Architecture")
 
@@ -54,7 +54,7 @@ Typical flow
 
 * [Strimzi-managed](https://strimzi.io/docs/operators/latest/quickstart.html) Kafka Connect cluster is running in the OpenShift cluster in the same namespace you intend to create `CyndiPipeline` resources in.
 * A PostgreSQL database to be used as the target database
-  * [Onboarding process](https://internal.cloud.redhat.com/docs/services/host-inventory/#onboarding-process) has been completed on the target database
+  * [Onboarding process](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html#_onboarding_process) has been completed on the target database
   An OpenShift secret with database credentials is stored in the Kafka Connect namespace and named `{appName}-db`, where `appName` is the name used in pipeline definition. If needed, the name of the secret used can be changed by setting `dbSecret` in the `CyndiPipeline` spec.
 * An OpenShift secret named `host-inventory-db` containing Inventory database credentials (used for validation) is present in the Kafka Connect namespace. The name of the secret used can be changed by setting `inventory.dbSecret` in the cyndi `ConfigMap`, or by setting `inventoryDbSecret` in the `CyndiPipeline` spec.
 
@@ -181,33 +181,36 @@ Then, the CR can be managed via Kubernetes commands like normal.
 
 ### Useful commands
 
-Create a host
-```
-KAFKA_BOOTSTRAP_SERVERS=192.168.130.11:$(oc get service my-cluster-kafka-nodeport-0 -n cyndi -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}') python utils/kafka_producer.py
-```
+- Populate shell environment with credentials to databases:
+    ```
+    source $HOME/projects/xjoin-operator/dev/get_credentials.sh test
+    ```
 
-List hosts
-```
-curl -H 'x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjAwMDAwMDEiLCAidHlwZSI6IlVzZXIifX0K' http://api.crc.testing:$(oc get service insights-inventory-public -n cyndi -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}')/api/inventory/v1/hosts
-```
+- Create a host using the [insights-host-inventory Makefile](https://github.com/RedHatInsights/insights-host-inventory/blob/master/Makefile)
+    ```
+    cd $HOME/projects/insights-host-inventory
+    pipenv shell
+    make run_inv_mq_service_test_producer
+    ```
 
-Inspect Kafka Connect cluster
-```
-oc port-forward svc/my-connect-cluster-connect-api 8083:8083 -n cyndi
-```
-then access the kafka connect API at http://localhost:8083/connectors
+- List hosts
+    ```
+    psql -U "$HBI_USER" -h host-inventory-db -p 5432 -d "$HBI_NAME" -c "SELECT * FROM HOSTS;"
+    ```
 
-Connect to inventory db
-```
-pgcli -h localhost -p 5432 -u insights insights
-```
+- Access the kafka connect API at http://connect-connect-api.test.svc:8083/connectors
 
-Connect to advisor db
-```
-pgcli -h localhost -p 5433 -u insights insights
-```
+- Connect to inventory db
+    ```
+    psql -U "$HBI_USER" -h host-inventory-db -p 5432 -d "$HBI_NAME"
+    ```
 
-Inspect index image
-```
-opm index export --index=quay.io/cloudservices/cyndi-operator-index:local -c podman
-```
+- Connect to advisor db
+    ```
+    psql -U "$ADVISOR_USER" -h advisor-backend-db -p 5432 -d "$ADVISOR_NAME"
+    ```
+
+- Inspect index image
+    ```
+    opm index export --index=quay.io/cloudservices/cyndi-operator-index:local -c podman
+    ```
