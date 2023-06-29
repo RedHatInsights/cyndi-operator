@@ -25,6 +25,9 @@ spec:
     - jsonPath: .spec.insightsOnly
       name: Insights only
       type: boolean
+    - jsonPath: .spec.hostsSources
+      name: Hosts Sources
+      type: string
     - jsonPath: .status.activeTableName
       name: Active table
       type: string
@@ -76,6 +79,9 @@ spec:
               insightsOnly:
                 default: false
                 type: boolean
+              hostsSources:
+                default: ""
+                type: string
               inventoryDbSecret:
                 minLength: 1
                 type: string

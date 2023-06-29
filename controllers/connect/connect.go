@@ -24,6 +24,7 @@ import (
 const (
 	LabelAppName        = "cyndi/appName"
 	LabelInsightsOnly   = "cyndi/insightsOnly"
+	LabelHostsSources   = "cyndi/hostsSources"
 	LabelMaxAge         = "cyndi/maxAge"
 	LabelStrimziCluster = "strimzi.io/cluster"
 	LabelOwner          = "cyndi/owner"
@@ -46,6 +47,7 @@ var connectorsGVK = schema.GroupVersionKind{
 type ConnectorConfiguration struct {
 	AppName                  string
 	InsightsOnly             bool
+	HostsSources             string
 	Cluster                  string
 	Topic                    string
 	TableName                string
@@ -104,6 +106,7 @@ func newConnectorResource(name string, namespace string, config ConnectorConfigu
 	m["BatchSize"] = strconv.FormatInt(config.BatchSize, 10)
 	m["MaxAge"] = strconv.FormatInt(config.MaxAge, 10)
 	m["InsightsOnly"] = strconv.FormatBool(config.InsightsOnly)
+	m["HostsSources"] = config.HostsSources
 	m["AllowlistSP"] = config.AllowlistSystemProfile
 	m["SSLMode"] = config.DB.SSLMode
 	m["SSLRootCert"] = config.DB.SSLRootCert
@@ -138,6 +141,7 @@ func newConnectorResource(name string, namespace string, config ConnectorConfigu
 				LabelStrimziCluster: config.Cluster,
 				LabelAppName:        config.AppName,
 				LabelInsightsOnly:   strconv.FormatBool(config.InsightsOnly),
+				LabelHostsSources:   config.HostsSources,
 				LabelMaxAge:         strconv.FormatInt(config.MaxAge, 10),
 			},
 		},

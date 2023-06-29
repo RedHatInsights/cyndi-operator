@@ -223,6 +223,7 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(connector.GetLabels()["cyndi/appName"]).To(Equal(namespacedName.Name))
 			Expect(connector.GetLabels()["cyndi/insightsOnly"]).To(Equal("false"))
+			Expect(connector.GetLabels()["cyndi/hostsSources"]).To(Equal(""))
 			Expect(connector.GetLabels()["strimzi.io/cluster"]).To(Equal("xjoin-kafka-connect-strimzi"))
 
 			exists, err := db.CheckIfTableExists(pipeline.Status.TableName)
@@ -240,6 +241,7 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(connector.GetLabels()["cyndi/appName"]).To(Equal(namespacedName.Name))
 			Expect(connector.GetLabels()["cyndi/insightsOnly"]).To(Equal("false"))
+			Expect(connector.GetLabels()["cyndi/hostsSources"]).To(Equal(""))
 			Expect(connector.GetLabels()["strimzi.io/cluster"]).To(Equal("test01"))
 		})
 

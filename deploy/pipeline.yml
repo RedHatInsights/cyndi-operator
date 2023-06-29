@@ -8,6 +8,8 @@ parameters:
   required: true
 - name: INSIGHTS_ONLY
   value: "false"
+- name: HOSTS_SOURCES
+  value: ""
 - name: VALIDATION_THRESHOLD
   value: "5"
 - name: MAX_AGE
@@ -24,6 +26,7 @@ objects:
   spec:
     appName: ${APP_NAME}
     insightsOnly: ${{INSIGHTS_ONLY}}
+    hostsSources: ${{HOSTS_SOURCES}}
     validationThreshold: ${{VALIDATION_THRESHOLD}}
     maxAge: ${{MAX_AGE}}
     topic: ${SOURCE_TOPIC}

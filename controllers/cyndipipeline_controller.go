@@ -347,6 +347,7 @@ func (i *ReconcileIteration) createConnector(name string, dryRun bool) (*unstruc
 	var connectorConfig = connect.ConnectorConfiguration{
 		AppName:                  i.Instance.Spec.AppName,
 		InsightsOnly:             i.Instance.Spec.InsightsOnly,
+		HostsSources:             i.Instance.Spec.HostsSources,
 		Cluster:                  i.config.ConnectCluster,
 		Topic:                    i.config.Topic,
 		TableName:                i.Instance.Status.TableName,
@@ -419,6 +420,10 @@ func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
 		return fmt.Errorf("InsightsOnly changed"), nil
 	}
 
+	if connector.GetLabels()[connect.LabelHostsSources] != i.Instance.Spec.HostsSources {
+		return fmt.Errorf("HostsSources changed from %s to %s", connector.GetLabels()[connect.LabelHostsSources], i.Instance.Spec.HostsSources), nil
+	}
+
 	if connector.GetLabels()[connect.LabelStrimziCluster] != i.config.ConnectCluster {
 		return fmt.Errorf("ConnectCluster changed from %s to %s", connector.GetLabels()[connect.LabelStrimziCluster], i.config.ConnectCluster), nil
 	}
@@ -471,19 +476,19 @@ func (i *ReconcileIteration) updateViewIfHealthier() error {
 			return err
 		}
 
-		hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly)
+		hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly, i.Instance.Spec.HostsSources)
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from inventory %w", err)
 		}
 
 		activeTable := utils.AppFullTableName(*table)
-		activeTableHostCount, err := i.AppDb.CountHosts(activeTable, false)
+		activeTableHostCount, err := i.AppDb.CountHosts(activeTable, false, "")
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from active table %w", err)
 		}
 
 		appTable := utils.AppFullTableName(i.Instance.Status.TableName)
-		latestTableHostCount, err := i.AppDb.CountHosts(appTable, false)
+		latestTableHostCount, err := i.AppDb.CountHosts(appTable, false, "")
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from application table %w", err)
 		}

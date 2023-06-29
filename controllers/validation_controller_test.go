@@ -142,6 +142,8 @@ var _ = Describe("Validation controller", func() {
 		})
 
 		It("Correctly validates fully in-sync insightsOnly table", func() {
+			// TODO: hostsSources
+			// TODO: hostsSources
 			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
 
 			var (

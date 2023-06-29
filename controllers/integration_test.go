@@ -97,6 +97,7 @@ var _ = Describe("Integration tests", func() {
 	})
 
 	Describe("Normal procedures", func() {
+		// TODO: hostsSources
 		It("Creates a new InsightsOnly pipeline", func() {
 			var (
 				insightsHosts = []string{
@@ -117,6 +118,7 @@ var _ = Describe("Integration tests", func() {
 			seedTable(hbiDb, "public.hosts", true, insightsHosts...)
 			seedTable(hbiDb, "public.hosts", false, otherHosts...)
 
+			// TODO: hostsSources
 			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
 
 			pipeline := getPipeline(namespacedName)
@@ -176,6 +178,7 @@ var _ = Describe("Integration tests", func() {
 
 			seedTable(hbiDb, "public.hosts", true, insightsHosts...)
 
+			// TODO: hostsSources
 			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
 
 			pipeline := getPipeline(namespacedName)
@@ -237,6 +240,7 @@ var _ = Describe("Integration tests", func() {
 
 			seedTable(hbiDb, "public.hosts", true, insightsHosts...)
 
+			// TODO: hostsSources
 			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
 
 			pipeline := reconcile(cyndiReconciler)
@@ -290,6 +294,7 @@ var _ = Describe("Integration tests", func() {
 				// start with one host and transition to STATE_VALID
 				seedTable(hbiDb, "public.hosts", true, insightsHosts[0:1]...)
 
+				// TODO: hostsSources
 				createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
 
 				pipeline := getPipeline(namespacedName)
@@ -342,6 +347,7 @@ var _ = Describe("Integration tests", func() {
 				// start with one host and transition to STATE_VALID
 				seedTable(hbiDb, "public.hosts", true, insightsHosts[0:3]...)
 
+				// TODO: hostsSources
 				createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
 
 				pipeline := getPipeline(namespacedName)

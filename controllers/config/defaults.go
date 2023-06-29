@@ -69,7 +69,7 @@ const defaultConnectorTemplate = `{
 
 	"connection.attempts": 60,
 	"connection.backoff.ms": 10000
-}`
+}` // TODO: hostsSources - what kind of transformation we need
 
 const defaultConnectorTasksMax int64 = 16
 const defaultConnectorBatchSize int64 = 100
