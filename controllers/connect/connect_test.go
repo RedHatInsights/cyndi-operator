@@ -38,6 +38,7 @@ func sampleConnectorConfig() ConnectorConfiguration {
 	return ConnectorConfiguration{
 		AppName:      "advisor",
 		InsightsOnly: true,
+		HostsSources: "",
 		Cluster:      "cluster01",
 		Topic:        "platform.inventory.events",
 		TableName:    "table",
@@ -88,6 +89,7 @@ var _ = Describe("Connect", func() {
 			var config = ConnectorConfiguration{
 				AppName:      "advisor",
 				InsightsOnly: false,
+				HostsSources: "",
 				Cluster:      "cluster01",
 				Topic:        "platform.inventory.events",
 				TableName:    "tableName",
@@ -109,6 +111,7 @@ var _ = Describe("Connect", func() {
 			Expect(labels["strimzi.io/cluster"]).To(Equal(config.Cluster))
 			Expect(labels["cyndi/appName"]).To(Equal(config.AppName))
 			Expect(labels["cyndi/insightsOnly"]).To(Equal("false"))
+			Expect(labels["cyndi/hostsSources"]).To(Equal(""))
 		})
 
 		It("Creates a connector with interpolated configuration", func() {
@@ -130,10 +133,12 @@ var _ = Describe("Connect", func() {
 					{{ end }}
 				}
 			`
+			// TODO: hostsSources - what minimum should be here
 
 			var config = ConnectorConfiguration{
 				AppName:      "advisor",
 				InsightsOnly: false,
+				HostsSources: "",
 				Cluster:      "cluster01",
 				Topic:        "platform.inventory.events",
 				TableName:    "inventory.hosts001",
@@ -174,6 +179,7 @@ var _ = Describe("Connect", func() {
 			var config = ConnectorConfiguration{
 				AppName:      "advisor",
 				InsightsOnly: false,
+				HostsSources: "",
 				Cluster:      "cluster01",
 				Topic:        "platform.inventory.events",
 				TableName:    "tableName",

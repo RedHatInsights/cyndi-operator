@@ -12,14 +12,14 @@ const countMismatchThreshold = 0.5
 const idDiffMaxLength = 51
 
 func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mismatchCount int64, hostCount int64, err error) {
-	hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly)
+	hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly, i.Instance.Spec.HostsSources)
 	if err != nil {
 		return false, -1, -1, -1, err
 	}
 
 	appTable := utils.AppFullTableName(i.Instance.Status.TableName)
 
-	appHostCount, err := i.AppDb.CountHosts(appTable, false)
+	appHostCount, err := i.AppDb.CountHosts(appTable, false, "")
 	if err != nil {
 		return false, -1, -1, -1, err
 	}
@@ -38,12 +38,12 @@ func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mi
 		return false, countMismatchRatio, countMismatch, appHostCount, nil
 	}
 
-	hbiIds, err := i.InventoryDb.GetHostIds(inventoryTableName, i.Instance.Spec.InsightsOnly)
+	hbiIds, err := i.InventoryDb.GetHostIds(inventoryTableName, i.Instance.Spec.InsightsOnly, i.Instance.Spec.HostsSources)
 	if err != nil {
 		return false, -1, -1, -1, err
 	}
 
-	appIds, err := i.AppDb.GetHostIds(appTable, false)
+	appIds, err := i.AppDb.GetHostIds(appTable, false, "")
 	if err != nil {
 		return false, -1, -1, -1, err
 	}
