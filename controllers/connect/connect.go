@@ -141,7 +141,7 @@ func newConnectorResource(name string, namespace string, config ConnectorConfigu
 				LabelStrimziCluster: config.Cluster,
 				LabelAppName:        config.AppName,
 				LabelInsightsOnly:   strconv.FormatBool(config.InsightsOnly),
-				LabelHostsSources:   config.HostsSources,
+				LabelHostsSources:   strings.ReplaceAll(config.HostsSources, ",", "_"),
 				LabelMaxAge:         strconv.FormatInt(config.MaxAge, 10),
 			},
 		},

@@ -3,6 +3,7 @@ package database
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx"
 
@@ -68,9 +69,17 @@ func (db *BaseDatabase) Exec(query string) (result pgx.CommandTag, err error) {
 }
 
 func (db *BaseDatabase) getWhereClause(insightsOnly bool, hostsSources string) string {
-	// TODO: hostsSources - query for getting hosts by sources
+	where := make([]string, 0, 2)
 	if insightsOnly {
-		return "WHERE canonical_facts ? 'insights_id'"
+		where = append(where, "canonical_facts ? 'insights_id'")
+	}
+	if len(hostsSources) > 0 {
+		reporters := strings.Split(hostsSources, ",")
+		where = append(where, fmt.Sprintf("reporter IN ('%s')", strings.Join(reporters, "', '")))
+	}
+
+	if len(where) > 0 {
+		return "WHERE " + strings.Join(where, " AND ")
 	}
 
 	return ""

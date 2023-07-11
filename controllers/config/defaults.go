@@ -24,14 +24,20 @@ const defaultConnectorTemplate = `{
 	"pk.fields": "id",
 	"fields.whitelist": "account,org_id,display_name,tags,updated,created,stale_timestamp,system_profile,insights_id,reporter,per_reporter_staleness,groups",
 
+	{{ $insightsFilter := "" }}
+	{{ $reportersFilter := "" }}
 	{{ if eq .InsightsOnly "true" }}
-	"transforms": "timestampFilter,insightsFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,perReporterStalenessToJson,groupsToJson,injectSchemaKey,injectSchemaValue",
+	{{ $insightsFilter = ",insightsFilter" }}
 	"transforms.insightsFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
 	"transforms.insightsFilter.if": "!!record.headers().lastWithName('insights_id').value()",
-	{{ else  }}
-	"transforms": "timestampFilter,deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,perReporterStalenessToJson,groupsToJson,injectSchemaKey,injectSchemaValue",
+	{{ end }}
+	{{ if gt (len .HostsSources) 0 }}
+	{{ $reportersFilter = ",reportersFilter" }}
+	"transforms.reportersFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
+	"transforms.reportersFilter.if": "'{{ .HostsSources }}'.split(',').includes(record.headers().lastWithName('reporter').value())",
 	{{ end }}
 
+	"transforms": "timestampFilter{{ $insightsFilter }}{{ $reportersFilter }},deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,perReporterStalenessToJson,groupsToJson,injectSchemaKey,injectSchemaValue",
 	"transforms.timestampFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
 	"transforms.timestampFilter.if": "(Date.now() - record.timestamp()) < {{.MaxAge}} * 24 * 60 * 60 * 1000",
 	"transforms.deleteToTombstone.type":"com.redhat.insights.kafka.connect.transforms.DropIf$Value",
@@ -69,7 +75,7 @@ const defaultConnectorTemplate = `{
 
 	"connection.attempts": 60,
 	"connection.backoff.ms": 10000
-}` // TODO: hostsSources - what kind of transformation we need
+}`
 
 const defaultConnectorTasksMax int64 = 16
 const defaultConnectorBatchSize int64 = 100
