@@ -15,12 +15,12 @@ func TestConfig(t *testing.T) {
 }
 
 func createHbiTable(db Database, TestTable string) {
-	rows, err := db.RunQuery(fmt.Sprintf("CREATE TABLE %s (id uuid PRIMARY KEY, canonical_facts jsonb)", TestTable))
+	rows, err := db.RunQuery(fmt.Sprintf("CREATE TABLE %s (id uuid PRIMARY KEY, canonical_facts jsonb, reporter text)", TestTable))
 	Expect(err).ToNot(HaveOccurred())
 	rows.Close()
 }
 
-func seedHbiTable(db Database, TestTable string, insights bool, ids ...string) {
+func seedHbiTableReporter(db Database, TestTable string, insights bool, reporter string, ids ...string) {
 	var canonicalFacts = "{}"
 
 	if insights {
@@ -28,10 +28,14 @@ func seedHbiTable(db Database, TestTable string, insights bool, ids ...string) {
 	}
 
 	for _, id := range ids {
-		rows, err := db.RunQuery(fmt.Sprintf("INSERT INTO %s (id, canonical_facts) VALUES ('%s', '%s')", TestTable, id, canonicalFacts))
+		rows, err := db.RunQuery(fmt.Sprintf("INSERT INTO %s (id, canonical_facts, reporter) VALUES ('%s', '%s', '%s')", TestTable, id, canonicalFacts, reporter))
 		Expect(err).ToNot(HaveOccurred())
 		rows.Close()
 	}
+}
+
+func seedHbiTable(db Database, TestTable string, insights bool, ids ...string) {
+	seedHbiTableReporter(db, TestTable, insights, "puptoo", ids...)
 }
 
 var _ = Describe("Database", func() {
@@ -82,7 +86,16 @@ var _ = Describe("Database", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(count).To(Equal(int64(2)))
 			})
-			// TODO: hostsSources - count hosts by sources
+
+			It("Counts puptoo and rhsm-conduit hosts", func() {
+				seedHbiTableReporter(db, TestTable, false, "puptoo", "374e613b-ee69-49e4-b0e8-3886f1f512ef")
+				seedHbiTableReporter(db, TestTable, true, "rhsm-conduit", "4db4bc46-ccf1-447f-8485-3f39c719fde7", "9cb651e4-3505-4f62-bb00-12fd9a19cd63")
+				seedHbiTableReporter(db, TestTable, true, "yupana", "a77d5711-b670-4ead-97e1-c091624c5f22", "2c201892-f907-414c-ad85-a455f71a90c0", "8dbfff32-b59e-40e5-b784-bdcbff7d8ac4")
+
+				count, err := db.CountHosts(TestTable, false, "puptoo,rhsm-conduit")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(count).To(Equal(int64(3)))
+			})
 		})
 
 		Describe("Fetching host ids", func() {
@@ -108,7 +121,21 @@ var _ = Describe("Database", func() {
 				Expect(ids[1]).To(Equal("8dbfff32-b59e-40e5-b784-bdcbff7d8ac4"))
 				Expect(ids[2]).To(Equal("a77d5711-b670-4ead-97e1-c091624c5f22"))
 			})
-			// TODO: hostsSources - fetch hosts by sources
+
+			It("Gets puptoo and rhsm-conduit host ids", func() {
+				seedHbiTableReporter(db, TestTable, false, "puptoo", "1ed2df3f-db4c-4002-8e89-c63d21a55e49", "2d5f1895-0d6b-4655-8c09-5f2c04fa0d8a")
+				seedHbiTableReporter(db, TestTable, true, "rhsm-conduit", "a77d5711-b670-4ead-97e1-c091624c5f22", "2c201892-f907-414c-ad85-a455f71a90c0", "8dbfff32-b59e-40e5-b784-bdcbff7d8ac4")
+				seedHbiTableReporter(db, TestTable, true, "yupana", "4db4bc46-ccf1-447f-8485-3f39c719fde7", "9cb651e4-3505-4f62-bb00-12fd9a19cd63")
+
+				ids, err := db.GetHostIds(TestTable, false, "puptoo,rhsm-conduit")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ids).To(HaveLen(5))
+				Expect(ids[0]).To(Equal("1ed2df3f-db4c-4002-8e89-c63d21a55e49"))
+				Expect(ids[1]).To(Equal("2c201892-f907-414c-ad85-a455f71a90c0"))
+				Expect(ids[2]).To(Equal("2d5f1895-0d6b-4655-8c09-5f2c04fa0d8a"))
+				Expect(ids[3]).To(Equal("8dbfff32-b59e-40e5-b784-bdcbff7d8ac4"))
+				Expect(ids[4]).To(Equal("a77d5711-b670-4ead-97e1-c091624c5f22"))
+			})
 		})
 	})
 })
