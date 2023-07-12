@@ -133,8 +133,6 @@ var _ = Describe("Connect", func() {
 					{{ end }}
 				}
 			`
-			// TODO: hostsSources - what minimum should be here
-
 			var config = ConnectorConfiguration{
 				AppName:      "advisor",
 				InsightsOnly: false,
@@ -172,6 +170,51 @@ var _ = Describe("Connect", func() {
 			Expect(spec["config"]).To(HaveKeyWithValue("table.name.format", "inventory.hosts001"))
 			Expect(spec["config"]).To(HaveKeyWithValue("max.age", "45"))
 			Expect(spec["config"]).To(HaveKeyWithValue("transforms", "false"))
+		})
+
+		It("Creates a connector with HostsSources configuration", func() {
+			const connectorName = "advisor-02"
+			const configTemplate = `
+				{
+					"topics": "{{.Topic}}",
+					"table.name.format": "{{.TableName}}",
+					{{ $insightsFilter := "" }}
+					{{ $reportersFilter := "" }}
+					{{ if eq .InsightsOnly "true" }}
+					{{ $insightsFilter = ",insightsFilter" }}
+					{{ end }}
+					{{ if gt (len .HostsSources) 0 }}
+					{{ $reportersFilter = ",reportersFilter" }}
+					"transforms.reportersFilter.if": "Arrays.asList('{{ .HostsSources }}'.split(',')).contains(record.headers().lastWithName('reporter').value())",
+					{{ end }}
+
+					"transforms": "stdFilter{{ $insightsFilter }}{{ $reportersFilter }}"
+				}
+			`
+			var config = ConnectorConfiguration{
+				AppName:      "advisor",
+				HostsSources: "puptoo,rhsm-conduit",
+				Cluster:      "cluster01",
+				Topic:        "platform.inventory.events",
+				TableName:    "inventory.hosts001",
+				DB:           dbParams,
+				TasksMax:     64,
+				Template:     configTemplate,
+			}
+
+			_, err := CreateConnector(test.Client, connectorName, namespace, config, nil, nil, false)
+			Expect(err).ToNot(HaveOccurred())
+
+			connector, err := GetConnector(test.Client, connectorName, namespace)
+			Expect(err).ToNot(HaveOccurred())
+
+			spec, ok, err := unstructured.NestedMap(connector.UnstructuredContent(), "spec")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ok).To(BeTrue())
+
+			Expect(spec["config"]).To(HaveKeyWithValue("transforms", "stdFilter,reportersFilter"))
+			Expect(spec["config"]).To(HaveKeyWithValue("transforms.reportersFilter.if",
+				"Arrays.asList('puptoo,rhsm-conduit'.split(',')).contains(record.headers().lastWithName('reporter').value())"))
 		})
 
 		It("Sets the controller reference", func() {
