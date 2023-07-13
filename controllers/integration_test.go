@@ -45,13 +45,17 @@ var _ = Describe("Integration tests", func() {
 		return getPipeline(namespacedName)
 	}
 
-	var seedAppTable = func(db database.Database, TestTable string, ids ...string) {
-		template := `INSERT INTO %s (id, account, org_id, display_name, tags, updated, created, stale_timestamp, system_profile, reporter, per_reporter_staleness) VALUES ('%s', '000001', 'test01', 'test01', '{}', NOW(), NOW(), NOW(), '{}', 'puptoo', '{}')`
+	var seedAppTableReporter = func(db database.Database, TestTable string, reporter string, ids ...string) {
+		template := `INSERT INTO %s (id, account, org_id, display_name, tags, updated, created, stale_timestamp, system_profile, reporter, per_reporter_staleness) VALUES ('%s', '000001', 'test01', 'test01', '{}', NOW(), NOW(), NOW(), '{}', '%s', '{}')`
 
 		for _, id := range ids {
-			_, err := db.Exec(fmt.Sprintf(template, TestTable, id))
+			_, err := db.Exec(fmt.Sprintf(template, TestTable, id, reporter))
 			Expect(err).ToNot(HaveOccurred())
 		}
+	}
+
+	var seedAppTable = func(db database.Database, TestTable string, ids ...string) {
+		seedAppTableReporter(db, TestTable, "puptoo", ids...)
 	}
 
 	BeforeEach(func() {
@@ -97,7 +101,6 @@ var _ = Describe("Integration tests", func() {
 	})
 
 	Describe("Normal procedures", func() {
-		// TODO: hostsSources
 		It("Creates a new InsightsOnly pipeline", func() {
 			var (
 				insightsHosts = []string{
@@ -118,7 +121,6 @@ var _ = Describe("Integration tests", func() {
 			seedTable(hbiDb, "public.hosts", true, insightsHosts...)
 			seedTable(hbiDb, "public.hosts", false, otherHosts...)
 
-			// TODO: hostsSources
 			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
 
 			pipeline := getPipeline(namespacedName)
@@ -167,6 +169,68 @@ var _ = Describe("Integration tests", func() {
 			Expect(pipeline.IsValid()).To(BeTrue())
 		})
 
+		It("Creates a new HostsSources pipeline", func() {
+			var (
+				puptooHosts = []string{
+					"3b8c0b37-6208-4323-b7df-030fee22db0c",
+					"99d28b1e-aad8-4ac0-8d98-ef33e7d3856e",
+					"14bcbbb5-8837-4d24-8122-1d44b65680f5",
+				}
+
+				rhsmHosts = []string{
+					"45f639ff-f1f5-4469-9a7b-35295fdb75fc",
+					"d2b58af8-fd82-4be1-83b1-1d1071b8bc95",
+				}
+				yupanaHosts = []string{
+					"5d378adc-11dc-4791-8f24-cb29e21918a4",
+					"f049590f-96ca-47fb-b35c-bcc097a767d7",
+				}
+			)
+
+			// TODO: move to beforeEach?
+			seedTableReporter(hbiDb, "public.hosts", false, "puptoo", puptooHosts...)
+			seedTableReporter(hbiDb, "public.hosts", false, "rhsm-conduit", rhsmHosts...)
+			seedTableReporter(hbiDb, "public.hosts", false, "yupana", yupanaHosts...)
+
+			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true, HostsSources: "rhsm-conduit,puptoo"})
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+			Expect(pipeline.GetValid()).To(Equal(metav1.ConditionUnknown))
+
+			// start initial sync
+			pipeline = reconcile(cyndiReconciler)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
+			Expect(pipeline.GetValid()).To(Equal(metav1.ConditionUnknown))
+
+			// keeps validating while the first few hosts are replicated
+			appTable := utils.AppFullTableName(pipeline.Status.TableName)
+			seedAppTableReporter(appDb, appTable, "puptoo", puptooHosts...)
+
+			pipeline = reconcile(validationReconciler)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
+			Expect(pipeline.GetValid()).To(Equal(metav1.ConditionFalse))
+			Expect(pipeline.Status.HostCount).To(Equal(int64(3)))
+
+			// complete the initial sync
+			seedAppTableReporter(appDb, appTable, "rhsm-conduit", rhsmHosts...)
+			pipeline = reconcile(validationReconciler)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+			Expect(pipeline.GetValid()).To(Equal(metav1.ConditionTrue))
+			Expect(pipeline.Status.HostCount).To(Equal(int64(5)))
+
+			// transition to valid and create inventory.hosts view
+			pipeline = reconcile(cyndiReconciler)
+			Expect(pipeline.IsValid()).To(BeTrue())
+			activeTable, err := appDb.GetCurrentTable()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(*activeTable).To(Equal(pipeline.Status.ActiveTableName))
+
+			// further reconcilations are noop
+			pipeline = reconcile(validationReconciler, cyndiReconciler)
+			Expect(pipeline.IsValid()).To(BeTrue())
+		})
+
 		It("Refreshes a pipeline when it becomes out of sync", func() {
 			var (
 				insightsHosts = []string{
@@ -178,7 +242,6 @@ var _ = Describe("Integration tests", func() {
 
 			seedTable(hbiDb, "public.hosts", true, insightsHosts...)
 
-			// TODO: hostsSources
 			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
 
 			pipeline := getPipeline(namespacedName)
@@ -240,7 +303,6 @@ var _ = Describe("Integration tests", func() {
 
 			seedTable(hbiDb, "public.hosts", true, insightsHosts...)
 
-			// TODO: hostsSources
 			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
 
 			pipeline := reconcile(cyndiReconciler)
@@ -294,7 +356,6 @@ var _ = Describe("Integration tests", func() {
 				// start with one host and transition to STATE_VALID
 				seedTable(hbiDb, "public.hosts", true, insightsHosts[0:1]...)
 
-				// TODO: hostsSources
 				createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
 
 				pipeline := getPipeline(namespacedName)
@@ -347,7 +408,6 @@ var _ = Describe("Integration tests", func() {
 				// start with one host and transition to STATE_VALID
 				seedTable(hbiDb, "public.hosts", true, insightsHosts[0:3]...)
 
-				// TODO: hostsSources
 				createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
 
 				pipeline := getPipeline(namespacedName)
