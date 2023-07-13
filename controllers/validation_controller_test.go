@@ -31,17 +31,24 @@ func createApplicationTable(db database.Database, TestTable string) {
 	Expect(err).ToNot(HaveOccurred())
 }
 
-func seedTable(db database.Database, TestTable string, insights bool, ids ...string) {
+func seedTableReporter(db database.Database, TestTable string, insights bool, reporter string, ids ...string) {
 	var template = "INSERT INTO %s (id) VALUES ('%s')"
 
 	if insights {
 		template = `INSERT INTO %s (id, canonical_facts) VALUES ('%s', '{"insights_id": "7597d33e-a1a6-4fda-ad1e-b86b73c722fd"}')`
+	}
+	if reporter != "" {
+		template = `INSERT INTO %s (id, reporter) VALUES ('%s', '` + reporter + `')`
 	}
 
 	for _, id := range ids {
 		_, err := db.Exec(fmt.Sprintf(template, TestTable, id))
 		Expect(err).ToNot(HaveOccurred())
 	}
+}
+
+func seedTable(db database.Database, TestTable string, insights bool, ids ...string) {
+	seedTableReporter(db, TestTable, insights, "", ids...)
 }
 
 var _ = Describe("Validation controller", func() {
@@ -97,7 +104,7 @@ var _ = Describe("Validation controller", func() {
 		err = hbiDb.Connect()
 		Expect(err).ToNot(HaveOccurred())
 
-		_, err = hbiDb.Exec(`DROP TABLE IF EXISTS public.hosts CASCADE; CREATE TABLE public.hosts (id uuid PRIMARY KEY, canonical_facts jsonb);`)
+		_, err = hbiDb.Exec(`DROP TABLE IF EXISTS public.hosts CASCADE; CREATE TABLE public.hosts (id uuid PRIMARY KEY, canonical_facts jsonb, reporter text);`)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
@@ -142,8 +149,6 @@ var _ = Describe("Validation controller", func() {
 		})
 
 		It("Correctly validates fully in-sync insightsOnly table", func() {
-			// TODO: hostsSources
-			// TODO: hostsSources
 			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: true})
 
 			var (
@@ -179,6 +184,49 @@ var _ = Describe("Validation controller", func() {
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
 			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
 			Expect(pipeline.Status.HostCount).To(Equal(int64(3)))
+		})
+
+		It("Correctly validates fully in-sync hostsSources table", func() {
+			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{InsightsOnly: false, HostsSources: "rhsm-conduit,puptoo"})
+
+			var (
+				puptooHosts = []string{
+					"3b8c0b37-6208-4323-b7df-030fee22db0c",
+					"99d28b1e-aad8-4ac0-8d98-ef33e7d3856e",
+					"14bcbbb5-8837-4d24-8122-1d44b65680f5",
+				}
+
+				rhsmHosts = []string{
+					"45f639ff-f1f5-4469-9a7b-35295fdb75fc",
+					"d2b58af8-fd82-4be1-83b1-1d1071b8bc95",
+				}
+
+				yupanaHosts = []string{
+					"5d378adc-11dc-4791-8f24-cb29e21918a4",
+					"f049590f-96ca-47fb-b35c-bcc097a767d7",
+				}
+			)
+
+			initializePipeline(false)
+			pipeline := getPipeline(namespacedName)
+
+			seedTableReporter(hbiDb, "public.hosts", false, "puptoo", puptooHosts...)
+			seedTableReporter(hbiDb, "public.hosts", false, "rhsm-conduit", rhsmHosts...)
+			seedTableReporter(hbiDb, "public.hosts", false, "yupana", yupanaHosts...)
+
+			appTable := utils.AppFullTableName(pipeline.Status.TableName)
+			createApplicationTable(appDb, appTable)
+			seedTable(appDb, appTable, false, puptooHosts...)
+			seedTable(appDb, appTable, false, rhsmHosts...)
+
+			reconcile()
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.IsValid()).To(BeTrue())
+			Expect(pipeline.Status.Conditions[0].Reason).To(Equal("ValidationSucceeded"))
+			Expect(pipeline.Status.Conditions[0].Message).To(Equal("Validation succeeded - 0 hosts (0.00%) do not match"))
+			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
+			Expect(pipeline.Status.ValidationFailedCount).To(Equal(int64(0)))
+			Expect(pipeline.Status.HostCount).To(Equal(int64(5)))
 		})
 
 		It("Correctly validates pipeline that's slightly off", func() {
