@@ -15,7 +15,6 @@ parameters:
 - name: SOURCE_TOPIC
   value: "platform.inventory.events"
 - name: DB_TABLE_INDEX_SQL
-- name: ADDITIONAL_FILTERS
 
 objects:
 - apiVersion: cyndi.cloud.redhat.com/v1alpha1
@@ -29,4 +28,3 @@ objects:
     maxAge: ${{MAX_AGE}}
     topic: ${SOURCE_TOPIC}
     dbTableIndexSQL: ${DB_TABLE_INDEX_SQL}
-    additionalFilters: "${{ADDITIONAL_FILTERS}}"

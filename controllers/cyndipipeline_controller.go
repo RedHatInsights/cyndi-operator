@@ -346,7 +346,6 @@ func (i *ReconcileIteration) removeFinalizer() error {
 func (i *ReconcileIteration) createConnector(name string, dryRun bool) (*unstructured.Unstructured, error) {
 	var connectorConfig = connect.ConnectorConfiguration{
 		AppName:                  i.Instance.Spec.AppName,
-		AdditionalFilters:        i.Instance.Spec.AdditionalFilters,
 		InsightsOnly:             i.Instance.Spec.InsightsOnly,
 		Cluster:                  i.config.ConnectCluster,
 		Topic:                    i.config.Topic,
@@ -472,19 +471,19 @@ func (i *ReconcileIteration) updateViewIfHealthier() error {
 			return err
 		}
 
-		hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly, i.Instance.Spec.AdditionalFilters)
+		hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly)
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from inventory %w", err)
 		}
 
 		activeTable := utils.AppFullTableName(*table)
-		activeTableHostCount, err := i.AppDb.CountHosts(activeTable, false, i.Instance.Spec.AdditionalFilters)
+		activeTableHostCount, err := i.AppDb.CountHosts(activeTable, false)
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from active table %w", err)
 		}
 
 		appTable := utils.AppFullTableName(i.Instance.Status.TableName)
-		latestTableHostCount, err := i.AppDb.CountHosts(appTable, false, i.Instance.Spec.AdditionalFilters)
+		latestTableHostCount, err := i.AppDb.CountHosts(appTable, false)
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from application table %w", err)
 		}

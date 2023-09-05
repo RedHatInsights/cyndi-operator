@@ -50,29 +50,6 @@ Typical flow
    The old table and connector are kept while the new table is being seeded.
    Once the new table becomes *Valid* the `inventory.hosts` view is updated and the old table/connector are removed.
 
-## Configuration
-The `CyndiPipeline` custom resource accepts the following attributes:
-```yaml
-- apiVersion: cyndi.cloud.redhat.com/v1alpha1
-  kind: CyndiPipeline
-  metadata:
-    name: application-pipeline
-  spec:
-    appName: application-name # name of your application
-    insightsOnly: true # whether or not syndicate insights hosts only
-    validationThreshold: 5 # TBD
-    maxAge: 45 # TBD
-    topic: platform.inventory.events # kafka topic to subscribe to for DB events
-    dbTableIndexSQL: # plaintext SQL queries defining custom indexes on the syndicated table
-    additionalFilters: # additional kafka filters
-     - name: reporterFilter # this filter actually does the same thing as `insightsOnly: true`
-       type: com.redhat.insights.kafka.connect.transforms.Filter
-       if: "!!record.headers().lastWithName('insights_id').value()"
-       where: "canonical_facts ? 'insights_id'" # SQL query matching the kafka filter's behavior
-```
-
-The `additionalFilter` expects an array of objects (defaults to `[]`) describing custom kafka filters that can be used to restrict the syndication of hosts based on certain parameters. The `name` attribute will be configured as the name of the filter, the `where` attribute configures the SQL query that does the same filtering, but in the databases for validation. Any other attribute except of these two is passed to the filter's definition.
-
 ## Requirements
 
 * [Strimzi-managed](https://strimzi.io/docs/operators/latest/quickstart.html) Kafka Connect cluster is running in the OpenShift cluster in the same namespace you intend to create `CyndiPipeline` resources in.
