@@ -9,6 +9,6 @@ type Database interface {
 	Close() error
 	RunQuery(query string) (*pgx.Rows, error)
 	Exec(query string) (result pgx.CommandTag, err error)
-	CountHosts(table string, insightsOnly bool) (int64, error)
-	GetHostIds(table string, insightsOnly bool) ([]string, error)
+	CountHosts(table string, insightsOnly bool, additionalFilters []map[string]string) (int64, error)
+	GetHostIds(table string, insightsOnly bool, additionalFilters []map[string]string) ([]string, error)
 }

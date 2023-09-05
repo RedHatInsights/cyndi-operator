@@ -26,6 +26,9 @@ spec:
     - jsonPath: .spec.insightsOnly
       name: Insights only
       type: boolean
+    - jsonPath: .spec.additionalFilters
+      name: Additional Filters
+      type: string
     - jsonPath: .status.activeTableName
       name: Active table
       type: string
@@ -64,6 +67,12 @@ spec:
           spec:
             description: CyndiPipelineSpec defines the desired state of CyndiPipeline
             properties:
+              additionalFilters:
+                items:
+                  additionalProperties:
+                    type: string
+                  type: object
+                type: array
               appName:
                 maxLength: 64
                 minLength: 1
