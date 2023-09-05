@@ -37,7 +37,7 @@ const defaultConnectorTemplate = `{
 	"transforms.insightsFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
 	"transforms.insightsFilter.if": "!!record.headers().lastWithName('insights_id').value()",
 	{{ else  }}
-	"transforms": "timestampFilter{{ range $element := .AdditionalFilters }}{{ $element.name }},{{ end }}deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,perReporterStalenessToJson,groupsToJson,injectSchemaKey,injectSchemaValue",
+	"transforms": "timestampFilter,{{ range $element := .AdditionalFilters }}{{ $element.name }},{{ end }}deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,perReporterStalenessToJson,groupsToJson,injectSchemaKey,injectSchemaValue",
 	{{ end }}
 
 	"transforms.timestampFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
