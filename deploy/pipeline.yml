@@ -16,6 +16,7 @@ parameters:
   value: "platform.inventory.events"
 - name: DB_TABLE_INDEX_SQL
 - name: ADDITIONAL_FILTERS
+  value: []
 
 objects:
 - apiVersion: cyndi.cloud.redhat.com/v1alpha1
