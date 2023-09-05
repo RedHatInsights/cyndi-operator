@@ -3,6 +3,7 @@ package database
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx"
 
@@ -67,22 +68,38 @@ func (db *BaseDatabase) Exec(query string) (result pgx.CommandTag, err error) {
 	return result, nil
 }
 
-func (db *BaseDatabase) getWhereClause(insightsOnly bool) string {
+func (db *BaseDatabase) getWhereClause(insightsOnly bool, additionalFilters []map[string]string) string {
+	length := len(additionalFilters)
 	if insightsOnly {
-		return "WHERE canonical_facts ? 'insights_id'"
+		length += 1
+	}
+
+	where := make([]string, length)
+
+	for i, filter := range additionalFilters {
+		where[i] = "(" + filter["where"] + ")"
+	}
+
+	if insightsOnly {
+		where[length - 1] = "(canonical_facts ? 'insights_id')"
+	}
+
+	query := strings.Join(where, " AND ")
+	if len(query) > 0 {
+		return "WHERE " + query
 	}
 
 	return ""
 }
 
-func (db *BaseDatabase) hostCountQuery(table string, insightsOnly bool) string {
-	return fmt.Sprintf(`SELECT count(*) FROM %s %s`, table, db.getWhereClause(insightsOnly))
+func (db *BaseDatabase) hostCountQuery(table string, insightsOnly bool, additionalFilters []map[string]string) string {
+	return fmt.Sprintf(`SELECT count(*) FROM %s %s`, table, db.getWhereClause(insightsOnly, additionalFilters))
 }
 
-func (db *BaseDatabase) CountHosts(table string, insightsOnly bool) (int64, error) {
+func (db *BaseDatabase) CountHosts(table string, insightsOnly bool, additionalFilters []map[string]string) (int64, error) {
 	// TODO: add modified_on filter
 	// waiting on https://issues.redhat.com/browse/RHCLOUD-9545
-	rows, err := db.RunQuery(db.hostCountQuery(table, insightsOnly))
+	rows, err := db.RunQuery(db.hostCountQuery(table, insightsOnly, additionalFilters))
 
 	if err != nil {
 		return -1, err
@@ -107,14 +124,14 @@ func (db *BaseDatabase) CountHosts(table string, insightsOnly bool) (int64, erro
 	return response, err
 }
 
-func (db *BaseDatabase) hostIdQuery(table string, insightsOnly bool) string {
-	return fmt.Sprintf(`SELECT id FROM %s %s ORDER BY id`, table, db.getWhereClause(insightsOnly))
+func (db *BaseDatabase) hostIdQuery(table string, insightsOnly bool, additionalFilters []map[string]string) string {
+	return fmt.Sprintf(`SELECT id FROM %s %s ORDER BY id`, table, db.getWhereClause(insightsOnly, additionalFilters))
 }
 
-func (db *BaseDatabase) GetHostIds(table string, insightsOnly bool) ([]string, error) {
+func (db *BaseDatabase) GetHostIds(table string, insightsOnly bool, additionalFilters []map[string]string) ([]string, error) {
 	// TODO: add modified_on filter
 	// waiting on https://issues.redhat.com/browse/RHCLOUD-9545
-	rows, err := db.RunQuery(db.hostIdQuery(table, insightsOnly))
+	rows, err := db.RunQuery(db.hostIdQuery(table, insightsOnly, additionalFilters))
 
 	var ids []string
 
