@@ -19,7 +19,7 @@ func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mi
 
 	appTable := utils.AppFullTableName(i.Instance.Status.TableName)
 
-	appHostCount, err := i.AppDb.CountHosts(appTable, false, i.Instance.Spec.AdditionalFilters)
+	appHostCount, err := i.AppDb.CountHosts(appTable, false, []map[string]string{})
 	if err != nil {
 		return false, -1, -1, -1, err
 	}
@@ -43,7 +43,7 @@ func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mi
 		return false, -1, -1, -1, err
 	}
 
-	appIds, err := i.AppDb.GetHostIds(appTable, false, i.Instance.Spec.AdditionalFilters)
+	appIds, err := i.AppDb.GetHostIds(appTable, false, []map[string]string{})
 	if err != nil {
 		return false, -1, -1, -1, err
 	}
