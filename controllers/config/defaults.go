@@ -27,7 +27,7 @@ const defaultConnectorTemplate = `{
 	{{ range $element := .AdditionalFilters }}
 	{{ range $key, $value := $element }}
 	{{ if and (ne $key "name") (ne $key "where") }}
-	"transforms.{{ $element.name }}":"{{ $value }}",
+	"transforms.{{ $element.name }}.{{ $key }}":"{{ $value }}",
 	{{ end }}
 	{{ end }}
 	{{ end }}
