@@ -478,13 +478,13 @@ func (i *ReconcileIteration) updateViewIfHealthier() error {
 		}
 
 		activeTable := utils.AppFullTableName(*table)
-		activeTableHostCount, err := i.AppDb.CountHosts(activeTable, false, i.Instance.Spec.AdditionalFilters)
+		activeTableHostCount, err := i.AppDb.CountHosts(activeTable, false, []map[string]string{})
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from active table %w", err)
 		}
 
 		appTable := utils.AppFullTableName(i.Instance.Status.TableName)
-		latestTableHostCount, err := i.AppDb.CountHosts(appTable, false, i.Instance.Spec.AdditionalFilters)
+		latestTableHostCount, err := i.AppDb.CountHosts(appTable, false, []map[string]string{})
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from application table %w", err)
 		}
