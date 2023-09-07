@@ -30,6 +30,6 @@ RUN microdnf install --setopt=tsflags=nodocs -y go-toolset && \
 WORKDIR /
 
 COPY --from=builder /workspace/manager .
-USER nonroot:nonroot
+USER 65534:65534
 
 ENTRYPOINT ["/manager"]
