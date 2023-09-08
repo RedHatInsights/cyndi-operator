@@ -2,6 +2,7 @@ package database
 
 import (
 	. "github.com/RedHatInsights/cyndi-operator/controllers/config"
+	logr "github.com/go-logr/logr/testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,7 +18,7 @@ var _ = Describe("Application Database", func() {
 
 	BeforeEach(uniqueTable)
 	BeforeEach(func() {
-		db = NewAppDatabase(getDBParams())
+		db = NewAppDatabase(getDBParams(), logr.TestLogger{})
 
 		err := db.Connect()
 		Expect(err).ToNot(HaveOccurred())

@@ -3,6 +3,7 @@ package database
 import (
 	"bytes"
 	"fmt"
+	"github.com/go-logr/logr"
 	"strings"
 	"text/template"
 
@@ -37,10 +38,11 @@ const cullingCulledOffset = "14"
 
 const initialPassword = "havefun"
 
-func NewAppDatabase(config *config.DBParams) *AppDatabase {
+func NewAppDatabase(config *config.DBParams, log logr.Logger) *AppDatabase {
 	return &AppDatabase{
 		BaseDatabase: BaseDatabase{
 			Config: config,
+			Log:    log,
 		},
 	}
 }

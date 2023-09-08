@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	logr "github.com/go-logr/logr/testing"
 
 	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
 	"github.com/RedHatInsights/cyndi-operator/controllers/database"
@@ -85,7 +86,7 @@ var _ = Describe("Validation controller", func() {
 		createDbSecret(namespacedName.Namespace, "host-inventory-db", dbParams)
 		createDbSecret(namespacedName.Namespace, utils.AppDefaultDbSecretName(namespacedName.Name), dbParams)
 
-		appDb = database.NewAppDatabase(&dbParams)
+		appDb = database.NewAppDatabase(&dbParams, logr.TestLogger{})
 		err := appDb.Connect()
 		Expect(err).ToNot(HaveOccurred())
 
@@ -93,7 +94,7 @@ var _ = Describe("Validation controller", func() {
 		_, err = appDb.Exec(`DROP SCHEMA IF EXISTS "inventory" CASCADE; CREATE SCHEMA "inventory";`)
 		Expect(err).ToNot(HaveOccurred())
 
-		hbiDb = database.NewBaseDatabase(&dbParams)
+		hbiDb = database.NewBaseDatabase(&dbParams, logr.TestLogger{})
 		err = hbiDb.Connect()
 		Expect(err).ToNot(HaveOccurred())
 

@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	logr "github.com/go-logr/logr/testing"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -194,7 +195,7 @@ var _ = Describe("Pipeline operations", func() {
 		createDbSecret(namespacedName.Namespace, "host-inventory-db", dbParams)
 		createDbSecret(namespacedName.Namespace, utils.AppDefaultDbSecretName(namespacedName.Name), dbParams)
 
-		db = database.NewAppDatabase(&dbParams)
+		db = database.NewAppDatabase(&dbParams, logr.TestLogger{})
 		err := db.Connect()
 		Expect(err).ToNot(HaveOccurred())
 

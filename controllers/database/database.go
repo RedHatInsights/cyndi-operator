@@ -3,6 +3,7 @@ package database
 import (
 	"errors"
 	"fmt"
+	"github.com/go-logr/logr"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -14,13 +15,15 @@ import (
 type BaseDatabase struct {
 	Config     *DBParams
 	connection *pgx.Conn
+	Log        logr.Logger
 }
 
 const connectionStringTemplate = "postgresql://%s:%s@%s:%s/%s?sslmode=%s&sslrootcert=%s"
 
-func NewBaseDatabase(config *config.DBParams) Database {
+func NewBaseDatabase(config *config.DBParams, log logr.Logger) Database {
 	return &BaseDatabase{
 		Config: config,
+		Log:    log,
 	}
 }
 
@@ -41,6 +44,10 @@ func (db *BaseDatabase) Close() error {
 }
 
 func (db *BaseDatabase) RunQuery(query string) (*pgx.Rows, error) {
+	if db.Log != nil {
+		db.Log.Info("DB Query", "query", query)
+	}
+
 	if db.connection == nil {
 		return nil, errors.New("cannot run query because there is no database connection")
 	}
@@ -81,7 +88,7 @@ func (db *BaseDatabase) getWhereClause(insightsOnly bool, additionalFilters []ma
 	}
 
 	if insightsOnly {
-		where[length - 1] = "(canonical_facts ? 'insights_id')"
+		where[length-1] = "(canonical_facts ? 'insights_id')"
 	}
 
 	query := strings.Join(where, " AND ")

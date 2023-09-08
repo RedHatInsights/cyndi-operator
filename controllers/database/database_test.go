@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	logr "github.com/go-logr/logr/testing"
 	"testing"
 
 	"github.com/RedHatInsights/cyndi-operator/test"
@@ -39,7 +40,7 @@ var _ = Describe("Database", func() {
 
 	BeforeEach(uniqueTable)
 	BeforeEach(func() {
-		db = NewBaseDatabase(getDBParams())
+		db = NewBaseDatabase(getDBParams(), logr.TestLogger{})
 
 		err := db.Connect()
 		Expect(err).ToNot(HaveOccurred())

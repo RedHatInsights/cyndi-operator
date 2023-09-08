@@ -107,7 +107,7 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 		return i, err
 	}
 
-	i.AppDb = database.NewAppDatabase(&i.AppDBParams)
+	i.AppDb = database.NewAppDatabase(&i.AppDBParams, reqLogger)
 
 	if err = i.AppDb.Connect(); err != nil {
 		return i, err
@@ -466,7 +466,7 @@ func (i *ReconcileIteration) updateViewIfHealthier() error {
 		}
 
 		// no need to close this as that's done in ReconcileIteration.Close()
-		i.InventoryDb = database.NewBaseDatabase(&i.HBIDBParams)
+		i.InventoryDb = database.NewBaseDatabase(&i.HBIDBParams, i.Log)
 
 		if err = i.InventoryDb.Connect(); err != nil {
 			return err
