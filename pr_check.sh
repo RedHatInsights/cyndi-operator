@@ -13,6 +13,6 @@ fi
 DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
 
-docker --config="$DOCKER_CONF" login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
-docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}" .
-docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
+docker buildx build --platform linux/arm64 -t "${IMAGE}:${IMAGE_TAG}-arm64" .
+docker buildx build --platform linux/amd64 -t "${IMAGE}:${IMAGE_TAG}-amd64" .
+
