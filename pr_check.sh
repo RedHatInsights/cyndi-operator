@@ -13,7 +13,7 @@ fi
 DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
 
-which qemu-user-static
+#which qemu-user-static
 cat /proc/sys/fs/binfmt_misc/qemu-*
 docker version
 docker buildx version
