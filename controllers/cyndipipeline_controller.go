@@ -107,7 +107,7 @@ func (r *CyndiPipelineReconciler) setup(reqLogger logr.Logger, request ctrl.Requ
 		return i, err
 	}
 
-	i.AppDb = database.NewAppDatabase(&i.AppDBParams)
+	i.AppDb = database.NewAppDatabase(&i.AppDBParams, reqLogger)
 
 	if err = i.AppDb.Connect(); err != nil {
 		return i, err
@@ -183,12 +183,13 @@ func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		}
 
 		i.Instance.Status.CyndiConfigVersion = i.config.ConfigMapVersion
+		i.Instance.Status.SpecHash = i.config.SpecHash
 
 		pipelineVersion := fmt.Sprintf("1_%s", strconv.FormatInt(time.Now().UnixNano(), 10))
 		i.Instance.TransitionToInitialSync(pipelineVersion)
 		i.probeStartingInitialSync()
 
-		err = i.AppDb.CreateTable(cyndi.TableName(pipelineVersion), i.config.DBTableInitScript)
+		err = i.AppDb.CreateTable(cyndi.TableName(pipelineVersion), i.config.DBTableInitScript+i.config.DBTableIndexSQL)
 		if err != nil {
 			return reconcile.Result{}, i.error(err, "Error creating table")
 		}
@@ -345,6 +346,7 @@ func (i *ReconcileIteration) removeFinalizer() error {
 func (i *ReconcileIteration) createConnector(name string, dryRun bool) (*unstructured.Unstructured, error) {
 	var connectorConfig = connect.ConnectorConfiguration{
 		AppName:                  i.Instance.Spec.AppName,
+		AdditionalFilters:        i.Instance.Spec.AdditionalFilters,
 		InsightsOnly:             i.Instance.Spec.InsightsOnly,
 		Cluster:                  i.config.ConnectCluster,
 		Topic:                    i.config.Topic,
@@ -383,6 +385,10 @@ func (i *ReconcileIteration) recreateViewIfNeeded() (bool, error) {
 func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
 	if i.Instance.Status.CyndiConfigVersion != i.config.ConfigMapVersion {
 		return fmt.Errorf("ConfigMap changed. New version is %s", i.config.ConfigMapVersion), nil
+	}
+
+	if i.Instance.Status.SpecHash != i.config.SpecHash {
+		return fmt.Errorf("Spec changed. New hash is %s", i.config.SpecHash), nil
 	}
 
 	dbTableExists, err := i.AppDb.CheckIfTableExists(i.Instance.Status.TableName)
@@ -460,25 +466,25 @@ func (i *ReconcileIteration) updateViewIfHealthier() error {
 		}
 
 		// no need to close this as that's done in ReconcileIteration.Close()
-		i.InventoryDb = database.NewBaseDatabase(&i.HBIDBParams)
+		i.InventoryDb = database.NewBaseDatabase(&i.HBIDBParams, i.Log)
 
 		if err = i.InventoryDb.Connect(); err != nil {
 			return err
 		}
 
-		hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly)
+		hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly, i.Instance.Spec.AdditionalFilters)
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from inventory %w", err)
 		}
 
 		activeTable := utils.AppFullTableName(*table)
-		activeTableHostCount, err := i.AppDb.CountHosts(activeTable, false)
+		activeTableHostCount, err := i.AppDb.CountHosts(activeTable, false, []map[string]string{})
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from active table %w", err)
 		}
 
 		appTable := utils.AppFullTableName(i.Instance.Status.TableName)
-		latestTableHostCount, err := i.AppDb.CountHosts(appTable, false)
+		latestTableHostCount, err := i.AppDb.CountHosts(appTable, false, []map[string]string{})
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from application table %w", err)
 		}

@@ -202,6 +202,25 @@ var _ = Describe("Config", func() {
 			Expect(config.ValidationConfigInit.PercentageThreshold).To(Equal(int64(7)))
 		})
 
+		It("Overrides DBTableIndexSQL", func() {
+			cm := &corev1.ConfigMap{
+				Data: map[string]string{
+					"connector.topic": "platform.inventory.events",
+				},
+			}
+
+			value := "db-table-index-test"
+			pipeline := cyndi.CyndiPipeline{
+				Spec: cyndi.CyndiPipelineSpec{
+					DBTableIndexSQL: value,
+				},
+			}
+
+			config, err := BuildCyndiConfig(&pipeline, cm.Data)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(config.DBTableIndexSQL).To(Equal(value))
+		})
+
 		It("Overrides Topic", func() {
 			cm := &corev1.ConfigMap{
 				Data: map[string]string{

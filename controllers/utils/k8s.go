@@ -60,3 +60,14 @@ func ConfigMapHash(cm map[string]string, ignoredKeys ...string) string {
 	algorithm.Write(json)
 	return fmt.Sprint(algorithm.Sum32())
 }
+
+func SpecHash(spec interface{}) (string, error) {
+	jsonVal, err := json.Marshal(spec)
+	if err != nil {
+		return "", err
+	}
+
+	algorithm := fnv.New32a()
+	_, err = algorithm.Write(jsonVal)
+	return fmt.Sprint(algorithm.Sum32()), err
+}

@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	logr "github.com/go-logr/logr/testing"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -194,7 +195,7 @@ var _ = Describe("Pipeline operations", func() {
 		createDbSecret(namespacedName.Namespace, "host-inventory-db", dbParams)
 		createDbSecret(namespacedName.Namespace, utils.AppDefaultDbSecretName(namespacedName.Name), dbParams)
 
-		db = database.NewAppDatabase(&dbParams)
+		db = database.NewAppDatabase(&dbParams, logr.TestLogger{})
 		err := db.Connect()
 		Expect(err).ToNot(HaveOccurred())
 
@@ -487,6 +488,40 @@ var _ = Describe("Pipeline operations", func() {
 
 			// as a result, the pipeline should start re-sync to reflect the change
 			configMap = getConfigMap(namespacedName.Namespace)
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())
+			Expect(pipeline.GetValid()).To(Equal(metav1.ConditionUnknown))
+			Expect(pipeline.Status.PipelineVersion).ToNot(Equal(pipelineVersion))
+
+			// ensure the view still points to the old table while the new one is being synchronized
+			table, err := db.GetCurrentTable()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(*table).To(Equal(tableName))
+			Expect(*table).To(Equal(pipeline.Status.ActiveTableName))
+		})
+
+		It("Triggers refresh if spec changes", func() {
+			createPipeline(namespacedName)
+			reconcile()
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+			pipelineVersion := pipeline.Status.PipelineVersion
+			tableName := pipeline.Status.TableName
+			Expect(pipeline.Status.CyndiConfigVersion).To(Equal("-1"))
+
+			// now change the DBTableIndexSQL field in the spec
+			pipeline, err := utils.FetchCyndiPipeline(test.Client, namespacedName)
+			Expect(err).ToNot(HaveOccurred())
+			pipeline.Spec.DBTableIndexSQL = "update test"
+			err = test.Client.Update(context.Background(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+			reconcile()
+
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
 			Expect(pipeline.Status.InitialSyncInProgress).To(BeFalse())

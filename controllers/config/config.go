@@ -75,6 +75,12 @@ func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm map[string]string) (*Cyn
 
 	config.ConnectorAllowlistSystemProfile = getStringValue(cm, "connector.allowlist.sp", defaultAllowlistSystemProfile)
 
+	if instance != nil && instance.Spec.DBTableIndexSQL != "" {
+		config.DBTableIndexSQL = instance.Spec.DBTableIndexSQL
+	} else {
+		config.DBTableIndexSQL = defaultDBTableIndexSQL
+	}
+
 	config.DBTableInitScript = getStringValue(cm, "db.schema", defaultDBTableInitScript)
 
 	if config.StandardInterval, err = getIntValue(cm, reconcileInterval, defaultStandardInterval); err != nil {
@@ -93,6 +99,12 @@ func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm map[string]string) (*Cyn
 	config.SSLRootCert = getStringValue(cm, "db.ssl.root.cert", defaultSSLRootCert)
 
 	config.ConfigMapVersion = utils.ConfigMapHash(cm, keysIgnoredByRefresh...)
+	if instance != nil {
+		config.SpecHash, err = utils.SpecHash(instance.Spec)
+		if err != nil {
+			return config, err
+		}
+	}
 
 	return config, err
 }

@@ -40,7 +40,7 @@ func (r *ValidationReconciler) setup(reqLogger logr.Logger, request ctrl.Request
 		return i.getValidationConfig().Interval
 	}
 
-	i.InventoryDb = database.NewBaseDatabase(&i.HBIDBParams)
+	i.InventoryDb = database.NewBaseDatabase(&i.HBIDBParams, reqLogger)
 
 	if err = i.InventoryDb.Connect(); err != nil {
 		return i, err

@@ -1,14 +1,14 @@
 Cyndi Operator
 ==============
 
-OpenShift operator that manages [Cyndi Pipelines](https://internal.cloud.redhat.com/docs/services/host-inventory/#host-data-syndication-aka-project-cyndi), i.e. data syndication between [Host-based Inventory](https://platform-docs.cloud.paas.psi.redhat.com/backend/inventory.html) and application databases.
+OpenShift operator that manages [Cyndi Pipelines](https://internal.cloud.redhat.com/docs/services/host-inventory/#host-data-syndication-aka-project-cyndi), i.e. data syndication between [Host-based Inventory](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html) and application databases.
 
 A syndication pipeline consumes events from the [Inventory Event Interface](https://internal.cloud.redhat.com/docs/services/host-inventory/#event-interface) and materializes them in the target database.
 [Kafka Connect](https://docs.confluent.io/current/connect/index.html) is used for consuming of the events stream.
 [Custom transformations](https://github.com/redhatinsights/connect-transforms) are used to process the data.
 It is then written into the database using using [JDBC Sink Connector](https://docs.confluent.io/3.1.1/connect/connect-jdbc/docs/sink_connector.html).
 
-For more details about Host Data Syndication (a.k.a. Project Cyndi) see [platform documentation](https://internal.cloud.redhat.com/docs/services/host-inventory/#host-data-syndication-aka-project-cyndi)
+For more details about Host Data Syndication (a.k.a. Project Cyndi) see [platform documentation](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html#cyndi)
 
 ![Architecture](./docs/architecture.png "Cyndi Architecture")
 
@@ -50,11 +50,34 @@ Typical flow
    The old table and connector are kept while the new table is being seeded.
    Once the new table becomes *Valid* the `inventory.hosts` view is updated and the old table/connector are removed.
 
+## Configuration
+The `CyndiPipeline` custom resource accepts the following attributes:
+```yaml
+- apiVersion: cyndi.cloud.redhat.com/v1alpha1
+  kind: CyndiPipeline
+  metadata:
+    name: application-pipeline
+  spec:
+    appName: application-name # name of your application
+    insightsOnly: true # whether or not syndicate insights hosts only
+    validationThreshold: 5 # TBD
+    maxAge: 45 # TBD
+    topic: platform.inventory.events # kafka topic to subscribe to for DB events
+    dbTableIndexSQL: # plaintext SQL queries defining custom indexes on the syndicated table
+    additionalFilters: # additional kafka filters
+     - name: reporterFilter # this filter actually does the same thing as `insightsOnly: true`
+       type: com.redhat.insights.kafka.connect.transforms.Filter
+       if: "!!record.headers().lastWithName('insights_id').value()"
+       where: "canonical_facts ? 'insights_id'" # SQL query matching the kafka filter's behavior
+```
+
+The `additionalFilter` expects an array of objects (defaults to `[]`) describing custom kafka filters that can be used to restrict the syndication of hosts based on certain parameters. The `name` attribute will be configured as the name of the filter, the `where` attribute configures the SQL query that does the same filtering, but in the databases for validation. Any other attribute except of these two is passed to the filter's definition.
+
 ## Requirements
 
 * [Strimzi-managed](https://strimzi.io/docs/operators/latest/quickstart.html) Kafka Connect cluster is running in the OpenShift cluster in the same namespace you intend to create `CyndiPipeline` resources in.
 * A PostgreSQL database to be used as the target database
-  * [Onboarding process](https://internal.cloud.redhat.com/docs/services/host-inventory/#onboarding-process) has been completed on the target database
+  * [Onboarding process](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html#_onboarding_process) has been completed on the target database
   An OpenShift secret with database credentials is stored in the Kafka Connect namespace and named `{appName}-db`, where `appName` is the name used in pipeline definition. If needed, the name of the secret used can be changed by setting `dbSecret` in the `CyndiPipeline` spec.
 * An OpenShift secret named `host-inventory-db` containing Inventory database credentials (used for validation) is present in the Kafka Connect namespace. The name of the secret used can be changed by setting `inventory.dbSecret` in the cyndi `ConfigMap`, or by setting `inventoryDbSecret` in the `CyndiPipeline` spec.
 
@@ -107,60 +130,23 @@ The threshold causes the validation to pass as long as the ratio of invalid reco
 
 ## Development
 
+### New instructions
 
-### <a name='devenv'></a> Setting up the development environment
+1. Follow the [development environment instructions for the xjoin-operator](https://github.com/RedHatInsights/xjoin-operator#development).
 
-[CodeReady Containers](https://developers.redhat.com/products/codeready-containers/overview) can be used as the Kubernetes cluster.
-Note that it requires a lot of RAM (over 20 GB on my machine).
-[MiniKube](https://github.com/kubernetes/minikube/releases) is a less resource hungry option.
-The rest of this document assumes CodeReady Containers.
-
-1. Download an unpack [CodeReady Containers](https://developers.redhat.com/products/codeready-containers/overview)
-
-1. Append the following line into `/etc/hosts`
+2. Scale down the cyndi-operator deployment in kubernetes:
+    ```bash
+    kubectl scale --replicas=0 deployments/cyndi-operator-controller-manager -n cyndi-operator-system   
     ```
-    127.0.0.1 advisor-db inventory-db
+   
+3. Add the following to `/etc/hosts`
     ```
-
-1. Configure CRC to use 16G of memory
+    127.0.0.1 advisor-backend-db advisor-backend-db.test.svc advisor-db inventory-db
     ```
-    ./crc config set memory 16384
+   
+4. Forward ports
     ```
-
-1. Start CRC
-    ```
-    ./crc start
-    ```
-
-1. When prompted for a pull secret paste it (you obtained pull secret on step 1 when downloading CRC)
-
-1. Log in to the cluster as kubeadmin (oc login -u kubeadmin -p ...)
-   You'll find the exact command to use in the CRC startup log
-
-1. Create a `cyndi` namespace
-    ```
-    oc create ns cyndi
-    ```
-
-1. Log in to https://quay.io/
-   From Account settings download a kubernetes secret.
-   This secret is used to pull quay.io/cloudservices images
-
-1. Install the quay secret to the cluster
-    ```
-    oc apply -n cyndi -f <secret name>.yml
-    ```
-
-1. In the `dev` folder run
-    ```
-    ./run-admin.sh <secret name>
-    ```
-   and wait for it to finish
-
-1. Set up port-forwarding to database pods
-    ```
-    oc port-forward svc/inventory-db 5432:5432 -n cyndi &
-    oc port-forward svc/advisor-db 5433:5432 -n cyndi &
+    sudo -E kubefwd svc --kubeconfig ~/.kube/config -m 8080:8090 -m 8081:8091 -n test
     ```
 
 ### Running the operator locally
@@ -175,16 +161,6 @@ With the cluster set up it is now possible to install manifests and run the oper
 1. Run the operator
     ```
     make run ENABLE_WEBHOOKS=false
-    ```
-
-1. Finally, create a new pipeline
-    ```
-    oc apply -f ../config/samples/example-pipeline.yaml
-    ```
-
-    Optionally, you can wait for the pipeline to become valid with
-    ```
-    oc wait cyndi/example-pipeline --for=condition=Valid --timeout=300s -n cyndi
     ```
 
 ### Running the operator using OLM
@@ -224,38 +200,40 @@ Then, the CR can be managed via Kubernetes commands like normal.
 
 1. [Setup the dev environment](#devenv)
 2. Forward ports via `dev/forward-ports.sh`
-3. Add a test database to the HBI DB `create database test with template insights;`
-4. Run the tests with `make test`
+3. Run the tests with `make test`
 
 ### Useful commands
 
-Create a host
-```
-KAFKA_BOOTSTRAP_SERVERS=192.168.130.11:$(oc get service my-cluster-kafka-nodeport-0 -n cyndi -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}') python utils/kafka_producer.py
-```
+- Populate shell environment with credentials to databases:
+    ```
+    source $HOME/projects/xjoin-operator/dev/get_credentials.sh test
+    ```
 
-List hosts
-```
-curl -H 'x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjAwMDAwMDEiLCAidHlwZSI6IlVzZXIifX0K' http://api.crc.testing:$(oc get service insights-inventory-public -n cyndi -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}')/api/inventory/v1/hosts
-```
+- Create a host using the [insights-host-inventory Makefile](https://github.com/RedHatInsights/insights-host-inventory/blob/master/Makefile)
+    ```
+    cd $HOME/projects/insights-host-inventory
+    pipenv shell
+    make run_inv_mq_service_test_producer
+    ```
 
-Inspect Kafka Connect cluster
-```
-oc port-forward svc/my-connect-cluster-connect-api 8083:8083 -n cyndi
-```
-then access the kafka connect API at http://localhost:8083/connectors
+- List hosts
+    ```
+    psql -U "$HBI_USER" -h host-inventory-db -p 5432 -d "$HBI_NAME" -c "SELECT * FROM HOSTS;"
+    ```
 
-Connect to inventory db
-```
-pgcli -h localhost -p 5432 -u insights insights
-```
+- Access the kafka connect API at http://connect-connect-api.test.svc:8083/connectors
 
-Connect to advisor db
-```
-pgcli -h localhost -p 5433 -u insights insights
-```
+- Connect to inventory db
+    ```
+    psql -U "$HBI_USER" -h host-inventory-db -p 5432 -d "$HBI_NAME"
+    ```
 
-Inspect index image
-```
-opm index export --index=quay.io/cloudservices/cyndi-operator-index:local -c podman
-```
+- Connect to advisor db
+    ```
+    psql -U "$ADVISOR_USER" -h advisor-backend-db -p 5432 -d "$ADVISOR_NAME"
+    ```
+
+- Inspect index image
+    ```
+    opm index export --index=quay.io/cloudservices/cyndi-operator-index:local -c podman
+    ```

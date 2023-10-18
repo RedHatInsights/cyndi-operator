@@ -33,6 +33,10 @@ type CyndiPipelineSpec struct {
 	InsightsOnly bool `json:"insightsOnly"`
 
 	// +optional
+	// +kubebuilder:default:={}
+	AdditionalFilters []map[string]string `json:"additionalFilters,omitempty"`
+
+	// +optional
 	// +kubebuilder:validation:MinLength:=1
 	ConnectCluster *string `json:"connectCluster,omitempty"`
 
@@ -56,6 +60,14 @@ type CyndiPipelineSpec struct {
 	// +optional
 	// +kubebuilder:validation:MinLength:=1
 	InventoryDbSecret *string `json:"inventoryDbSecret,omitempty"`
+
+	// +optional
+	// +kubebuilder:validation:MinLength:=0
+	DBTableIndexSQL string `json:"dbTableIndexSQL,omitempty"`
+
+	// +optional
+	// +kubebuilder:validation:MinLength:=0
+	Refresh string `json:"refresh,omitempty"`
 }
 
 // CyndiPipelineStatus defines the observed state of CyndiPipeline
@@ -69,6 +81,9 @@ type CyndiPipelineStatus struct {
 	TableName       string `json:"tableName"`
 
 	CyndiConfigVersion string `json:"cyndiConfigVersion"`
+
+	// +optional
+	SpecHash string `json:"specHash"`
 
 	InitialSyncInProgress bool `json:"initialSyncInProgress"`
 
@@ -86,6 +101,7 @@ type CyndiPipelineStatus struct {
 // +kubebuilder:resource:shortName=cyndi,categories=all
 // +kubebuilder:printcolumn:name="App",type=string,JSONPath=`.spec.appName`
 // +kubebuilder:printcolumn:name="Insights only",type=boolean,JSONPath=`.spec.insightsOnly`
+// +kubebuilder:printcolumn:name="Additional Filters",type=string,JSONPath=`.spec.additionalFilters`
 // +kubebuilder:printcolumn:name="Active table",type=string,JSONPath=`.status.activeTableName`
 // +kubebuilder:printcolumn:name="Valid",type=string,JSONPath=`.status.conditions[?(@.type == "Valid")].status`
 // +kubebuilder:printcolumn:name="Host Count",type="integer",JSONPath=".status.hostCount"

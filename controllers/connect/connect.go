@@ -45,6 +45,7 @@ var connectorsGVK = schema.GroupVersionKind{
 
 type ConnectorConfiguration struct {
 	AppName                  string
+	AdditionalFilters        []map[string]string
 	InsightsOnly             bool
 	Cluster                  string
 	Topic                    string
@@ -74,7 +75,7 @@ func CheckIfConnectorExists(c client.Client, name string, namespace string) (boo
 }
 
 func newConnectorResource(name string, namespace string, config ConnectorConfiguration) (*unstructured.Unstructured, error) {
-	m := make(map[string]string)
+	m := make(map[string]interface{})
 	m["TableName"] = config.TableName
 	m["Topic"] = config.Topic
 
@@ -99,6 +100,8 @@ func newConnectorResource(name string, namespace string, config ConnectorConfigu
 		m["DBUser"] = fmt.Sprintf("${env:%s_DB_USERNAME}", appNameFormatted)
 		m["DBPassword"] = fmt.Sprintf("${env:%s_DB_PASSWORD}", appNameFormatted)
 	}
+
+	m["AdditionalFilters"] = config.AdditionalFilters
 
 	m["TasksMax"] = strconv.FormatInt(config.TasksMax, 10)
 	m["BatchSize"] = strconv.FormatInt(config.BatchSize, 10)
