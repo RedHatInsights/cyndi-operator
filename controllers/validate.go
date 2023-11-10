@@ -12,14 +12,14 @@ const countMismatchThreshold = 0.5
 const idDiffMaxLength = 51
 
 func (i *ReconcileIteration) validate() (isValid bool, mismatchRatio float64, mismatchCount int64, hostCount int64, err error) {
-	hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly, i.Instance.Spec.AdditionalFilters)
+	appTable := utils.AppFullTableName(i.Instance.Status.TableName)
+
+	appHostCount, err := i.AppDb.CountHosts(appTable, false, []map[string]string{})
 	if err != nil {
 		return false, -1, -1, -1, err
 	}
 
-	appTable := utils.AppFullTableName(i.Instance.Status.TableName)
-
-	appHostCount, err := i.AppDb.CountHosts(appTable, false, []map[string]string{})
+	hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly, i.Instance.Spec.AdditionalFilters)
 	if err != nil {
 		return false, -1, -1, -1, err
 	}
