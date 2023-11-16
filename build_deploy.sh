@@ -17,6 +17,7 @@ docker login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
 if docker buildx ls | grep -q "multiarchbuilder"; then
     echo "Using multiarchbuilder for buildx"
     # Multi-architecture build
+    docker buildx use multiarchbuilder
     docker buildx build --platform linux/amd64,linux/arm64 -t "${IMAGE}:${IMAGE_TAG}" --push .
 else
     echo "Falling back to standard build and push"
