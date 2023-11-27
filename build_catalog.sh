@@ -104,8 +104,8 @@ function build_a_tag ()
 
   log "Pushing the bundle $BUNDLE_IMAGE:$current_commit to repository"
   docker push $BUNDLE_IMAGE:$current_commit
-  # Do not push the $tag tag here.  If there is a problem creating the catalog then
-  # pushing the $tag tag here will mean subsequent runs will be extracting a bundle
+  # Do not push the latest tag here.  If there is a problem creating the catalog then
+  # pushing the latest tag here will mean subsequent runs will be extracting a bundle
   # version that isn't referenced in the catalog.  This will result in all future
   # catalog creation failing to be created.
 
