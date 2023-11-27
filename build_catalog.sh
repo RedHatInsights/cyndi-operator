@@ -69,19 +69,19 @@ function build_a_tag ()
     popd
     rm -rf $tmp_dir
     docker rm tmp_$$
-
-    ###############################
-    #Uncomment to reset the catalog
-    ###############################
-    #log "Resetting index"
-    ./opm index prune -f $CATALOG_IMAGE:$tag -c docker --tag $CATALOG_IMAGE:$tag -f $CATALOG_IMAGE -p blank
-    ./opm index prune-stranded -f $CATALOG_IMAGE:$tag -c docker --tag $CATALOG_IMAGE:$tag
-    ./opm index rm -f $CATALOG_IMAGE:$tag -c docker --tag $CATALOG_IMAGE:$tag -o xjoin-operator
-    docker push $CATALOG_IMAGE:$tag
-    export SKIP_VERSION=$version
-    prev_version=""
-    unset REPLACE_VERSION
   fi
+
+  ###############################
+  #Uncomment to reset the catalog
+  ###############################
+  log "Resetting index"
+  ./opm index prune -f $CATALOG_IMAGE:$tag -c docker --tag $CATALOG_IMAGE:$tag -f $CATALOG_IMAGE -p blank
+  ./opm index prune-stranded -f $CATALOG_IMAGE:$tag -c docker --tag $CATALOG_IMAGE:$tag
+  ./opm index rm -f $CATALOG_IMAGE:$tag -c docker --tag $CATALOG_IMAGE:$tag -o cyndi
+  docker push $CATALOG_IMAGE:$tag
+  export SKIP_VERSION=$version
+  prev_version=""
+  unset REPLACE_VERSION
 
   # Build/push the new bundle
   log "Creating bundle $BUNDLE_IMAGE:$current_commit"
@@ -104,8 +104,8 @@ function build_a_tag ()
 
   log "Pushing the bundle $BUNDLE_IMAGE:$current_commit to repository"
   docker push $BUNDLE_IMAGE:$current_commit
-  # Do not push the latest tag here.  If there is a problem creating the catalog then
-  # pushing the latest tag here will mean subsequent runs will be extracting a bundle
+  # Do not push the $tag tag here.  If there is a problem creating the catalog then
+  # pushing the $tag tag here will mean subsequent runs will be extracting a bundle
   # version that isn't referenced in the catalog.  This will result in all future
   # catalog creation failing to be created.
 
