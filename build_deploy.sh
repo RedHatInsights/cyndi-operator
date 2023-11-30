@@ -11,13 +11,22 @@ if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
     exit 1
 fi
 
-DOCKER_CONF="$PWD/.docker"
-mkdir -p "$DOCKER_CONF"
-docker --config="$DOCKER_CONF" login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
-docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}" .
-docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
+docker login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
+
+# Check if the multiarchbuilder exists
+if docker buildx ls | grep -q "multiarchbuilder"; then
+    echo "Using multiarchbuilder for buildx"
+    # Multi-architecture build
+    docker buildx use multiarchbuilder
+    docker buildx build --platform linux/amd64,linux/arm64 -t "${IMAGE}:${IMAGE_TAG}" --push .
+else
+    echo "Falling back to standard build and push"
+    # Standard build and push
+    docker build -t "${IMAGE}:${IMAGE_TAG}" .
+    docker push "${IMAGE}:${IMAGE_TAG}"
+fi
 
 if [[ "$GIT_BRANCH" == "origin/security-compliance" ]]; then
-    docker --config="$DOCKER_CONF" tag "${IMAGE}:${IMAGE_TAG}" "${IMAGE}:${SECURITY_COMPLIANCE_TAG}"
-    docker --config="$DOCKER_CONF" push "${IMAGE}:${SECURITY_COMPLIANCE_TAG}"
+    docker  tag "${IMAGE}:${IMAGE_TAG}" "${IMAGE}:${SECURITY_COMPLIANCE_TAG}"
+    docker  push "${IMAGE}:${SECURITY_COMPLIANCE_TAG}"
 fi
