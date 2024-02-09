@@ -64,9 +64,9 @@ spec:
                 type: object
                 description: 'The Kafka Connector configuration. The following properties
                   cannot be set: connector.class, tasks.max.'
-              pause:
-                type: boolean
-                description: Whether the connector should be paused. Defaults to false.
+              state:
+                type: string
+                description: The running state of the connector. Defaults to "running"
             description: The specification of the Kafka Connector.
           status:
             type: object
