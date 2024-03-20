@@ -22,8 +22,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager 
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
-RUN microdnf install --setopt=tsflags=nodocs -y go-toolset && \
-    microdnf install -y rsync tar procps-ng && \
+RUN microdnf install -y rsync tar procps-ng && \
     microdnf upgrade -y && \
     microdnf clean all
 
