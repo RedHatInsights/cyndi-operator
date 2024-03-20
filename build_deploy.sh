@@ -27,6 +27,7 @@ else
 fi
 
 if [[ "$GIT_BRANCH" == "origin/security-compliance" ]]; then
+    docker build -t "${IMAGE}:${IMAGE_TAG}" .
     docker  tag "${IMAGE}:${IMAGE_TAG}" "${IMAGE}:${SECURITY_COMPLIANCE_TAG}"
     docker  push "${IMAGE}:${SECURITY_COMPLIANCE_TAG}"
 fi
