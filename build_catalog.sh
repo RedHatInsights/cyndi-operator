@@ -57,7 +57,7 @@ function build_a_tag ()
   trap job_cleanup EXIT ERR SIGINT SIGTERM
 
   DOCKER_CONF="$TMP_JOB_DIR/.docker"
-  mkdir -p "$DOCKER_CONFIG"
+  mkdir -p "$DOCKER_CONF"
 
   docker login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
 
