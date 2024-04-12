@@ -27,6 +27,11 @@ __debug_bin
 
 testbin
 
+# Potential security risks
+.docker
+.podman
+.kube
+
 # do not persist bundle artifact as it is generated with each release
 bundle/manifests/cyndi.clusterserviceversion.yaml
 manifest.yaml
