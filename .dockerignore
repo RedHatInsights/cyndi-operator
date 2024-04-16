@@ -1,0 +1,4 @@
+# Potential security risks
+.docker
+.podman
+.kube
