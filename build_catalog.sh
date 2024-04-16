@@ -5,8 +5,7 @@ set -e
 # https://github.com/app-sre/deployment-validation-operator/blob/master/build_catalog.sh
 #
 ##########################################################################
-function log ()
-{
+log() {
   echo "######## $1 ########"
 }
 count=0
@@ -23,8 +22,12 @@ done
 
 [ $count -gt 0 ] && exit 1
 
-function build_a_tag ()
-{
+job_cleanup() {
+      echo "cleaning up job tmp dir: $TMP_JOB_DIR"
+      rm -fr $TMP_JOB_DIR
+}
+
+build_a_tag() {
   tag=$1
   echo "Building tag: $tag"
 
@@ -48,16 +51,10 @@ function build_a_tag ()
   # Create tmp dir to store data in during job run (do NOT store in $WORKSPACE)
   export TMP_JOB_DIR=$(mktemp -d -p "$HOME" -t "jenkins-${JOB_NAME}-${BUILD_NUMBER}-XXXXXX")
   echo "job tmp dir location: $TMP_JOB_DIR"
-
-  function job_cleanup() {
-      echo "cleaning up job tmp dir: $TMP_JOB_DIR"
-      rm -fr $TMP_JOB_DIR
-  }
-
   trap job_cleanup EXIT ERR SIGINT SIGTERM
 
-  DOCKER_CONF="$TMP_JOB_DIR/.docker"
-  mkdir -p "$DOCKER_CONF"
+  DOCKER_CONFIG="$TMP_JOB_DIR/.docker"
+  mkdir -p "$DOCKER_CONFIG"
 
   docker login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
 
