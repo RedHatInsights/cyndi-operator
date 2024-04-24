@@ -3,9 +3,10 @@ package database
 import (
 	"bytes"
 	"fmt"
-	"github.com/go-logr/logr"
 	"strings"
 	"text/template"
+
+	"github.com/go-logr/logr"
 
 	"github.com/RedHatInsights/cyndi-operator/controllers/config"
 	"github.com/RedHatInsights/cyndi-operator/controllers/utils"
