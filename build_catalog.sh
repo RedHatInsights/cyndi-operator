@@ -32,7 +32,15 @@ build_a_tag() {
   echo "Building tag: $tag"
 
   num_commits=$(git rev-list $(git rev-list --max-parents=0 HEAD)..HEAD --count)
-  current_commit=$(git rev-parse --short=7 HEAD)
+  
+  # If the tag is related to the security-compliance (SC) branch, we need the SC tag to be
+  # the current commit so we don't overwrite the original images
+  if [[ "$tag" == "sc-$(date +%Y%m%d)-$(git rev-parse --short=7 HEAD)" ]]; then
+    current_commit=$tag
+  else 
+    current_commit=$(git rev-parse --short=7 HEAD)
+  fi
+  
   version="0.1.$num_commits-git$current_commit"
   opm_version="1.24.0"
 
@@ -139,8 +147,10 @@ build_a_tag() {
   log "Pushing catalog $CATALOG_IMAGE:$current_commit to repository"
   docker push $CATALOG_IMAGE:$current_commit
 
-  # Only put the $tag tags once everything else has succeeded
-  log "Pushing $tag tags for $BUNDLE_IMAGE and $CATALOG_IMAGE"
-  docker push $CATALOG_IMAGE:$tag
-  docker push $BUNDLE_IMAGE:$tag
+  # If not the security-complaince tag, push the $tag tags once everything else has succeeded
+  if [[ "$tag" != "sc-$(date +%Y%m%d)-$(git rev-parse --short=7 HEAD)" ]]; then
+    log "Pushing $tag tags for $BUNDLE_IMAGE and $CATALOG_IMAGE"
+    docker push $CATALOG_IMAGE:$tag
+    docker push $BUNDLE_IMAGE:$tag
+  fi
 }
