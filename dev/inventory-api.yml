@@ -47,17 +47,17 @@ spec:
           valueFrom:
             secretKeyRef:
               key: db.host
-              name: host-inventory-read-only-db
+              name: host-inventory-db
         - name: INVENTORY_DB_USER
           valueFrom:
             secretKeyRef:
               key: db.user
-              name: host-inventory-read-only-db
+              name: host-inventory-db
         - name: INVENTORY_DB_PASS
           valueFrom:
             secretKeyRef:
               key: db.password
-              name: host-inventory-read-only-db
+              name: host-inventory-db
         - name: INVENTORY_DB_NAME
           value: insights
         - name: APP_NAME
