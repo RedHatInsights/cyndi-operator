@@ -15,7 +15,7 @@ CONNECT_NAME=$(kubectl get kafkaconnect -o custom-columns=:metadata.name -n "$PR
 KAFKA_SVC="svc/$KAFKA_NAME-kafka-bootstrap"
 CONNECT_SVC="svc/$CONNECT_NAME-connect-api"
 ELASTICSEARCH_SVC="svc/xjoin-elasticsearch-es-default"
-HBI_DB_SVC="svc/host-inventory-db"
+HBI_DB_SVC="svc/host-inventory-read-only-db"
 XJOIN_SVC="svc/xjoin-search"
 HBI_SVC="svc/host-inventory-service"
 APICURIO_SVC="svc/xjoin-apicurio-service"
