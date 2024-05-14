@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-
 	logr "github.com/go-logr/logr/testing"
 
 	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
@@ -84,7 +83,7 @@ var _ = Describe("Validation controller", func() {
 
 		dbParams = getDBParams()
 
-		createDbSecret(namespacedName.Namespace, "host-inventory-read-only-db", dbParams)
+		createDbSecret(namespacedName.Namespace, "host-inventory-db", dbParams)
 		createDbSecret(namespacedName.Namespace, utils.AppDefaultDbSecretName(namespacedName.Name), dbParams)
 
 		appDb = database.NewAppDatabase(&dbParams, logr.TestLogger{})
@@ -329,7 +328,7 @@ var _ = Describe("Validation controller", func() {
 
 	Describe("Failures", func() {
 		It("Fails if HBI DB secret is missing", func() {
-			dbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, "host-inventory-read-only-db")
+			dbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, "host-inventory-db")
 			Expect(err).ToNot(HaveOccurred())
 			dbSecret.Data["db.host"] = []byte("localhost")
 			dbSecret.Data["db.port"] = []byte("55432")
