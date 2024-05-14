@@ -79,7 +79,7 @@ The `additionalFilter` expects an array of objects (defaults to `[]`) describing
 * A PostgreSQL database to be used as the target database
   * [Onboarding process](https://consoledot.pages.redhat.com/docs/dev/services/inventory.html#_onboarding_process) has been completed on the target database
   An OpenShift secret with database credentials is stored in the Kafka Connect namespace and named `{appName}-db`, where `appName` is the name used in pipeline definition. If needed, the name of the secret used can be changed by setting `dbSecret` in the `CyndiPipeline` spec.
-* An OpenShift secret named `host-inventory-db` containing Inventory database credentials (used for validation) is present in the Kafka Connect namespace. The name of the secret used can be changed by setting `inventory.dbSecret` in the cyndi `ConfigMap`, or by setting `inventoryDbSecret` in the `CyndiPipeline` spec.
+* An OpenShift secret named `host-inventory-read-only-db` containing Inventory database credentials (used for validation) is present in the Kafka Connect namespace. The name of the secret used can be changed by setting `inventory.dbSecret` in the cyndi `ConfigMap`, or by setting `inventoryDbSecret` in the `CyndiPipeline` spec.
 
 
 ## Implementation
@@ -218,14 +218,14 @@ Then, the CR can be managed via Kubernetes commands like normal.
 
 - List hosts
     ```
-    psql -U "$HBI_USER" -h host-inventory-db -p 5432 -d "$HBI_NAME" -c "SELECT * FROM HOSTS;"
+    psql -U "$HBI_USER" -h host-inventory-read-only-db -p 5432 -d "$HBI_NAME" -c "SELECT * FROM HOSTS;"
     ```
 
 - Access the kafka connect API at http://connect-connect-api.test.svc:8083/connectors
 
 - Connect to inventory db
     ```
-    psql -U "$HBI_USER" -h host-inventory-db -p 5432 -d "$HBI_NAME"
+    psql -U "$HBI_USER" -h host-inventory-read-only-db -p 5432 -d "$HBI_NAME"
     ```
 
 - Connect to advisor db

@@ -51,22 +51,22 @@ spec:
           valueFrom:
             secretKeyRef:
               key: db.host
-              name: host-inventory-db
+              name: host-inventory-read-only-db
         - name: INVENTORY_DB_PORT
           valueFrom:
             secretKeyRef:
               key: db.port
-              name: host-inventory-db
+              name: host-inventory-read-only-db
         - name: INVENTORY_DB_USER
           valueFrom:
             secretKeyRef:
               key: db.user
-              name: host-inventory-db
+              name: host-inventory-read-only-db
         - name: INVENTORY_DB_PASS
           valueFrom:
             secretKeyRef:
               key: db.password
-              name: host-inventory-db
+              name: host-inventory-read-only-db
         - name: INVENTORY_DB_NAME
           value: insights
         - name: INVENTORY_LOG_LEVEL

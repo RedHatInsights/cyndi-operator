@@ -19,8 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
-	logr "github.com/go-logr/logr/testing"
 	"testing"
+
+	logr "github.com/go-logr/logr/testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -192,7 +193,7 @@ var _ = Describe("Pipeline operations", func() {
 
 		dbParams = getDBParams()
 
-		createDbSecret(namespacedName.Namespace, "host-inventory-db", dbParams)
+		createDbSecret(namespacedName.Namespace, "host-inventory-read-only-db", dbParams)
 		createDbSecret(namespacedName.Namespace, utils.AppDefaultDbSecretName(namespacedName.Name), dbParams)
 
 		db = database.NewAppDatabase(&dbParams, logr.TestLogger{})
@@ -265,7 +266,7 @@ var _ = Describe("Pipeline operations", func() {
 
 		It("Considers inventory db secret name configuration", func() {
 			// remove the app db secret and create a secret with non-standard name
-			inventoryDbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, "host-inventory-db")
+			inventoryDbSecret, err := utils.FetchSecret(test.Client, namespacedName.Namespace, "host-inventory-read-only-db")
 			Expect(err).ToNot(HaveOccurred())
 			err = test.Client.Delete(context.TODO(), inventoryDbSecret)
 			Expect(err).ToNot(HaveOccurred())
