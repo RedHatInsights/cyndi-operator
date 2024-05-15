@@ -112,7 +112,7 @@ These are high level descriptions of the steps taken within the reconcile loop i
   * If the validation succeeds, the pipeline transitions back to the *Valid* state.
   * If the pipeline fails to become valid before the retry limit is reached, the pipeline is refreshed (transitions to *New* state)
 
-In addition, regardless of the state, PipelineController
+In addition, regardless of the state, PipelineController:
 
 * checks that configuration of the CyndiPipeline resource or the `cyndi` ConfigMap hasn't changed
 * checks that the database table exists
