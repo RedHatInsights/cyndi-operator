@@ -40,17 +40,17 @@ spec:
           valueFrom:
             secretKeyRef:
               key: db.user
-              name: host-inventory-db
+              name: host-inventory-read-only-db
         - name: POSTGRESQL_PASSWORD
           valueFrom:
             secretKeyRef:
               key: db.password
-              name: host-inventory-db
+              name: host-inventory-read-only-db
         - name: POSTGRESQL_DATABASE
           valueFrom:
             secretKeyRef:
               key: db.name
-              name: host-inventory-db
+              name: host-inventory-read-only-db
         image: registry.redhat.io/rhscl/postgresql-12-rhel7
         imagePullPolicy: IfNotPresent
         livenessProbe:
