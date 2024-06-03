@@ -49,6 +49,8 @@ parameters:
   value: "platform.cyndi.dlq"
 - name: DLQ_TOPIC_REPLICATION_FACTOR
   value: "1"
+- name: HOST_INVENTORY_DB_SECRET
+  value: "host-inventory-read-only-db"
 
 objects:
 - apiVersion: operators.coreos.com/v1alpha1
@@ -111,6 +113,7 @@ objects:
     connector.allowlist.sp: ${CONNECTOR_ALLOWLIST_SP}
     db.ssl.mode: ${SSL_MODE}
     db.ssl.root.cert: ${SSL_ROOT_CERT}
+    inventory.dbSecret: ${HOST_INVENTORY_DB_SECRET}
     refresh: ${REFRESH}
     connector.topic: ${CONNECTOR_TOPIC}
     connector.topic.replication.factor: ${DLQ_TOPIC_REPLICATION_FACTOR}
