@@ -73,7 +73,7 @@ var _ = Describe("Integration tests", func() {
 
 		dbParams = getDBParams()
 
-		createDbSecret(namespacedName.Namespace, "host-inventory-db", dbParams)
+		createDbSecret(namespacedName.Namespace, "host-inventory-read-only-db", dbParams)
 		createDbSecret(namespacedName.Namespace, utils.AppDefaultDbSecretName(namespacedName.Name), dbParams)
 
 		appDb = database.NewAppDatabase(&dbParams, logr.TestLogger{})
