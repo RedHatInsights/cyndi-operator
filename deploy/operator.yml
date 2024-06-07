@@ -118,3 +118,4 @@ objects:
     connector.topic: ${CONNECTOR_TOPIC}
     connector.topic.replication.factor: ${DLQ_TOPIC_REPLICATION_FACTOR}
     connector.deadletterqueue.topic.name: ${DLQ_TOPIC_NAME}
+
