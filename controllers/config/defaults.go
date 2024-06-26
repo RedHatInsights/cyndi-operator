@@ -98,6 +98,7 @@ CREATE TABLE inventory.{{.TableName}} (
 	tags jsonb NOT NULL,
 	updated timestamp with time zone NOT NULL,
 	created timestamp with time zone NOT NULL,
+	syndicated timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
 	stale_timestamp timestamp with time zone NOT NULL,
 	system_profile jsonb NOT NULL,
 	insights_id uuid,
@@ -106,6 +107,17 @@ CREATE TABLE inventory.{{.TableName}} (
 	org_id character varying(36),
 	groups jsonb
 );
+
+CREATE OR REPLACE FUNCTION update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.syndicated = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_timestamp BEFORE INSERT OR UPDATE ON inventory.{{.TableName}}
+FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 `
 
 const defaultDBTableIndexSQL = `
