@@ -237,6 +237,3 @@ Then, the CR can be managed via Kubernetes commands like normal.
     ```
     opm index export --index=quay.io/cloudservices/cyndi-operator-index:local -c podman
     ```
-
-## Synchronization delay
-As the service does asynchronous replication, a small amount of inconsistency is always expected over time. There is always a slight delay between the appearance of a system in the inventory database and the syndicated application databases. In order to measure this delay over time, the `syndicated` field is automatically populated in the target tables with the current timestamp of the moment when a row is created/updated. The replication delay can be calculated by subtracting the `updated` timestamp from this value.
