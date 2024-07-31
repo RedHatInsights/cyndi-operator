@@ -35,5 +35,3 @@ testbin
 # do not persist bundle artifact as it is generated with each release
 bundle/manifests/cyndi.clusterserviceversion.yaml
 manifest.yaml
-
-local_build.sh
