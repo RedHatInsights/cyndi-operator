@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cyndi
+data:
+  standard.interval: ${RECONCILE_INTERVAL}
+  validation.interval: ${VALIDATION_INTERVAL}
+  validation.attempts.threshold: ${VALIDATION_ATTEMPTS_THRESHOLD}
+  validation.percentage.threshold: ${VALIDATION_PERCENTAGE_THRESHOLD}
+  init.validation.interval: ${VALIDATION_INTERVAL_INIT}
+  init.validation.attempts.threshold: ${VALIDATION_ATTEMPTS_THRESHOLD_INIT}
+  init.validation.percentage.threshold: ${VALIDATION_PERCENTAGE_THRESHOLD}
+  connect.cluster: ${CONNECT_CLUSTER}
+  connector.allowlist.sp: ${CONNECTOR_ALLOWLIST_SP}
+  db.ssl.mode: ${SSL_MODE}
+  db.ssl.root.cert: ${SSL_ROOT_CERT}
+  refresh: ${REFRESH}
+  connector.topic: ${CONNECTOR_TOPIC}
+  connector.topic.replication.factor: ${DLQ_TOPIC_REPLICATION_FACTOR}
+  connector.deadletterqueue.topic.name: ${DLQ_TOPIC_NAME}
