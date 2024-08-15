@@ -41,9 +41,18 @@ spec:
           requests:
             cpu: 100m
             memory: 2Gi
+        volumeMounts:
+            - mountPath: /opt/kafka/external-configuration/rds-client-ca
+              name: rds-client-ca
         ports:
         - name: metrics
           containerPort: 8080
           protocol: TCP
+      volumes:
+        - name: rds-client-ca
+          secret:
+            secretName: rds-client-ca
+            defaultMode: 420
+            optional: true
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

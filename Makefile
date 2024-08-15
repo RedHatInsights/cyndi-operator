@@ -166,7 +166,8 @@ bundle-build: bundle
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMAGE):$(BUNDLE_IMAGE_TAG) .
 
 build-template: manifests kustomize controller-gen
-	$(KUSTOMIZE) build config/default | ./manifest2template.py > deploy.yml 
+	$(KUSTOMIZE) build config/deployment-template | ./manifest2template.py > deploy.yml
+	sed -i '/ConfigMap/{n;n;s/cyndi-operator-//;:a;n;ba;}' deploy.yml 
 
 # Create a release manifest file
 release: manifests kustomize
