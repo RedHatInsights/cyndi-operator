@@ -42,14 +42,14 @@ build_a_tag() {
   fi
   
   version="0.1.$num_commits-git$current_commit"
-  opm_version="1.45.0"
+  opm_version="1.24.0"
 
   # Download opm build
   curl -L https://github.com/operator-framework/operator-registry/releases/download/v$opm_version/linux-amd64-opm -o ./opm
   chmod u+x ./opm
 
   # workaround for https://github.com/golang/go/issues/38373
-  GO_VERSION="1.22.6"
+  GO_VERSION="1.18.10"
   GOUNPACK=$(mktemp -d)
   wget -q "https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O $GOUNPACK/go.tar.gz
   tar -C $GOUNPACK -xzf $GOUNPACK/go.tar.gz
