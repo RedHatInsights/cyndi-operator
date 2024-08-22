@@ -194,7 +194,7 @@ Then connect to it with a debugger on port 2345.
 It can also be run locally with `make run ENABLE_WEBHOOKS=false`.
 
 After everything is running, create a new Custom Resource via `kubectl apply -f config/samples/example-pipeline.yaml`.
-Then, the CR can be managed via Kubernetes commands like normal.
+Then the CR can be managed via Kubernetes commands like normal.
 
 ### Running the tests
 
