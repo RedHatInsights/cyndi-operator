@@ -93,7 +93,7 @@ build_a_tag() {
   log "Resetting index"
   ./opm index prune -f $CATALOG_IMAGE:$tag -c docker --tag $CATALOG_IMAGE:$tag -f $CATALOG_IMAGE -p blank
   ./opm index prune-stranded -f $CATALOG_IMAGE:$tag -c docker --tag $CATALOG_IMAGE:$tag
-  ./opm index rm -f $CATALOG_IMAGE:$tag -c docker --tag $CATALOG_IMAGE:$tag -o cyndi
+  # ./opm index rm -f $CATALOG_IMAGE:$tag -c docker --tag $CATALOG_IMAGE:$tag -o cyndi
   docker push $CATALOG_IMAGE:$tag
   export SKIP_VERSION=$version
   prev_version=""
