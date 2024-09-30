@@ -472,6 +472,7 @@ func (i *ReconcileIteration) updateViewIfHealthier() error {
 			return err
 		}
 
+		inventoryTableName := i.config.InventoryDbSchema + ".hosts"
 		hbiHostCount, err := i.InventoryDb.CountHosts(inventoryTableName, i.Instance.Spec.InsightsOnly, i.Instance.Spec.AdditionalFilters)
 		if err != nil {
 			return fmt.Errorf("Failed to get host count from inventory %w", err)

@@ -51,6 +51,8 @@ func BuildCyndiConfig(instance *cyndi.CyndiPipeline, cm map[string]string) (*Cyn
 		config.InventoryDbSecret = getStringValue(cm, "inventory.dbSecret", defaultInventoryDbSecret)
 	}
 
+	config.InventoryDbSchema = getStringValue(cm, "inventory.dbSchema", defaultInventoryDbSchema)
+
 	if config.TopicReplicationFactor, err = getIntValue(cm, "connector.topic.replication.factor", defaultTopicReplicationFactor); err != nil {
 		return config, err
 	}

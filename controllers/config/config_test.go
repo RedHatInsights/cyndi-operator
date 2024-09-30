@@ -30,6 +30,7 @@ func assertDefaults(config *CyndiConfiguration) {
 	Expect(config.ValidationConfig).To(Equal(defaultValidationConfig))
 	Expect(config.ValidationConfigInit).To(Equal(defaultValidationConfigInit))
 	Expect(config.InventoryDbSecret).To(Equal(defaultInventoryDbSecret))
+	Expect(config.InventoryDbSchema).To(Equal(defaultInventoryDbSchema))
 	Expect(config.TopicReplicationFactor).To(Equal(defaultTopicReplicationFactor))
 	Expect(config.DeadLetterQueueTopicName).To(Equal(defaultDeadLetterQueueTopicName))
 
@@ -71,6 +72,7 @@ var _ = Describe("Config", func() {
 				"init.validation.attempts.threshold":   "55",
 				"init.validation.percentage.threshold": "56",
 				"inventory.dbSecret":                   "some-secret",
+				"inventory.dbSchema":                   "some-schema",
 				"connector.topic.replication.factor":   "2",
 				"connector.deadletterqueue.topic.name": "some-topic",
 			},
@@ -95,6 +97,7 @@ var _ = Describe("Config", func() {
 		Expect(config.ValidationConfigInit.AttemptsThreshold).To(Equal(int64(55)))
 		Expect(config.ValidationConfigInit.PercentageThreshold).To(Equal(int64(56)))
 		Expect(config.InventoryDbSecret).To(Equal("some-secret"))
+		Expect(config.InventoryDbSchema).To(Equal("some-schema"))
 		Expect(config.TopicReplicationFactor).To(Equal(int64(2)))
 		Expect(config.DeadLetterQueueTopicName).To(Equal("some-topic"))
 	})

@@ -3,6 +3,7 @@ package config
 const defaultTopic = "platform.inventory.events"
 const defaultConnectCluster = "xjoin-kafka-connect-strimzi"
 const defaultInventoryDbSecret = "host-inventory-read-only-db"
+const defaultInventoryDbSchema = "public"
 
 const defaultConnectorTemplate = `{
 	"connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",

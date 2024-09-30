@@ -78,7 +78,7 @@ func (r *ValidationReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 
-	isValid, mismatchRatio, mismatchCount, hostCount, err := i.validate()
+	isValid, mismatchRatio, mismatchCount, hostCount, err := i.validate(i.config.InventoryDbSchema)
 	if err != nil {
 		return reconcile.Result{}, i.error(err, "Error validating pipeline")
 	}
