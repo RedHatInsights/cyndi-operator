@@ -16,7 +16,7 @@ jobs:
         run: |
           baseimage=$(grep -Po '(?<=FROM )(.* as builder)' Dockerfile)
           base=${baseimage% as builder}
-          skopeo inspect "docker://$base" | grep -Po '(?<="Digest": ")([^"]+)' > .baseimagedigest
+          skopeo inspect "docker://$base" | jq .Digest --raw-output > .baseimagedigest
       - name: Do change if the digest changed
         run: |
           git config user.name 'Update-a-Bot'
