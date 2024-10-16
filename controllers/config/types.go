@@ -30,6 +30,7 @@ type CyndiConfiguration struct {
 
 	// the secret for the inventory DB we should connect to when validating
 	InventoryDbSecret string
+	InventoryDbSchema string
 
 	DBTableInitScript string
 	DBTableIndexSQL   string
