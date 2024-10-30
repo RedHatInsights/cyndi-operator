@@ -177,9 +177,13 @@ func GetConnection(params *DBParams) (connection *pgx.Conn, err error) {
 		params.SSLRootCert,
 	)
 
-	if connection, err = pgx.Connect(context.Background(), connStr); err != nil {
+	if config, err := pgx.ParseConfig(connStr); err != nil {
 		return nil, err
 	} else {
-		return connection, nil
+		if connection, err = pgx.ConnectConfig(context.Background(), config); err != nil {
+			return nil, err
+		} else {
+			return connection, nil
+		}
 	}
 }
