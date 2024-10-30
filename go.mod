@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/go-logr/logr v0.3.0
 	github.com/google/go-cmp v0.5.5
-	github.com/jackc/pgx/v5 v5.0.0
+	github.com/jackc/pgx/v5 v5.7.1
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
 	github.com/prometheus/client_golang v1.11.1
@@ -34,7 +34,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/imdario/mergo v0.3.10 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
-	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/json-iterator/go v1.1.11 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
@@ -53,7 +53,6 @@ require (
 	github.com/spf13/cast v1.3.0 // indirect
 	github.com/spf13/jwalterweatherman v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/testify v1.8.1 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	go.uber.org/atomic v1.6.0 // indirect
 	go.uber.org/multierr v1.5.0 // indirect
