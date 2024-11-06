@@ -1,15 +1,12 @@
 package database
 
 import (
-	"context"
 	"errors"
 	"fmt"
+	"github.com/go-logr/logr"
 	"strings"
 
-	"github.com/go-logr/logr"
-
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx"
 
 	"github.com/RedHatInsights/cyndi-operator/controllers/config"
 	. "github.com/RedHatInsights/cyndi-operator/controllers/config"
@@ -40,13 +37,13 @@ func (db *BaseDatabase) Connect() (err error) {
 
 func (db *BaseDatabase) Close() error {
 	if db.connection != nil {
-		return db.connection.Close(context.Background())
+		return db.connection.Close()
 	}
 
 	return nil
 }
 
-func (db *BaseDatabase) RunQuery(query string) (pgx.Rows, error) {
+func (db *BaseDatabase) RunQuery(query string) (*pgx.Rows, error) {
 	if db.Log != nil {
 		db.Log.Info("DB Query", "query", query)
 	}
@@ -55,7 +52,7 @@ func (db *BaseDatabase) RunQuery(query string) (pgx.Rows, error) {
 		return nil, errors.New("cannot run query because there is no database connection")
 	}
 
-	rows, err := db.connection.Query(context.Background(), query)
+	rows, err := db.connection.Query(query)
 
 	if err != nil {
 		return nil, fmt.Errorf("Error executing query %s, %w", query, err)
@@ -64,12 +61,12 @@ func (db *BaseDatabase) RunQuery(query string) (pgx.Rows, error) {
 	return rows, nil
 }
 
-func (db *BaseDatabase) Exec(query string) (result pgconn.CommandTag, err error) {
+func (db *BaseDatabase) Exec(query string) (result pgx.CommandTag, err error) {
 	if db.connection == nil {
 		return result, errors.New("cannot run query because there is no database connection")
 	}
 
-	result, err = db.connection.Exec(context.Background(), query)
+	result, err = db.connection.Exec(query)
 
 	if err != nil {
 		return result, fmt.Errorf("Error executing query %s, %w", query, err)
@@ -177,9 +174,13 @@ func GetConnection(params *DBParams) (connection *pgx.Conn, err error) {
 		params.SSLRootCert,
 	)
 
-	if connection, err = pgx.Connect(context.Background(), connStr); err != nil {
+	if config, err := pgx.ParseConnectionString(connStr); err != nil {
 		return nil, err
 	} else {
-		return connection, nil
+		if connection, err = pgx.Connect(config); err != nil {
+			return nil, err
+		} else {
+			return connection, nil
+		}
 	}
 }
