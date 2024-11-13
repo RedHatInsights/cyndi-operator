@@ -1,6 +1,6 @@
 module github.com/RedHatInsights/cyndi-operator
 
-go 1.22.7
+go 1.22
 
 require (
 	github.com/go-logr/logr v0.3.0
