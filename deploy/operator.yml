@@ -28,7 +28,7 @@ parameters:
 - name: CONNECTOR_ALLOWLIST_SP
   value: "sap_system,sap_sids"
 - name: SSL_MODE
-  value: verify-full
+  value: verify-ca
 - name: SSL_ROOT_CERT
   value: /opt/kafka/external-configuration/rds-client-ca/rds-cacert
 - name: EPHEMERAL
