@@ -51,7 +51,9 @@ Typical flow
    Once the new table becomes *Valid* the `inventory.hosts` view is updated and the old table/connector are removed.
 
 ## Configuration
+
 The `CyndiPipeline` custom resource accepts the following attributes:
+
 ```yaml
 - apiVersion: cyndi.cloud.redhat.com/v1alpha1
   kind: CyndiPipeline
