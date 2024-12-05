@@ -156,7 +156,7 @@ var _ = Describe("Connect", func() {
 			Expect(spec).To(HaveKey("config"))
 			Expect(spec).To(HaveKeyWithValue("class", "io.confluent.connect.jdbc.JdbcSinkConnector"))
 			Expect(spec).To(HaveKeyWithValue("tasksMax", int64(64)))
-			Expect(spec).To(HaveKeyWithValue("pause", false))
+			Expect(spec).To(HaveKeyWithValue("state", "running"))
 
 			Expect(spec["config"]).To(HaveKeyWithValue("tasks.max", "64"))
 			Expect(spec["config"]).To(HaveKeyWithValue("topics", "platform.inventory.events"))

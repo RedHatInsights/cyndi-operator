@@ -148,7 +148,7 @@ func newConnectorResource(name string, namespace string, config ConnectorConfigu
 			"tasksMax": config.TasksMax,
 			"class":    "io.confluent.connect.jdbc.JdbcSinkConnector",
 			"config":   configTemplateInterface,
-			"pause":    false,
+			"state":    "running",
 		},
 	}
 
