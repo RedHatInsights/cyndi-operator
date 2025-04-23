@@ -1,15 +1,7 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  labels:
-    control-plane: controller-manager
-  name: system
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: controller-manager
-  namespace: system
   labels:
     control-plane: controller-manager
 spec:
@@ -49,9 +41,18 @@ spec:
           requests:
             cpu: 100m
             memory: 2Gi
+        volumeMounts:
+            - mountPath: /opt/kafka/external-configuration/rds-client-ca
+              name: rds-client-ca
         ports:
         - name: metrics
           containerPort: 8080
           protocol: TCP
+      volumes:
+        - name: rds-client-ca
+          secret:
+            secretName: rds-client-ca
+            defaultMode: 420
+            optional: true
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
