@@ -84,7 +84,7 @@ func (i *ReconcileIteration) debug(message string, keysAndValues ...interface{})
 }
 
 func (i *ReconcileIteration) getValidationConfig() config.ValidationConfiguration {
-	if i.Instance.Status.InitialSyncInProgress == true {
+	if i.Instance.Status.InitialSyncInProgress {
 		return i.config.ValidationConfigInit
 	}
 
