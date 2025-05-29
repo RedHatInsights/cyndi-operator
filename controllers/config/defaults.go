@@ -23,7 +23,7 @@ const defaultConnectorTemplate = `{
 	"table.name.format": "inventory.{{.TableName}}",
 	"pk.mode": "record_key",
 	"pk.fields": "id",
-	"fields.whitelist": "account,org_id,display_name,tags,updated,created,stale_timestamp,system_profile,insights_id,reporter,per_reporter_staleness,groups",
+	"fields.whitelist": "account,org_id,display_name,tags,updated,created,last_check_in,stale_timestamp,system_profile,insights_id,reporter,per_reporter_staleness,groups",
 
 	{{ range $element := .AdditionalFilters }}
 	{{ range $key, $value := $element }}
@@ -65,7 +65,7 @@ const defaultConnectorTemplate = `{
 	"transforms.injectSchemaKey.type": "com.redhat.insights.kafka.connect.transforms.InjectSchema$Key",
 	"transforms.injectSchemaKey.schema": "{\"type\":\"string\",\"optional\":false, \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=uuid\"}",
 	"transforms.injectSchemaValue.type": "com.redhat.insights.kafka.connect.transforms.InjectSchema$Value",
-	"transforms.injectSchemaValue.schema": "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"optional\":true,\"field\":\"account\"},{\"type\":\"string\",\"optional\":true,\"field\":\"org_id\"},{\"type\":\"string\",\"optional\":false,\"field\":\"display_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"tags\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":false,\"field\":\"updated\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"created\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"stale_timestamp\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"system_profile\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":true,\"field\":\"insights_id\"},{\"type\":\"string\",\"optional\":false,\"field\":\"reporter\"},{\"type\":\"string\",\"optional\":false,\"field\":\"per_reporter_staleness\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":true,\"field\":\"groups\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"}],\"optional\":false}",
+	"transforms.injectSchemaValue.schema": "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"optional\":true,\"field\":\"account\"},{\"type\":\"string\",\"optional\":true,\"field\":\"org_id\"},{\"type\":\"string\",\"optional\":false,\"field\":\"display_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"tags\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":false,\"field\":\"updated\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"created\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"last_check_in\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"stale_timestamp\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"system_profile\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":true,\"field\":\"insights_id\"},{\"type\":\"string\",\"optional\":false,\"field\":\"reporter\"},{\"type\":\"string\",\"optional\":false,\"field\":\"per_reporter_staleness\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":true,\"field\":\"groups\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"}],\"optional\":false}",
 
 	"errors.tolerance": "all",
 	"errors.deadletterqueue.topic.name": "{{.DeadLetterQueueTopicName}}",
@@ -99,6 +99,7 @@ CREATE TABLE inventory.{{.TableName}} (
 	tags jsonb NOT NULL,
 	updated timestamp with time zone NOT NULL,
 	created timestamp with time zone NOT NULL,
+	last_check_in timestamp with time zone NOT NULL,
 	stale_timestamp timestamp with time zone NOT NULL,
 	system_profile jsonb NOT NULL,
 	insights_id uuid,
@@ -121,6 +122,9 @@ CREATE INDEX {{.TableName}}_display_name_index ON inventory.{{.TableName}}
 
 CREATE INDEX {{.TableName}}_tags_index ON inventory.{{.TableName}} USING GIN
 (tags JSONB_PATH_OPS);
+
+CREATE INDEX {{.TableName}}_last_check_in_index ON
+inventory.{{.TableName}} (last_check_in);
 
 CREATE INDEX {{.TableName}}_stale_timestamp_index ON
 inventory.{{.TableName}} (stale_timestamp);
