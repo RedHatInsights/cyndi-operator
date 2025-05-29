@@ -21,6 +21,7 @@ const viewTemplate = `CREATE OR REPLACE VIEW inventory.hosts AS SELECT
 	display_name,
 	created,
 	updated,
+	last_check_in,
 	stale_timestamp,
 	stale_timestamp + INTERVAL '1' DAY * '%[2]s' AS stale_warning_timestamp,
 	stale_timestamp + INTERVAL '1' DAY * '%[3]s' AS culled_timestamp,
