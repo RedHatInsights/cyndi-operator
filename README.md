@@ -86,7 +86,7 @@ The `additionalFilter` expects an array of objects (defaults to `[]`) describing
 
 ## Implementation
 
-The operator defines two controllers that reconcile a Cyndi Pipeline
+The operator defines two controllers that reconcile a Cyndi Pipeline:
 * [PipelineController](./controllers/cyndipipeline_controller.go) which manages connectors, database objects and handles automated recovery
 * [ValidationController](./controllers/validation_controller.go) which periodically compares the data in the target database with what is stored in Host-based inventory to determine whether the pipeline is valid
 
