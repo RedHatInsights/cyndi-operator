@@ -99,14 +99,14 @@ CREATE TABLE inventory.{{.TableName}} (
 	tags jsonb NOT NULL,
 	updated timestamp with time zone NOT NULL,
 	created timestamp with time zone NOT NULL,
-	last_check_in timestamp with time zone NOT NULL,
 	stale_timestamp timestamp with time zone NOT NULL,
 	system_profile jsonb NOT NULL,
 	insights_id uuid,
 	reporter character varying(255) NOT NULL,
 	per_reporter_staleness jsonb NOT NULL,
 	org_id character varying(36),
-	groups jsonb
+	groups jsonb,
+	last_check_in timestamp with time zone NOT NULL
 );
 `
 
