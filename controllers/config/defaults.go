@@ -34,38 +34,59 @@ const defaultConnectorTemplate = `{
 	{{ end }}
 
 	{{ if eq .InsightsOnly "true" }}
-	"transforms": "timestampFilter,insightsFilter,{{ range $element := .AdditionalFilters }}{{ $element.name }},{{ end }}deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,perReporterStalenessToJson,groupsToJson,injectSchemaKey,injectSchemaValue",
+	"transforms": "timestampFilter,insightsFilter,{{ range $element := .AdditionalFilters }}{{ $element.name }},{{ end }}deleteToTombstone,extractHost,systemProfileFilter,extractArch,extractHostType,extractOperatingSystem,operatingSystemToJson,systemProfileToJson,tagsToJson,perReporterStalenessToJson,groupsToJson,injectSchemaKey,injectSchemaValue",
 	"transforms.insightsFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
 	"transforms.insightsFilter.if": "!!record.headers().lastWithName('insights_id').value()",
 	{{ else  }}
-	"transforms": "timestampFilter,{{ range $element := .AdditionalFilters }}{{ $element.name }},{{ end }}deleteToTombstone,extractHost,systemProfileFilter,systemProfileToJson,tagsToJson,perReporterStalenessToJson,groupsToJson,injectSchemaKey,injectSchemaValue",
+	"transforms": "timestampFilter,{{ range $element := .AdditionalFilters }}{{ $element.name }},{{ end }}deleteToTombstone,extractHost,systemProfileFilter,extractArch,extractHostType,extractOperatingSystem,operatingSystemToJson,systemProfileToJson,tagsToJson,perReporterStalenessToJson,groupsToJson,injectSchemaKey,injectSchemaValue",
 	{{ end }}
 
 	"transforms.timestampFilter.type":"com.redhat.insights.kafka.connect.transforms.Filter",
 	"transforms.timestampFilter.if": "(Date.now() - record.timestamp()) < {{.MaxAge}} * 24 * 60 * 60 * 1000",
 	"transforms.deleteToTombstone.type":"com.redhat.insights.kafka.connect.transforms.DropIf$Value",
 	"transforms.deleteToTombstone.if": "'delete'.equals(record.headers().lastWithName('event_type').value())",
+	
 	"transforms.extractHost.type":"org.apache.kafka.connect.transforms.ExtractField$Value",
 	"transforms.extractHost.field":"host",
+	
 	"transforms.systemProfileFilter.type": "com.redhat.insights.kafka.connect.transforms.FilterFields$Value",
 	"transforms.systemProfileFilter.field": "system_profile",
 	"transforms.systemProfileFilter.allowlist": "{{.AllowlistSP}}",
+	
+	"transforms.extractArch.type": "org.apache.kafka.connect.transforms.ExtractField$Value",
+	"transforms.extractArch.field": "system_profile.arch",
+	
+	"transforms.extractHostType.type": "org.apache.kafka.connect.transforms.ExtractField$Value",
+	"transforms.extractHostType.field": "system_profile.host_type",
+	
+	"transforms.extractOperatingSystem.type": "org.apache.kafka.connect.transforms.ExtractField$Value",
+	"transforms.extractOperatingSystem.field": "system_profile.operating_system",
+	
+	"transforms.operatingSystemToJson.type": "com.redhat.insights.kafka.connect.transforms.FieldToJson$Value",
+	"transforms.operatingSystemToJson.originalField": "operating_system",
+	"transforms.operatingSystemToJson.destinationField": "operating_system",
+	
 	"transforms.systemProfileToJson.type": "com.redhat.insights.kafka.connect.transforms.FieldToJson$Value",
 	"transforms.systemProfileToJson.originalField": "system_profile",
 	"transforms.systemProfileToJson.destinationField": "system_profile",
+	
 	"transforms.tagsToJson.type": "com.redhat.insights.kafka.connect.transforms.FieldToJson$Value",
 	"transforms.tagsToJson.originalField": "tags",
 	"transforms.tagsToJson.destinationField": "tags",
+	
 	"transforms.perReporterStalenessToJson.type": "com.redhat.insights.kafka.connect.transforms.FieldToJson$Value",
 	"transforms.perReporterStalenessToJson.originalField": "per_reporter_staleness",
 	"transforms.perReporterStalenessToJson.destinationField": "per_reporter_staleness",
+	
 	"transforms.groupsToJson.type": "com.redhat.insights.kafka.connect.transforms.FieldToJson$Value",
 	"transforms.groupsToJson.originalField": "groups",
 	"transforms.groupsToJson.destinationField": "groups",
+	
 	"transforms.injectSchemaKey.type": "com.redhat.insights.kafka.connect.transforms.InjectSchema$Key",
 	"transforms.injectSchemaKey.schema": "{\"type\":\"string\",\"optional\":false, \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=uuid\"}",
+	
 	"transforms.injectSchemaValue.type": "com.redhat.insights.kafka.connect.transforms.InjectSchema$Value",
-	"transforms.injectSchemaValue.schema": "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"optional\":true,\"field\":\"account\"},{\"type\":\"string\",\"optional\":true,\"field\":\"org_id\"},{\"type\":\"string\",\"optional\":false,\"field\":\"display_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"tags\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":false,\"field\":\"updated\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"created\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"last_check_in\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"stale_timestamp\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"system_profile\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":true,\"field\":\"insights_id\"},{\"type\":\"string\",\"optional\":false,\"field\":\"reporter\"},{\"type\":\"string\",\"optional\":false,\"field\":\"per_reporter_staleness\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":true,\"field\":\"groups\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"}],\"optional\":false}",
+	"transforms.injectSchemaValue.schema": "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"optional\":true,\"field\":\"account\"},{\"type\":\"string\",\"optional\":true,\"field\":\"org_id\"},{\"type\":\"string\",\"optional\":false,\"field\":\"display_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"tags\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":false,\"field\":\"updated\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"created\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"last_check_in\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"stale_timestamp\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=timestamptz\"},{\"type\":\"string\",\"optional\":false,\"field\":\"system_profile\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":true,\"field\":\"insights_id\"},{\"type\":\"string\",\"optional\":false,\"field\":\"reporter\"},{\"type\":\"string\",\"optional\":false,\"field\":\"per_reporter_staleness\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":true,\"field\":\"groups\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"},{\"type\":\"string\",\"optional\":true,\"field\":\"arch\"},{\"type\":\"string\",\"optional\":true,\"field\":\"host_type\"},{\"type\":\"string\",\"optional\":false,\"field\":\"operating_system\", \"name\": \"com.redhat.cloud.inventory.syndication.pgtype=jsonb\"}],\"optional\":false}",
 
 	"errors.tolerance": "all",
 	"errors.deadletterqueue.topic.name": "{{.DeadLetterQueueTopicName}}",
@@ -106,7 +127,10 @@ CREATE TABLE inventory.{{.TableName}} (
 	per_reporter_staleness jsonb NOT NULL,
 	org_id character varying(36),
 	groups jsonb,
-	last_check_in timestamp with time zone NOT NULL
+	last_check_in timestamp with time zone NOT NULL,
+	arch character varying(50),
+	host_type character varying(4),
+	operating_system jsonb
 );
 `
 
@@ -146,6 +170,15 @@ CREATE INDEX {{.TableName}}_org_id_id_index ON inventory.{{.TableName}}
 
 CREATE INDEX {{.TableName}}_groups_index ON inventory.{{.TableName}}
 USING GIN (groups JSONB_PATH_OPS);
+
+CREATE INDEX {{.TableName}}_arch_index ON
+inventory.{{.TableName}} (arch);
+
+CREATE INDEX {{.TableName}}_host_type_index ON
+inventory.{{.TableName}} (host_type);
+
+CREATE INDEX {{.TableName}}_operating_system_index ON inventory.{{.TableName}}
+USING GIN (operating_system JSONB_PATH_OPS);
 `
 
 const defaultStandardInterval int64 = 120
