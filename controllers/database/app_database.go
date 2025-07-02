@@ -115,7 +115,7 @@ func (db *AppDatabase) DeleteTable(tableName string) error {
 	tableExists, err := db.CheckIfTableExists(tableName)
 	if err != nil {
 		return err
-	} else if tableExists != true {
+	} else if !tableExists {
 		return nil
 	}
 
