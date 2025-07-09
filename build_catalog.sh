@@ -49,7 +49,7 @@ build_a_tag() {
   chmod u+x ./opm
 
   # workaround for https://github.com/golang/go/issues/38373
-  GO_VERSION="1.18.10"
+  GO_VERSION="1.23.11"
   GOUNPACK=$(mktemp -d)
   wget -q "https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O $GOUNPACK/go.tar.gz
   tar -C $GOUNPACK -xzf $GOUNPACK/go.tar.gz
