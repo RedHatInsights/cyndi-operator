@@ -32,15 +32,15 @@ build_a_tag() {
   echo "Building tag: $tag"
 
   num_commits=$(git rev-list $(git rev-list --max-parents=0 HEAD)..HEAD --count)
-  
+
   # If the tag is related to the security-compliance (SC) branch, we need the SC tag to be
   # the current commit so we don't overwrite the original images
   if [[ "$tag" == "sc-$(date +%Y%m%d)-$(git rev-parse --short=7 HEAD)" ]]; then
     current_commit=$tag
-  else 
+  else
     current_commit=$(git rev-parse --short=7 HEAD)
   fi
-  
+
   version="0.1.$num_commits-git$current_commit"
   opm_version="1.24.0"
 
@@ -49,7 +49,7 @@ build_a_tag() {
   chmod u+x ./opm
 
   # workaround for https://github.com/golang/go/issues/38373
-  GO_VERSION="1.23.11"
+  GO_VERSION="1.24.6"
   GOUNPACK=$(mktemp -d)
   wget -q "https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O $GOUNPACK/go.tar.gz
   tar -C $GOUNPACK -xzf $GOUNPACK/go.tar.gz
