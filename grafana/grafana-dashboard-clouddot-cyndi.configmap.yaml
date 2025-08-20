@@ -1,0 +1,1499 @@
+apiVersion: v1
+data:
+  Cyndi.json: |-
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": "-- Grafana --",
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "gnetId": null,
+      "graphTooltip": 0,
+      "iteration": 1624360661212,
+      "links": [],
+      "panels": [
+        {
+          "collapsed": false,
+          "datasource": null,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "id": 23,
+          "panels": [],
+          "title": "SLO",
+          "type": "row"
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$datasource_awskafka",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {},
+              "links": []
+            },
+            "overrides": []
+          },
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 11,
+            "w": 12,
+            "x": 0,
+            "y": 1
+          },
+          "hiddenSeries": false,
+          "id": 2,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "hideZero": false,
+            "max": true,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.2.1",
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "min(\nsum(\nlabel_replace(\naws_kafka_sum_offset_lag_sum{topic=\"platform.inventory.events\", consumer_group=~\"connect-cyndi-.*\"},\n\"cyndi_application\", \"$1\", \"consumer_group\", \"connect-cyndi-(.*)-([0-9]+)-.*\")\n) by (consumer_group, cyndi_application)\n\n) by (cyndi_application)",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "{{cyndi_application}}",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [
+            {
+              "$$hashKey": "object:580",
+              "colorMode": "critical",
+              "fill": true,
+              "line": true,
+              "op": "gt",
+              "value": 10000,
+              "yaxis": "left"
+            }
+          ],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Consumer lag by application",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "$$hashKey": "object:1220",
+              "format": "short",
+              "label": "",
+              "logBase": 10,
+              "max": "1000000",
+              "min": "0",
+              "show": true
+            },
+            {
+              "$$hashKey": "object:1221",
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$datasource",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {},
+              "links": []
+            },
+            "overrides": []
+          },
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 11,
+            "w": 12,
+            "x": 12,
+            "y": 1
+          },
+          "hiddenSeries": false,
+          "id": 9,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "hideZero": false,
+            "max": true,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.2.1",
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(cyndi_inconsistency_ratio) by (app)",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "{{app}}",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [
+            {
+              "$$hashKey": "object:566",
+              "colorMode": "critical",
+              "fill": true,
+              "line": true,
+              "op": "gt",
+              "value": 0.01,
+              "yaxis": "left"
+            }
+          ],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Inconsistency ratio by application",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "$$hashKey": "object:257",
+              "decimals": null,
+              "format": "percentunit",
+              "label": null,
+              "logBase": 10,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "$$hashKey": "object:258",
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "datasource": "$datasource",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": null,
+                "displayMode": "auto",
+                "filterable": false
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Consistency (95th percentile)"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "percentunit"
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "red",
+                          "value": null
+                        },
+                        {
+                          "color": "#EAB839",
+                          "value": 0.99
+                        },
+                        {
+                          "color": "green",
+                          "value": 0.995
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.displayMode",
+                    "value": "basic"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 3
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Latency (95th percentile)"
+                },
+                "properties": [
+                  {
+                    "id": "custom.displayMode",
+                    "value": "basic"
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": null
+                        },
+                        {
+                          "color": "#EAB839",
+                          "value": 9000
+                        },
+                        {
+                          "color": "red",
+                          "value": 10000
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Application"
+                },
+                "properties": [
+                  {
+                    "id": "custom.filterable",
+                    "value": false
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 12
+          },
+          "id": 25,
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "SLO definition",
+              "url": "https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/docs/cloud.redhat.com/app-sops/cyndi/SLO.md"
+            }
+          ],
+          "options": {
+            "frameIndex": 0,
+            "showHeader": true,
+            "sortBy": []
+          },
+          "pluginVersion": "7.2.1",
+          "targets": [
+            {
+              "expr": "label_replace(\nmax(quantile_over_time(0.95, cyndi:consumer_group_lag:min_per_app[$__range])) by (cyndi_application)\n, \"app\", \"$1\", \"cyndi_application\", \"(.+)\"\n)",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "Latency (95th quantile)",
+              "refId": "A"
+            },
+            {
+              "expr": "1 - max(quantile_over_time(0.95, cyndi_inconsistency_ratio[$__range])) by (app)",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "Consistency (95th quantile)",
+              "refId": "B"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "",
+          "transformations": [
+            {
+              "id": "seriesToColumns",
+              "options": {
+                "byField": "app"
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "cyndi_application": true
+                },
+                "indexByName": {
+                  "Time": 4,
+                  "Value #A": 2,
+                  "Value #B": 3,
+                  "app": 0,
+                  "cyndi_application": 1
+                },
+                "renameByName": {
+                  "Time": "",
+                  "Value #A": "Latency (95th percentile)",
+                  "Value #B": "Consistency (95th percentile)",
+                  "app": "Application"
+                }
+              }
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "collapsed": true,
+          "datasource": null,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 18
+          },
+          "id": 12,
+          "panels": [
+            {
+              "aliasColors": {},
+              "bars": false,
+              "dashLength": 10,
+              "dashes": false,
+              "datasource": "$datasource_awskafka",
+              "fieldConfig": {
+                "defaults": {
+                  "custom": {},
+                  "links": []
+                },
+                "overrides": []
+              },
+              "fill": 1,
+              "fillGradient": 0,
+              "gridPos": {
+                "h": 7,
+                "w": 12,
+                "x": 0,
+                "y": 13
+              },
+              "hiddenSeries": false,
+              "id": 6,
+              "legend": {
+                "alignAsTable": true,
+                "avg": true,
+                "current": true,
+                "hideZero": true,
+                "max": true,
+                "min": true,
+                "show": true,
+                "total": false,
+                "values": true
+              },
+              "lines": true,
+              "linewidth": 1,
+              "links": [],
+              "nullPointMode": "null",
+              "options": {
+                "alertThreshold": true
+              },
+              "percentage": false,
+              "pluginVersion": "7.2.1",
+              "pointradius": 5,
+              "points": false,
+              "renderer": "flot",
+              "seriesOverrides": [],
+              "spaceLength": 10,
+              "stack": false,
+              "steppedLine": false,
+              "targets": [
+                {
+                  "expr": "sum(rate(aws_kafka_sum_offset_lag_sum{topic=\"platform.inventory.events\"}[1m]))",
+                  "format": "time_series",
+                  "interval": "",
+                  "intervalFactor": 1,
+                  "legendFormat": "platform.inventory.events",
+                  "refId": "A"
+                }
+              ],
+              "thresholds": [],
+              "timeFrom": null,
+              "timeRegions": [],
+              "timeShift": null,
+              "title": "Incoming Message Rate",
+              "tooltip": {
+                "shared": true,
+                "sort": 0,
+                "value_type": "individual"
+              },
+              "type": "graph",
+              "xaxis": {
+                "buckets": null,
+                "mode": "time",
+                "name": null,
+                "show": true,
+                "values": []
+              },
+              "yaxes": [
+                {
+                  "format": "ops",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": null,
+                  "show": true
+                },
+                {
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": null,
+                  "show": true
+                }
+              ],
+              "yaxis": {
+                "align": false,
+                "alignLevel": null
+              }
+            },
+            {
+              "aliasColors": {},
+              "bars": false,
+              "dashLength": 10,
+              "dashes": false,
+              "datasource": "$datasource",
+              "fieldConfig": {
+                "defaults": {
+                  "custom": {},
+                  "links": []
+                },
+                "overrides": []
+              },
+              "fill": 1,
+              "fillGradient": 0,
+              "gridPos": {
+                "h": 11,
+                "w": 12,
+                "x": 12,
+                "y": 13
+              },
+              "hiddenSeries": false,
+              "id": 21,
+              "legend": {
+                "alignAsTable": true,
+                "avg": false,
+                "current": true,
+                "hideZero": false,
+                "max": true,
+                "min": false,
+                "show": true,
+                "total": false,
+                "values": true
+              },
+              "lines": true,
+              "linewidth": 1,
+              "links": [],
+              "nullPointMode": "null",
+              "options": {
+                "alertThreshold": true
+              },
+              "percentage": false,
+              "pluginVersion": "7.2.1",
+              "pointradius": 5,
+              "points": false,
+              "renderer": "flot",
+              "seriesOverrides": [],
+              "spaceLength": 10,
+              "stack": false,
+              "steppedLine": false,
+              "targets": [
+                {
+                  "expr": "sum(cyndi_inconsistency_total) by (app)",
+                  "format": "time_series",
+                  "interval": "",
+                  "intervalFactor": 1,
+                  "legendFormat": "{{app}}",
+                  "refId": "B"
+                }
+              ],
+              "thresholds": [],
+              "timeFrom": null,
+              "timeRegions": [],
+              "timeShift": null,
+              "title": "Inconsistency (absolute) by application",
+              "tooltip": {
+                "shared": true,
+                "sort": 0,
+                "value_type": "individual"
+              },
+              "type": "graph",
+              "xaxis": {
+                "buckets": null,
+                "mode": "time",
+                "name": null,
+                "show": true,
+                "values": []
+              },
+              "yaxes": [
+                {
+                  "$$hashKey": "object:257",
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": "0",
+                  "show": true
+                },
+                {
+                  "$$hashKey": "object:258",
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": null,
+                  "show": true
+                }
+              ],
+              "yaxis": {
+                "align": false,
+                "alignLevel": null
+              }
+            },
+            {
+              "aliasColors": {},
+              "bars": false,
+              "dashLength": 10,
+              "dashes": false,
+              "datasource": "$datasource",
+              "fieldConfig": {
+                "defaults": {
+                  "custom": {},
+                  "links": []
+                },
+                "overrides": []
+              },
+              "fill": 1,
+              "fillGradient": 0,
+              "gridPos": {
+                "h": 11,
+                "w": 12,
+                "x": 0,
+                "y": 20
+              },
+              "hiddenSeries": false,
+              "id": 10,
+              "legend": {
+                "alignAsTable": true,
+                "avg": false,
+                "current": true,
+                "hideZero": false,
+                "max": true,
+                "min": false,
+                "show": true,
+                "total": false,
+                "values": true
+              },
+              "lines": true,
+              "linewidth": 1,
+              "links": [],
+              "nullPointMode": "null",
+              "options": {
+                "alertThreshold": true
+              },
+              "percentage": false,
+              "pluginVersion": "7.2.1",
+              "pointradius": 5,
+              "points": false,
+              "renderer": "flot",
+              "seriesOverrides": [],
+              "spaceLength": 10,
+              "stack": false,
+              "steppedLine": false,
+              "targets": [
+                {
+                  "expr": "sum(cyndi_hosts_total) by (app)",
+                  "format": "time_series",
+                  "interval": "",
+                  "intervalFactor": 1,
+                  "legendFormat": "{{app}}",
+                  "refId": "B"
+                }
+              ],
+              "thresholds": [],
+              "timeFrom": null,
+              "timeRegions": [],
+              "timeShift": null,
+              "title": "Host count by application",
+              "tooltip": {
+                "shared": true,
+                "sort": 0,
+                "value_type": "individual"
+              },
+              "type": "graph",
+              "xaxis": {
+                "buckets": null,
+                "mode": "time",
+                "name": null,
+                "show": true,
+                "values": []
+              },
+              "yaxes": [
+                {
+                  "$$hashKey": "object:257",
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": null,
+                  "show": true
+                },
+                {
+                  "$$hashKey": "object:258",
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": null,
+                  "show": true
+                }
+              ],
+              "yaxis": {
+                "align": false,
+                "alignLevel": null
+              }
+            },
+            {
+              "columns": [],
+              "datasource": "$datasource_awskafka",
+              "fieldConfig": {
+                "defaults": {
+                  "custom": {}
+                },
+                "overrides": []
+              },
+              "fontSize": "100%",
+              "gridPos": {
+                "h": 18,
+                "w": 12,
+                "x": 12,
+                "y": 24
+              },
+              "id": 8,
+              "pageSize": null,
+              "showHeader": true,
+              "sort": {
+                "col": 1,
+                "desc": false
+              },
+              "styles": [
+                {
+                  "alias": "Time",
+                  "align": "auto",
+                  "dateFormat": "YYYY-MM-DD HH:mm:ss",
+                  "pattern": "Time",
+                  "type": "hidden"
+                },
+                {
+                  "alias": "running",
+                  "align": "center",
+                  "colorMode": "cell",
+                  "colors": [
+                    "rgba(245, 54, 54, 0.9)",
+                    "rgba(237, 129, 40, 0.89)",
+                    "rgba(50, 172, 45, 0.97)"
+                  ],
+                  "decimals": 0,
+                  "pattern": "Value #A",
+                  "thresholds": [
+                    "0",
+                    "1"
+                  ],
+                  "type": "number",
+                  "unit": "short"
+                },
+                {
+                  "alias": "paused",
+                  "align": "center",
+                  "colorMode": "cell",
+                  "colors": [
+                    "rgba(50, 172, 45, 0.97)",
+                    "rgba(237, 129, 40, 0.89)",
+                    "rgba(245, 54, 54, 0.9)"
+                  ],
+                  "dateFormat": "YYYY-MM-DD HH:mm:ss",
+                  "decimals": 0,
+                  "mappingType": 1,
+                  "pattern": "Value #B",
+                  "thresholds": [
+                    "1"
+                  ],
+                  "type": "number",
+                  "unit": "short"
+                },
+                {
+                  "alias": "failed",
+                  "align": "center",
+                  "colorMode": "cell",
+                  "colors": [
+                    "rgba(50, 172, 45, 0.97)",
+                    "rgba(237, 129, 40, 0.89)",
+                    "rgba(245, 54, 54, 0.9)"
+                  ],
+                  "dateFormat": "YYYY-MM-DD HH:mm:ss",
+                  "decimals": 0,
+                  "mappingType": 1,
+                  "pattern": "Value #C",
+                  "thresholds": [
+                    "1",
+                    "1"
+                  ],
+                  "type": "number",
+                  "unit": "short"
+                },
+                {
+                  "alias": "lag",
+                  "align": "auto",
+                  "colorMode": "cell",
+                  "colors": [
+                    "rgba(50, 172, 45, 0.97)",
+                    "rgba(237, 129, 40, 0.89)",
+                    "rgba(245, 54, 54, 0.9)"
+                  ],
+                  "dateFormat": "YYYY-MM-DD HH:mm:ss",
+                  "decimals": 0,
+                  "mappingType": 1,
+                  "pattern": "Value #D",
+                  "thresholds": [
+                    "500",
+                    " 10000"
+                  ],
+                  "type": "number",
+                  "unit": "short"
+                },
+                {
+                  "alias": "delay",
+                  "align": "auto",
+                  "colorMode": "cell",
+                  "colors": [
+                    "rgba(50, 172, 45, 0.97)",
+                    "rgba(237, 129, 40, 0.89)",
+                    "rgba(245, 54, 54, 0.9)"
+                  ],
+                  "dateFormat": "YYYY-MM-DD HH:mm:ss",
+                  "decimals": 0,
+                  "mappingType": 1,
+                  "pattern": "Value #E",
+                  "thresholds": [
+                    "60",
+                    " 300"
+                  ],
+                  "type": "number",
+                  "unit": "s"
+                }
+              ],
+              "targets": [
+                {
+                  "expr": "sum(\nlabel_replace(\naws_kafka_sum_offset_lag_sum{topic=\"platform.inventory.events\", consumer_group=~\"connect-cyndi-.*\"},\n\"connector\", \"$1\", \"consumer_group\", \"connect-(cyndi-.*)\")\n) by (connector)",
+                  "format": "table",
+                  "instant": true,
+                  "interval": "",
+                  "legendFormat": "{{connector}}",
+                  "refId": "D"
+                },
+                {
+                  "expr": "sum(kafka_connect_worker_connector_running_task_count{connector=~\"cyndi-.*\"}) by (connector) OR sum (kafka_connect_connect_worker_metrics_connector_running_task_count{connector=~\"syndication-sink-.*\"}) by (connector)",
+                  "format": "table",
+                  "instant": true,
+                  "interval": "",
+                  "legendFormat": "{{connector}}",
+                  "refId": "A"
+                },
+                {
+                  "expr": "sum(kafka_connect_worker_connector_paused_task_count{connector=~\"cyndi-.*\"}) by (connector) OR sum (kafka_connect_connect_worker_metrics_connector_paused_task_count{connector=~\"syndication-sink-.*\"}) by (connector)",
+                  "format": "table",
+                  "instant": true,
+                  "interval": "",
+                  "legendFormat": "{{connector}}",
+                  "refId": "B"
+                },
+                {
+                  "expr": "sum(kafka_connect_worker_connector_paused_task_count{connector=~\"cyndi-.*\"}) by (connector) OR  sum (kafka_connect_connect_worker_metrics_connector_failed_task_count{connector=~\"syndication-sink-.*\"}) by (connector)",
+                  "format": "table",
+                  "instant": true,
+                  "interval": "",
+                  "legendFormat": "{{connector}}",
+                  "refId": "C"
+                }
+              ],
+              "timeFrom": null,
+              "timeShift": null,
+              "title": "Cyndi connectors",
+              "transform": "table",
+              "type": "table-old"
+            },
+            {
+              "aliasColors": {},
+              "bars": false,
+              "dashLength": 10,
+              "dashes": false,
+              "datasource": "$datasource",
+              "fieldConfig": {
+                "defaults": {
+                  "custom": {},
+                  "links": []
+                },
+                "overrides": []
+              },
+              "fill": 1,
+              "fillGradient": 0,
+              "gridPos": {
+                "h": 11,
+                "w": 12,
+                "x": 0,
+                "y": 31
+              },
+              "hiddenSeries": false,
+              "id": 19,
+              "legend": {
+                "alignAsTable": true,
+                "avg": false,
+                "current": true,
+                "hideZero": false,
+                "max": true,
+                "min": false,
+                "show": true,
+                "total": false,
+                "values": true
+              },
+              "lines": true,
+              "linewidth": 1,
+              "links": [],
+              "nullPointMode": "null",
+              "options": {
+                "alertThreshold": true
+              },
+              "percentage": false,
+              "pluginVersion": "7.2.1",
+              "pointradius": 5,
+              "points": false,
+              "renderer": "flot",
+              "seriesOverrides": [],
+              "spaceLength": 10,
+              "stack": false,
+              "steppedLine": false,
+              "targets": [
+                {
+                  "expr": "sum(increase(cyndi_validation_failed_total[5m])) by (app)",
+                  "format": "time_series",
+                  "interval": "",
+                  "intervalFactor": 1,
+                  "legendFormat": "{{app}}",
+                  "refId": "B"
+                }
+              ],
+              "thresholds": [],
+              "timeFrom": null,
+              "timeRegions": [],
+              "timeShift": null,
+              "title": "Validation failure rate [5min]",
+              "tooltip": {
+                "shared": true,
+                "sort": 0,
+                "value_type": "individual"
+              },
+              "type": "graph",
+              "xaxis": {
+                "buckets": null,
+                "mode": "time",
+                "name": null,
+                "show": true,
+                "values": []
+              },
+              "yaxes": [
+                {
+                  "$$hashKey": "object:257",
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": "0",
+                  "show": true
+                },
+                {
+                  "$$hashKey": "object:258",
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": null,
+                  "show": true
+                }
+              ],
+              "yaxis": {
+                "align": false,
+                "alignLevel": null
+              }
+            },
+            {
+              "aliasColors": {},
+              "bars": false,
+              "dashLength": 10,
+              "dashes": false,
+              "datasource": "$datasource",
+              "fieldConfig": {
+                "defaults": {
+                  "custom": {},
+                  "links": []
+                },
+                "overrides": []
+              },
+              "fill": 1,
+              "fillGradient": 0,
+              "gridPos": {
+                "h": 11,
+                "w": 12,
+                "x": 12,
+                "y": 42
+              },
+              "hiddenSeries": false,
+              "id": 20,
+              "legend": {
+                "alignAsTable": true,
+                "avg": false,
+                "current": true,
+                "hideZero": false,
+                "max": true,
+                "min": false,
+                "show": true,
+                "total": false,
+                "values": true
+              },
+              "lines": true,
+              "linewidth": 1,
+              "links": [],
+              "nullPointMode": "null",
+              "options": {
+                "alertThreshold": true
+              },
+              "percentage": false,
+              "pluginVersion": "7.2.1",
+              "pointradius": 5,
+              "points": false,
+              "renderer": "flot",
+              "seriesOverrides": [],
+              "spaceLength": 10,
+              "stack": false,
+              "steppedLine": false,
+              "targets": [
+                {
+                  "expr": "sum(increase(cyndi_refresh_total[5m])) by (app)",
+                  "format": "time_series",
+                  "interval": "",
+                  "intervalFactor": 1,
+                  "legendFormat": "{{app}}",
+                  "refId": "B"
+                }
+              ],
+              "thresholds": [],
+              "timeFrom": null,
+              "timeRegions": [],
+              "timeShift": null,
+              "title": "Refresh rate [5min]",
+              "tooltip": {
+                "shared": true,
+                "sort": 0,
+                "value_type": "individual"
+              },
+              "type": "graph",
+              "xaxis": {
+                "buckets": null,
+                "mode": "time",
+                "name": null,
+                "show": true,
+                "values": []
+              },
+              "yaxes": [
+                {
+                  "$$hashKey": "object:257",
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": "0",
+                  "show": true
+                },
+                {
+                  "$$hashKey": "object:258",
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": null,
+                  "show": true
+                }
+              ],
+              "yaxis": {
+                "align": false,
+                "alignLevel": null
+              }
+            }
+          ],
+          "title": "Pipelines",
+          "type": "row"
+        },
+        {
+          "collapsed": true,
+          "datasource": null,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 19
+          },
+          "id": 14,
+          "panels": [
+            {
+              "cards": {
+                "cardPadding": null,
+                "cardRound": null
+              },
+              "color": {
+                "cardColor": "#b4ff00",
+                "colorScale": "sqrt",
+                "colorScheme": "interpolateOranges",
+                "exponent": 0.5,
+                "mode": "spectrum"
+              },
+              "dataFormat": "tsbuckets",
+              "datasource": "$datasource",
+              "fieldConfig": {
+                "defaults": {
+                  "custom": {}
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 20
+              },
+              "heatmap": {},
+              "hideZeroBuckets": true,
+              "highlightCards": true,
+              "id": 16,
+              "legend": {
+                "show": true
+              },
+              "pluginVersion": "7.2.1",
+              "reverseYBuckets": false,
+              "targets": [
+                {
+                  "expr": "sum(rate(controller_runtime_reconcile_time_seconds_bucket{controller=\"cyndi-controller\"}[1m])) by (le)",
+                  "format": "heatmap",
+                  "interval": "15s",
+                  "legendFormat": "{{le}}",
+                  "refId": "A"
+                }
+              ],
+              "timeFrom": null,
+              "timeShift": null,
+              "title": "Reconciliation time (controller)",
+              "tooltip": {
+                "show": true,
+                "showHistogram": false
+              },
+              "type": "heatmap",
+              "xAxis": {
+                "show": true
+              },
+              "xBucketNumber": null,
+              "xBucketSize": null,
+              "yAxis": {
+                "decimals": null,
+                "format": "none",
+                "logBase": 1,
+                "max": null,
+                "min": null,
+                "show": true,
+                "splitFactor": null
+              },
+              "yBucketBound": "auto",
+              "yBucketNumber": null,
+              "yBucketSize": null
+            },
+            {
+              "aliasColors": {},
+              "bars": false,
+              "dashLength": 10,
+              "dashes": false,
+              "datasource": "$datasource",
+              "fieldConfig": {
+                "defaults": {
+                  "custom": {},
+                  "links": []
+                },
+                "overrides": []
+              },
+              "fill": 1,
+              "fillGradient": 0,
+              "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 20
+              },
+              "hiddenSeries": false,
+              "id": 18,
+              "legend": {
+                "alignAsTable": true,
+                "avg": false,
+                "current": true,
+                "hideZero": true,
+                "max": true,
+                "min": false,
+                "show": true,
+                "total": false,
+                "values": true
+              },
+              "lines": true,
+              "linewidth": 1,
+              "links": [],
+              "nullPointMode": "null",
+              "options": {
+                "alertThreshold": true
+              },
+              "percentage": false,
+              "pluginVersion": "7.2.1",
+              "pointradius": 5,
+              "points": false,
+              "renderer": "flot",
+              "seriesOverrides": [],
+              "spaceLength": 10,
+              "stack": false,
+              "steppedLine": false,
+              "targets": [
+                {
+                  "expr": "sum(increase(controller_runtime_reconcile_total{controller=~\"cyndi.*\"}[1m])) by (controller)",
+                  "format": "time_series",
+                  "interval": "",
+                  "intervalFactor": 1,
+                  "legendFormat": "{{controller}}",
+                  "refId": "B"
+                }
+              ],
+              "thresholds": [],
+              "timeFrom": null,
+              "timeRegions": [],
+              "timeShift": null,
+              "title": "Reconciliation rate [1m]",
+              "tooltip": {
+                "shared": true,
+                "sort": 0,
+                "value_type": "individual"
+              },
+              "type": "graph",
+              "xaxis": {
+                "buckets": null,
+                "mode": "time",
+                "name": null,
+                "show": true,
+                "values": []
+              },
+              "yaxes": [
+                {
+                  "$$hashKey": "object:257",
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": null,
+                  "show": true
+                },
+                {
+                  "$$hashKey": "object:258",
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": null,
+                  "show": true
+                }
+              ],
+              "yaxis": {
+                "align": false,
+                "alignLevel": null
+              }
+            },
+            {
+              "cards": {
+                "cardPadding": null,
+                "cardRound": null
+              },
+              "color": {
+                "cardColor": "#b4ff00",
+                "colorScale": "sqrt",
+                "colorScheme": "interpolatePurples",
+                "exponent": 0.5,
+                "mode": "spectrum"
+              },
+              "dataFormat": "tsbuckets",
+              "datasource": "$datasource",
+              "fieldConfig": {
+                "defaults": {
+                  "custom": {}
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 28
+              },
+              "heatmap": {},
+              "hideZeroBuckets": true,
+              "highlightCards": true,
+              "id": 17,
+              "legend": {
+                "show": true
+              },
+              "pluginVersion": "7.2.1",
+              "reverseYBuckets": false,
+              "targets": [
+                {
+                  "expr": "sum(rate(controller_runtime_reconcile_time_seconds_bucket{controller=\"cyndi-validation\"}[1m])) by (le)",
+                  "format": "heatmap",
+                  "interval": "15s",
+                  "legendFormat": "{{le}}",
+                  "refId": "A"
+                }
+              ],
+              "timeFrom": null,
+              "timeShift": null,
+              "title": "Reconciliation time (validator)",
+              "tooltip": {
+                "show": true,
+                "showHistogram": false
+              },
+              "type": "heatmap",
+              "xAxis": {
+                "show": true
+              },
+              "xBucketNumber": null,
+              "xBucketSize": null,
+              "yAxis": {
+                "decimals": null,
+                "format": "none",
+                "logBase": 1,
+                "max": null,
+                "min": null,
+                "show": true,
+                "splitFactor": null
+              },
+              "yBucketBound": "auto",
+              "yBucketNumber": null,
+              "yBucketSize": null
+            }
+          ],
+          "title": "Operator",
+          "type": "row"
+        }
+      ],
+      "refresh": "1m",
+      "schemaVersion": 26,
+      "style": "dark",
+      "tags": [
+        "platform-health",
+        "cyndi"
+      ],
+      "templating": {
+        "list": [
+          {
+            "current": {
+              "selected": false,
+              "text": "crcp01ue1-prometheus",
+              "value": "crcp01ue1-prometheus"
+            },
+            "hide": 0,
+            "includeAll": false,
+            "label": "Datasource",
+            "multi": false,
+            "name": "datasource",
+            "options": [],
+            "query": "prometheus",
+            "queryValue": "",
+            "refresh": 1,
+            "regex": "crc[0-9a-z]*-prometheus",
+            "skipUrlSync": false,
+            "type": "datasource"
+          },
+          {
+            "current": {
+              "selected": false,
+              "text": "appsrep11ue1-prometheus",
+              "value": "appsrep11ue1-prometheus"
+            },
+            "hide": 0,
+            "includeAll": false,
+            "label": "Datasource - AWS Kafka",
+            "multi": false,
+            "name": "datasource_awskafka",
+            "options": [],
+            "query": "prometheus",
+            "queryValue": "",
+            "refresh": 1,
+            "regex": "(appsrep11ue1-prometheus|appsres11ue1-prometheus)",
+            "skipUrlSync": false,
+            "type": "datasource"
+          }
+        ]
+      },
+      "time": {
+        "from": "now-12h",
+        "to": "now"
+      },
+      "timepicker": {
+        "refresh_intervals": [
+          "5s",
+          "10s",
+          "30s",
+          "1m",
+          "5m",
+          "15m",
+          "30m",
+          "1h",
+          "2h",
+          "1d"
+        ],
+        "time_options": [
+          "5m",
+          "15m",
+          "1h",
+          "6h",
+          "12h",
+          "24h",
+          "2d",
+          "7d",
+          "30d"
+        ]
+      },
+      "timezone": "",
+      "title": "Cyndi",
+      "uid": "fF9U-h7Mk",
+      "version": 1
+    }
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: grafana-dashboard-clouddot-cyndi
+  labels:
+    grafana_dashboard: "true"
+  annotations:
+    grafana-folder: /grafana-dashboard-definitions/Insights
