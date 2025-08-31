@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: cyndi-operator
+parameters:
+- name: IMAGE_TAG
+  value: latest
+- name: IMAGE
+  value: quay.io/cloudservices/cyndi-operator
+- name: TARGET_NAMESPACE
+  value: cyndi
+- name: SOURCE_NAMESPACE
+  value: cyndi
+- name: RECONCILE_INTERVAL
+  value: "120"
+- name: VALIDATION_INTERVAL
+  value: "1800"
+- name: VALIDATION_INTERVAL_INIT
+  value: "60"
+- name: VALIDATION_PERCENTAGE_THRESHOLD
+  value: "5"
+- name: VALIDATION_ATTEMPTS_THRESHOLD
+  value: "3"
+- name: VALIDATION_ATTEMPTS_THRESHOLD_INIT
+  value: "30"
+- name: CONNECT_CLUSTER
+  value: "xjoin-kafka-connect-strimzi"
+- name: CONNECTOR_ALLOWLIST_SP
+  value: "sap_system,sap_sids"
+- name: SSL_MODE
+  value: verify-full
+- name: SSL_ROOT_CERT
+  value: /opt/kafka/external-configuration/rds-client-ca/rds-cacert
+- name: EPHEMERAL
+  value: "false"
+- name: REFRESH
+  value: "1633013215"
+- name: MANAGER_POD_CPU_REQUESTS
+  value: "500m"
+- name: MANAGER_POD_MEM_REQUESTS
+  value: "2Gi"
+- name: MANAGER_POD_CPU_LIMIT
+  value: "1"
+- name: MANAGER_POD_MEM_LIMIT
+  value: "4Gi"
+- name: CONNECTOR_TOPIC
+  value: "platform.inventory.events"
+- name: DLQ_TOPIC_NAME
+  value: "platform.cyndi.dlq"
+- name: DLQ_TOPIC_REPLICATION_FACTOR
+  value: "1"
+- name: HOST_INVENTORY_DB_SECRET
+  value: "host-inventory-read-only-db"
+objects: []
