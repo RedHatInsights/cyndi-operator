@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cyndi
+data:
+  inventory.dbSecret: host-inventory-db
+  connector.allowlist.sp: >-
+    ansible,sap,sap_system,sap_sids,operating_system,owner_id,rhc_client_id,rhsm,bios_vendor,bios_version,bios_release_date,infrastructure_type,host_type,mssql,system_update_method
+  validation.percentage.threshold: '15'
+  connector.topic: platform.inventory.events
+  init.validation.percentage.threshold: '15'
+  connector.topic.replication.factor: '1'
+  connector.deadletterqueue.topic.name: platform.cyndi.dlq
+  db.ssl.mode: verify-full
+  standard.interval: '120'
+  connect.cluster: insights-kafka-connect
+  validation.attempts.threshold: '2'
+  validation.interval: '1800'
+  init.validation.attempts.threshold: '60'
+  refresh: '1666032490'
+  init.validation.interval: '60'
+  db.ssl.root.cert: /opt/kafka/external-configuration/rds-client-ca/rds-cacert
+
