@@ -33,15 +33,16 @@ func createApplicationTable(db database.Database, TestTable string) {
 }
 
 func seedTable(db database.Database, TestTable string, insights bool, ids ...string) {
-	// Default insights_id is the zero UUID (no insights_id)
-	var insightsId = "00000000-0000-0000-0000-000000000000"
+	// Default template just inserts id (works for app tables and HBI tables with default insights_id)
+	var template = "INSERT INTO %s (id) VALUES ('%s')"
 
 	if insights {
-		insightsId = "7597d33e-a1a6-4fda-ad1e-b86b73c722fd"
+		// For HBI tables with real insights_id, explicitly set the value
+		template = "INSERT INTO %s (id, insights_id) VALUES ('%s', '7597d33e-a1a6-4fda-ad1e-b86b73c722fd')"
 	}
 
 	for _, id := range ids {
-		_, err := db.Exec(fmt.Sprintf("INSERT INTO %s (id, insights_id) VALUES ('%s', '%s')", TestTable, id, insightsId))
+		_, err := db.Exec(fmt.Sprintf(template, TestTable, id))
 		Expect(err).ToNot(HaveOccurred())
 	}
 }
