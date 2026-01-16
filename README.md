@@ -69,8 +69,8 @@ The `CyndiPipeline` custom resource accepts the following attributes:
     additionalFilters: # additional kafka filters
      - name: reporterFilter # this filter actually does the same thing as `insightsOnly: true`
        type: com.redhat.insights.kafka.connect.transforms.Filter
-       if: "!!record.headers().lastWithName('insights_id').value()"
-       where: "canonical_facts ? 'insights_id'" # SQL query matching the kafka filter's behavior
+       if: "record.headers().lastWithName('insights_id').value() && record.headers().lastWithName('insights_id').value() != '00000000-0000-0000-0000-000000000000'"
+       where: "insights_id != '00000000-0000-0000-0000-000000000000'::uuid" # SQL query matching the kafka filter's behavior
 ```
 
 The `additionalFilter` expects an array of objects (defaults to `[]`) describing custom kafka filters that can be used to restrict the syndication of hosts based on certain parameters. The `name` attribute will be configured as the name of the filter, the `where` attribute configures the SQL query that does the same filtering, but in the databases for validation. Any other attribute except of these two is passed to the filter's definition.

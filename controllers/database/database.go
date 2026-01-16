@@ -91,7 +91,7 @@ func (db *BaseDatabase) getWhereClause(insightsOnly bool, additionalFilters []ma
 	}
 
 	if insightsOnly {
-		where[length-1] = "(canonical_facts ? 'insights_id')"
+		where[length-1] = "(insights_id != '00000000-0000-0000-0000-000000000000'::uuid)"
 	}
 
 	query := strings.Join(where, " AND ")
