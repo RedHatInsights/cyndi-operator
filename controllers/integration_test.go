@@ -88,7 +88,7 @@ var _ = Describe("Integration tests", func() {
 		err = hbiDb.Connect()
 		Expect(err).ToNot(HaveOccurred())
 
-		_, err = hbiDb.Exec(`DROP TABLE IF EXISTS public.hosts CASCADE; CREATE TABLE public.hosts (id uuid PRIMARY KEY, canonical_facts jsonb);`)
+		_, err = hbiDb.Exec(`DROP TABLE IF EXISTS public.hosts CASCADE; CREATE TABLE public.hosts (id uuid PRIMARY KEY, insights_id uuid NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000'::uuid);`)
 		Expect(err).ToNot(HaveOccurred())
 	})
 

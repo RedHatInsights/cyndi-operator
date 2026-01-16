@@ -33,10 +33,12 @@ func createApplicationTable(db database.Database, TestTable string) {
 }
 
 func seedTable(db database.Database, TestTable string, insights bool, ids ...string) {
+	// Default template just inserts id (works for app tables and HBI tables with default insights_id)
 	var template = "INSERT INTO %s (id) VALUES ('%s')"
 
 	if insights {
-		template = `INSERT INTO %s (id, canonical_facts) VALUES ('%s', '{"insights_id": "7597d33e-a1a6-4fda-ad1e-b86b73c722fd"}')`
+		// For HBI tables with real insights_id, explicitly set the value
+		template = "INSERT INTO %s (id, insights_id) VALUES ('%s', '7597d33e-a1a6-4fda-ad1e-b86b73c722fd')"
 	}
 
 	for _, id := range ids {
@@ -98,7 +100,7 @@ var _ = Describe("Validation controller", func() {
 		err = hbiDb.Connect()
 		Expect(err).ToNot(HaveOccurred())
 
-		_, err = hbiDb.Exec(`DROP TABLE IF EXISTS public.hosts CASCADE; CREATE TABLE public.hosts (id uuid PRIMARY KEY, canonical_facts jsonb);`)
+		_, err = hbiDb.Exec(`DROP TABLE IF EXISTS public.hosts CASCADE; CREATE TABLE public.hosts (id uuid PRIMARY KEY, insights_id uuid NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000'::uuid);`)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
