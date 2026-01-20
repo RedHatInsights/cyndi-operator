@@ -78,6 +78,25 @@ func (db *BaseDatabase) Exec(query string) (result pgconn.CommandTag, err error)
 	return result, nil
 }
 
+// getJoinClause extracts and deduplicates JOIN clauses from additional filters.
+// Filters can specify a "join" property to add a JOIN clause to the query.
+// This enables efficient partition pruning when querying related tables.
+func (db *BaseDatabase) getJoinClause(additionalFilters []map[string]string) string {
+	var joins []string
+	seen := make(map[string]bool)
+
+	for _, filter := range additionalFilters {
+		if join, ok := filter["join"]; ok && join != "" {
+			if !seen[join] {
+				joins = append(joins, join)
+				seen[join] = true
+			}
+		}
+	}
+
+	return strings.Join(joins, " ")
+}
+
 func (db *BaseDatabase) getWhereClause(insightsOnly bool, additionalFilters []map[string]string) string {
 	length := len(additionalFilters)
 	if insightsOnly {
@@ -102,7 +121,24 @@ func (db *BaseDatabase) getWhereClause(insightsOnly bool, additionalFilters []ma
 	return ""
 }
 
+// hasJoinClause checks if any filter has a join clause defined
+func (db *BaseDatabase) hasJoinClause(additionalFilters []map[string]string) bool {
+	for _, filter := range additionalFilters {
+		if join, ok := filter["join"]; ok && join != "" {
+			return true
+		}
+	}
+	return false
+}
+
 func (db *BaseDatabase) hostCountQuery(table string, insightsOnly bool, additionalFilters []map[string]string) string {
+	// When joins are present, use table alias 'h' for proper column references
+	if db.hasJoinClause(additionalFilters) {
+		return fmt.Sprintf(`SELECT count(*) FROM %s h %s %s`,
+			table,
+			db.getJoinClause(additionalFilters),
+			db.getWhereClause(insightsOnly, additionalFilters))
+	}
 	return fmt.Sprintf(`SELECT count(*) FROM %s %s`, table, db.getWhereClause(insightsOnly, additionalFilters))
 }
 
@@ -135,6 +171,13 @@ func (db *BaseDatabase) CountHosts(table string, insightsOnly bool, additionalFi
 }
 
 func (db *BaseDatabase) hostIdQuery(table string, insightsOnly bool, additionalFilters []map[string]string) string {
+	// When joins are present, use table alias 'h' for proper column references
+	if db.hasJoinClause(additionalFilters) {
+		return fmt.Sprintf(`SELECT h.id FROM %s h %s %s ORDER BY h.id`,
+			table,
+			db.getJoinClause(additionalFilters),
+			db.getWhereClause(insightsOnly, additionalFilters))
+	}
 	return fmt.Sprintf(`SELECT id FROM %s %s ORDER BY id`, table, db.getWhereClause(insightsOnly, additionalFilters))
 }
 
