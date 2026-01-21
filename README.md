@@ -75,6 +75,33 @@ The `CyndiPipeline` custom resource accepts the following attributes:
 
 The `additionalFilter` expects an array of objects (defaults to `[]`) describing custom kafka filters that can be used to restrict the syndication of hosts based on certain parameters. The `name` attribute will be configured as the name of the filter, the `where` attribute configures the SQL query that does the same filtering, but in the databases for validation. Any other attribute except of these two is passed to the filter's definition.
 
+### JOIN Clause Support
+
+When filtering based on data in related tables (e.g., `system_profiles_static`), you can use the optional `join` attribute to specify a JOIN clause. This enables efficient partition pruning and significantly improves validation query performance compared to using correlated subqueries in the `where` clause.
+
+**Example with JOIN:**
+
+```yaml
+additionalFilters:
+  - name: "nonEdge"
+    type: "com.redhat.insights.kafka.connect.transforms.Filter"
+    if: "!record.headers().lastWithName('host_type').value()"
+    join: "LEFT JOIN hbi.system_profiles_static sps ON sps.org_id = h.org_id AND sps.host_id = h.id"
+    where: "sps.host_type IS NULL"
+  - name: "nonCentOS"
+    type: "com.redhat.insights.kafka.connect.transforms.Filter"
+    if: "!record.headers().lastWithName('os_name').value().match(/centos/i)"
+    join: "LEFT JOIN hbi.system_profiles_static sps ON sps.org_id = h.org_id AND sps.host_id = h.id"
+    where: "COALESCE(sps.operating_system->>'name', '') NOT ILIKE '%centos%'"
+```
+
+**Key points:**
+- The `join` attribute is optional and only used for validation queries (not Kafka Connect transforms)
+- When `join` is specified, the main hosts table is aliased as `h` (e.g., use `h.id` instead of `id`)
+- Identical JOIN clauses from multiple filters are automatically deduplicated
+- Include both `host_id` and `org_id` in JOIN conditions to enable partition pruning on partitioned tables
+- The `type` and `if` attributes control the Kafka Connect SMT (Single Message Transform) filtering, which operates on message headers in real-time
+
 ## Requirements
 
 * [Strimzi-managed](https://strimzi.io/docs/operators/latest/quickstart.html) Kafka Connect cluster is running in the OpenShift cluster in the same namespace you intend to create `CyndiPipeline` resources in.
