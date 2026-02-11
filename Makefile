@@ -28,7 +28,6 @@ GOBIN=$(shell go env GOBIN)
 endif
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
-# This is a requirement for 'setup-envtest.sh' in the test target.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
@@ -43,14 +42,33 @@ endif
 
 all: manager
 
-set-up-envtest:
-	mkdir -p ${ENVTEST_ASSETS_DIR}
-	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/235d62a9d93f0183035787518f26142000972b14/hack/setup-envtest.sh
-
 # Run tests
-ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: generate fmt vet manifests set-up-envtest
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test -v -p 1 ./controllers/... -coverprofile cover.out
+#
+# controller-runtime v0.8.3 requires:
+#   - kube-apiserver with a functional --insecure-port flag (removed in K8s 1.24,
+#     non-functional in 1.20+). K8s 1.19.16 is the last version where it works.
+#   - etcd 3.4.x because readiness detection watches stderr for
+#     "serving insecure client requests on", changed in etcd 3.5.0.
+#
+# The setup-envtest CLI only offers K8s >= 1.23.5 (incompatible), so we download
+# both binaries directly and use TEST_ASSET_* env vars.
+ENVTEST_K8S_VERSION ?= 1.19.16
+ETCD_VERSION ?= 3.4.34
+ENVTEST_DIR ?= $(GOBIN)/envtest-$(ENVTEST_K8S_VERSION)
+ETCD_BIN ?= $(ENVTEST_DIR)/etcd
+APISERVER_BIN ?= $(ENVTEST_DIR)/kube-apiserver
+
+$(ETCD_BIN):
+	mkdir -p $(ENVTEST_DIR)
+	curl -sSL https://github.com/etcd-io/etcd/releases/download/v$(ETCD_VERSION)/etcd-v$(ETCD_VERSION)-$(OS)-$(ARCH).tar.gz | tar -xz -C $(ENVTEST_DIR) --strip-components=1 etcd-v$(ETCD_VERSION)-$(OS)-$(ARCH)/etcd
+
+$(APISERVER_BIN):
+	mkdir -p $(ENVTEST_DIR)
+	curl -sSLo $(APISERVER_BIN) https://dl.k8s.io/v$(ENVTEST_K8S_VERSION)/bin/$(OS)/$(ARCH)/kube-apiserver
+	chmod +x $(APISERVER_BIN)
+
+test: generate fmt vet manifests $(ETCD_BIN) $(APISERVER_BIN)
+	TEST_ASSET_ETCD="$(ETCD_BIN)" TEST_ASSET_KUBE_APISERVER="$(APISERVER_BIN)" go test -v -p 1 ./controllers/... -coverprofile cover.out
 
 # Build manager binary
 manager: generate fmt vet
@@ -64,10 +82,8 @@ run: generate fmt vet manifests
 delve: generate fmt vet manifests
 	which dlv; dlv version; dlv debug ./main.go --headless --accept-multiclient --listen=:2345 --api-version=2
 
-delve-test: generate fmt vet manifests
-	mkdir -p $(ENVTEST_ASSETS_DIR)
-	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
-	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); which dlv; dlv version; dlv test ./controllers --headless --accept-multiclient --listen=:2345 --api-version=2
+delve-test: generate fmt vet manifests $(ETCD_BIN) $(APISERVER_BIN)
+	TEST_ASSET_ETCD="$(ETCD_BIN)" TEST_ASSET_KUBE_APISERVER="$(APISERVER_BIN)" which dlv; dlv version; dlv test ./controllers --headless --accept-multiclient --listen=:2345 --api-version=2
 
 # Install CRDs into a cluster
 install: manifests kustomize
@@ -110,9 +126,9 @@ container-push:
 	$(CONTAINER_ENGINE) push ${IMG}
 
 # Test locally with a test DB
-test-local: generate fmt vet manifests set-up-envtest
+test-local: generate fmt vet manifests $(ETCD_BIN) $(APISERVER_BIN)
 	$(CONTAINER_ENGINE) run --rm --name hbiDB -p 15432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=test -d postgres
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); DBPORT=15432 go test -p 1 ./controllers/... -coverprofile cover.out -ginkgo.randomizeAllSpecs || (ret=$$?; $(CONTAINER_ENGINE) stop hbiDB; exit $$ret) && $(CONTAINER_ENGINE) stop hbiDB
+	TEST_ASSET_ETCD="$(ETCD_BIN)" TEST_ASSET_KUBE_APISERVER="$(APISERVER_BIN)" DBPORT=15432 go test -p 1 ./controllers/... -coverprofile cover.out -ginkgo.randomizeAllSpecs || (ret=$$?; $(CONTAINER_ENGINE) stop hbiDB; exit $$ret) && $(CONTAINER_ENGINE) stop hbiDB
 
 # find or download controller-gen
 # download controller-gen if necessary
