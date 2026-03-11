@@ -261,29 +261,33 @@ func (i *ReconcileIteration) deleteStaleDependencies() (errors []error) {
 	)
 
 	if i.Instance.GetState() != cyndi.STATE_REMOVED && i.Instance.Status.PipelineVersion != "" {
-		connectorsToKeep = append(connectorsToKeep, cyndi.ConnectorName(i.Instance.Status.PipelineVersion, i.Instance.Spec.AppName))
 		tablesToKeep = append(tablesToKeep, cyndi.TableName(i.Instance.Status.PipelineVersion))
+
+		if i.Instance.ConnectorsManaged() {
+			connectorsToKeep = append(connectorsToKeep, cyndi.ConnectorName(i.Instance.Status.PipelineVersion, i.Instance.Spec.AppName))
+		}
 	}
 
 	currentTable, err := i.AppDb.GetCurrentTable()
 	if err != nil {
 		errors = append(errors, err)
 	} else if currentTable != nil && i.Instance.GetState() != cyndi.STATE_REMOVED {
-		connectorsToKeep = append(connectorsToKeep, cyndi.TableNameToConnectorName(*currentTable, i.Instance.Spec.AppName))
 		tablesToKeep = append(tablesToKeep, *currentTable)
+
+		if i.Instance.ConnectorsManaged() {
+			connectorsToKeep = append(connectorsToKeep, cyndi.TableNameToConnectorName(*currentTable, i.Instance.Spec.AppName))
+		}
 	}
 
-	if i.Instance.ConnectorsManaged() {
-		connectors, err := connect.GetConnectorsForOwner(i.Client, i.Instance.Namespace, i.Instance.GetUIDString())
-		if err != nil {
-			errors = append(errors, err)
-		} else {
-			for _, connector := range connectors.Items {
-				if !utils.ContainsString(connectorsToKeep, connector.GetName()) {
-					i.Log.Info("Removing stale connector", "connector", connector.GetName())
-					if err = connect.DeleteConnector(i.Client, connector.GetName(), i.Instance.Namespace); err != nil {
-						errors = append(errors, err)
-					}
+	connectors, err := connect.GetConnectorsForOwner(i.Client, i.Instance.Namespace, i.Instance.GetUIDString())
+	if err != nil {
+		errors = append(errors, err)
+	} else {
+		for _, connector := range connectors.Items {
+			if !utils.ContainsString(connectorsToKeep, connector.GetName()) {
+				i.Log.Info("Removing stale connector", "connector", connector.GetName())
+				if err = connect.DeleteConnector(i.Client, connector.GetName(), i.Instance.Namespace); err != nil {
+					errors = append(errors, err)
 				}
 			}
 		}

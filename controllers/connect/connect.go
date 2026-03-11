@@ -231,10 +231,7 @@ func SetConnectorState(c client.Client, name string, namespace string, paused bo
 		return err
 	}
 
-	desiredState := "running"
-	if paused {
-		desiredState = "paused"
-	}
+	desiredState := connectorState(paused)
 
 	currentState, _, _ := unstructured.NestedString(connector.UnstructuredContent(), "spec", "state")
 	if currentState == desiredState {

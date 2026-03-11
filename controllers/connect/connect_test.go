@@ -82,6 +82,79 @@ var _ = Describe("Connect", func() {
 		Expect(err).ToNot(HaveOccurred())
 	})
 
+	Context("Connector State", func() {
+		It("Creates a connector in paused state when Paused is true", func() {
+			const connectorName = "paused-connector-01"
+			config := sampleConnectorConfig()
+			config.Paused = true
+
+			_, err := CreateConnector(test.Client, connectorName, namespace, config, nil, nil, false)
+			Expect(err).ToNot(HaveOccurred())
+
+			connector, err := GetConnector(test.Client, connectorName, namespace)
+			Expect(err).ToNot(HaveOccurred())
+
+			state, ok, err := unstructured.NestedString(connector.UnstructuredContent(), "spec", "state")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ok).To(BeTrue())
+			Expect(state).To(Equal("paused"))
+		})
+
+		It("SetConnectorState pauses a running connector", func() {
+			const connectorName = "state-pause-01"
+			config := sampleConnectorConfig()
+			config.Paused = false
+
+			_, err := CreateConnector(test.Client, connectorName, namespace, config, nil, nil, false)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = SetConnectorState(test.Client, connectorName, namespace, true)
+			Expect(err).ToNot(HaveOccurred())
+
+			connector, err := GetConnector(test.Client, connectorName, namespace)
+			Expect(err).ToNot(HaveOccurred())
+
+			state, _, _ := unstructured.NestedString(connector.UnstructuredContent(), "spec", "state")
+			Expect(state).To(Equal("paused"))
+		})
+
+		It("SetConnectorState resumes a paused connector", func() {
+			const connectorName = "state-resume-01"
+			config := sampleConnectorConfig()
+			config.Paused = true
+
+			_, err := CreateConnector(test.Client, connectorName, namespace, config, nil, nil, false)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = SetConnectorState(test.Client, connectorName, namespace, false)
+			Expect(err).ToNot(HaveOccurred())
+
+			connector, err := GetConnector(test.Client, connectorName, namespace)
+			Expect(err).ToNot(HaveOccurred())
+
+			state, _, _ := unstructured.NestedString(connector.UnstructuredContent(), "spec", "state")
+			Expect(state).To(Equal("running"))
+		})
+
+		It("SetConnectorState is idempotent", func() {
+			const connectorName = "state-noop-01"
+			config := sampleConnectorConfig()
+			config.Paused = false
+
+			_, err := CreateConnector(test.Client, connectorName, namespace, config, nil, nil, false)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = SetConnectorState(test.Client, connectorName, namespace, false)
+			Expect(err).ToNot(HaveOccurred())
+
+			connector, err := GetConnector(test.Client, connectorName, namespace)
+			Expect(err).ToNot(HaveOccurred())
+
+			state, _, _ := unstructured.NestedString(connector.UnstructuredContent(), "spec", "state")
+			Expect(state).To(Equal("running"))
+		})
+	})
+
 	Context("Create Connector", func() {
 		It("Creates a simple connector", func() {
 			const connectorName = "advisor-01"
