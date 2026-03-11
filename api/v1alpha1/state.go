@@ -109,6 +109,13 @@ func (instance *CyndiPipeline) assertState(targetState PipelineState, validState
 	return fmt.Errorf("Attempted invalid state transition from %s to %s", instance.GetState(), targetState)
 }
 
+func (instance *CyndiPipeline) ConnectorsManaged() bool {
+	if instance.Spec.ManagedConnectors == nil {
+		return true
+	}
+	return *instance.Spec.ManagedConnectors
+}
+
 func TableName(pipelineVersion string) string {
 	return fmt.Sprintf("%s%s", tablePrefix, pipelineVersion)
 }

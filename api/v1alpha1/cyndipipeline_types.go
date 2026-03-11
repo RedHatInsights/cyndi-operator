@@ -68,6 +68,14 @@ type CyndiPipelineSpec struct {
 	// +optional
 	// +kubebuilder:validation:MinLength:=0
 	Refresh string `json:"refresh,omitempty"`
+
+	// +optional
+	// +kubebuilder:default:=true
+	ManagedConnectors *bool `json:"managedConnectors,omitempty"`
+
+	// +optional
+	// +kubebuilder:default:=false
+	ConnectorPaused bool `json:"connectorPaused,omitempty"`
 }
 
 // CyndiPipelineStatus defines the observed state of CyndiPipeline

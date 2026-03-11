@@ -194,9 +194,11 @@ func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Re
 			return reconcile.Result{}, i.error(err, "Error creating table")
 		}
 
-		_, err = i.createConnector(cyndi.ConnectorName(pipelineVersion, i.Instance.Spec.AppName), false)
-		if err != nil {
-			return reconcile.Result{}, i.error(err, "Error creating connector")
+		if i.Instance.ConnectorsManaged() {
+			_, err = i.createConnector(cyndi.ConnectorName(pipelineVersion, i.Instance.Spec.AppName), false)
+			if err != nil {
+				return reconcile.Result{}, i.error(err, "Error creating connector")
+			}
 		}
 
 		i.Log.Info("Transitioning to InitialSync")
@@ -210,6 +212,12 @@ func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		i.probeStateDeviationRefresh(problem.Error())
 		i.Instance.TransitionToNew()
 		return i.updateStatusAndRequeue()
+	}
+
+	if i.Instance.ConnectorsManaged() {
+		if err := connect.SetConnectorState(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace, i.Instance.Spec.ConnectorPaused); err != nil {
+			return reconcile.Result{}, i.error(err, "Error setting connector state")
+		}
 	}
 
 	// STATE_VALID
@@ -263,15 +271,17 @@ func (i *ReconcileIteration) deleteStaleDependencies() (errors []error) {
 		tablesToKeep = append(tablesToKeep, *currentTable)
 	}
 
-	connectors, err := connect.GetConnectorsForOwner(i.Client, i.Instance.Namespace, i.Instance.GetUIDString())
-	if err != nil {
-		errors = append(errors, err)
-	} else {
-		for _, connector := range connectors.Items {
-			if !utils.ContainsString(connectorsToKeep, connector.GetName()) {
-				i.Log.Info("Removing stale connector", "connector", connector.GetName())
-				if err = connect.DeleteConnector(i.Client, connector.GetName(), i.Instance.Namespace); err != nil {
-					errors = append(errors, err)
+	if i.Instance.ConnectorsManaged() {
+		connectors, err := connect.GetConnectorsForOwner(i.Client, i.Instance.Namespace, i.Instance.GetUIDString())
+		if err != nil {
+			errors = append(errors, err)
+		} else {
+			for _, connector := range connectors.Items {
+				if !utils.ContainsString(connectorsToKeep, connector.GetName()) {
+					i.Log.Info("Removing stale connector", "connector", connector.GetName())
+					if err = connect.DeleteConnector(i.Client, connector.GetName(), i.Instance.Namespace); err != nil {
+						errors = append(errors, err)
+					}
 				}
 			}
 		}
@@ -348,6 +358,7 @@ func (i *ReconcileIteration) createConnector(name string, dryRun bool) (*unstruc
 		AppName:                  i.Instance.Spec.AppName,
 		AdditionalFilters:        i.Instance.Spec.AdditionalFilters,
 		InsightsOnly:             i.Instance.Spec.InsightsOnly,
+		Paused:                   i.Instance.Spec.ConnectorPaused,
 		Cluster:                  i.config.ConnectCluster,
 		Topic:                    i.config.Topic,
 		TableName:                i.Instance.Status.TableName,
@@ -396,6 +407,10 @@ func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
 		return nil, err
 	} else if dbTableExists == false {
 		return fmt.Errorf("Database table %s not found", i.Instance.Status.TableName), nil
+	}
+
+	if !i.Instance.ConnectorsManaged() {
+		return nil, nil
 	}
 
 	connector, err := connect.GetConnector(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace)
