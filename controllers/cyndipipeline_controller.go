@@ -199,6 +199,8 @@ func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Re
 			if err != nil {
 				return reconcile.Result{}, i.error(err, "Error creating connector")
 			}
+		} else {
+			i.eventWarning("ExternalConnectorUpdate", "External connector must be updated to target new table: inventory.%s", cyndi.TableName(pipelineVersion))
 		}
 
 		i.Log.Info("Transitioning to InitialSync")
