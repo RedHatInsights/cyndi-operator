@@ -68,6 +68,24 @@ type CyndiPipelineSpec struct {
 	// +optional
 	// +kubebuilder:validation:MinLength:=0
 	Refresh string `json:"refresh,omitempty"`
+
+	// +optional
+	// +kubebuilder:default:=true
+	ManagedConnectors *bool `json:"managedConnectors,omitempty"`
+
+	// +optional
+	// +kubebuilder:default:=false
+	ConnectorPaused bool `json:"connectorPaused,omitempty"`
+}
+
+// DataSpec returns a copy of the spec with operational-only fields zeroed out,
+// so that changes to those fields do not affect the spec hash.
+func (s CyndiPipelineSpec) DataSpec() CyndiPipelineSpec {
+	cp := s
+	cp.ManagedConnectors = nil
+	cp.ConnectorPaused = false
+	cp.Refresh = ""
+	return cp
 }
 
 // CyndiPipelineStatus defines the observed state of CyndiPipeline

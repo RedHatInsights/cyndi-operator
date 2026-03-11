@@ -331,6 +331,80 @@ var _ = Describe("Pipeline operations", func() {
 		})
 	})
 
+	Describe("Unmanaged connectors", func() {
+		It("Creates table but no connector with managedConnectors false", func() {
+			managed := false
+			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{ManagedConnectors: &managed})
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
+
+			exists, err := db.CheckIfTableExists(pipeline.Status.TableName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exists).To(BeTrue())
+
+			connectors, err := connect.GetConnectorsForOwner(test.Client, namespacedName.Namespace, pipeline.GetUIDString())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(connectors.Items).To(BeEmpty())
+
+			recorder, _ := r.Recorder.(*record.FakeRecorder)
+			var foundEvent bool
+			for len(recorder.Events) > 0 {
+				event := <-recorder.Events
+				if event == fmt.Sprintf("Warning ExternalConnectorUpdate External connector must be updated to target new table: inventory.%s", pipeline.Status.TableName) {
+					foundEvent = true
+				}
+			}
+			Expect(foundEvent).To(BeTrue())
+		})
+
+		It("Does not trigger refresh when connector disappears with managedConnectors false", func() {
+			managed := false
+			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{ManagedConnectors: &managed})
+			reconcile()
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+		})
+
+		It("Cleans up owned connectors when switching to managedConnectors false", func() {
+			createPipeline(namespacedName)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_INITIAL_SYNC))
+
+			connectors, err := connect.GetConnectorsForOwner(test.Client, namespacedName.Namespace, pipeline.GetUIDString())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(connectors.Items).To(HaveLen(1))
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline, err = utils.FetchCyndiPipeline(test.Client, namespacedName)
+			Expect(err).ToNot(HaveOccurred())
+			managed := false
+			pipeline.Spec.ManagedConnectors = &managed
+			err = test.Client.Update(context.Background(), pipeline)
+			Expect(err).ToNot(HaveOccurred())
+
+			reconcile()
+
+			connectors, err = connect.GetConnectorsForOwner(test.Client, namespacedName.Namespace, pipeline.GetUIDString())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(connectors.Items).To(BeEmpty())
+		})
+	})
+
 	Describe("InitialSync -> Valid", func() {
 		It("Creates the hosts view", func() {
 			createPipeline(namespacedName)

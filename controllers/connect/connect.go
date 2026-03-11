@@ -31,6 +31,13 @@ const (
 
 const failed = "FAILED"
 
+func connectorState(paused bool) string {
+	if paused {
+		return "paused"
+	}
+	return "running"
+}
+
 var connectorGVK = schema.GroupVersionKind{
 	Group:   "kafka.strimzi.io",
 	Kind:    "KafkaConnector",
@@ -47,6 +54,7 @@ type ConnectorConfiguration struct {
 	AppName                  string
 	AdditionalFilters        []map[string]string
 	InsightsOnly             bool
+	Paused                   bool
 	Cluster                  string
 	Topic                    string
 	TableName                string
@@ -148,7 +156,7 @@ func newConnectorResource(name string, namespace string, config ConnectorConfigu
 			"tasksMax": config.TasksMax,
 			"class":    "io.confluent.connect.jdbc.JdbcSinkConnector",
 			"config":   configTemplateInterface,
-			"state":    "running",
+			"state":    connectorState(config.Paused),
 		},
 	}
 
@@ -215,6 +223,26 @@ func DeleteConnector(c client.Client, name string, namespace string) error {
 	}
 
 	return nil
+}
+
+func SetConnectorState(c client.Client, name string, namespace string, paused bool) error {
+	connector, err := GetConnector(c, name, namespace)
+	if err != nil {
+		return err
+	}
+
+	desiredState := connectorState(paused)
+
+	currentState, _, _ := unstructured.NestedString(connector.UnstructuredContent(), "spec", "state")
+	if currentState == desiredState {
+		return nil
+	}
+
+	if err := unstructured.SetNestedField(connector.UnstructuredContent(), desiredState, "spec", "state"); err != nil {
+		return err
+	}
+
+	return c.Update(context.TODO(), connector)
 }
 
 func IsFailed(connector *unstructured.Unstructured) bool {

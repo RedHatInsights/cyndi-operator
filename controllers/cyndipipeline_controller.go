@@ -194,9 +194,13 @@ func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Re
 			return reconcile.Result{}, i.error(err, "Error creating table")
 		}
 
-		_, err = i.createConnector(cyndi.ConnectorName(pipelineVersion, i.Instance.Spec.AppName), false)
-		if err != nil {
-			return reconcile.Result{}, i.error(err, "Error creating connector")
+		if i.Instance.ConnectorsManaged() {
+			_, err = i.createConnector(cyndi.ConnectorName(pipelineVersion, i.Instance.Spec.AppName), false)
+			if err != nil {
+				return reconcile.Result{}, i.error(err, "Error creating connector")
+			}
+		} else {
+			i.eventWarning("ExternalConnectorUpdate", "External connector must be updated to target new table: inventory.%s", cyndi.TableName(pipelineVersion))
 		}
 
 		i.Log.Info("Transitioning to InitialSync")
@@ -210,6 +214,12 @@ func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		i.probeStateDeviationRefresh(problem.Error())
 		i.Instance.TransitionToNew()
 		return i.updateStatusAndRequeue()
+	}
+
+	if i.Instance.ConnectorsManaged() {
+		if err := connect.SetConnectorState(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace, i.Instance.Spec.ConnectorPaused); err != nil {
+			return reconcile.Result{}, i.error(err, "Error setting connector state")
+		}
 	}
 
 	// STATE_VALID
@@ -251,16 +261,22 @@ func (i *ReconcileIteration) deleteStaleDependencies() (errors []error) {
 	)
 
 	if i.Instance.GetState() != cyndi.STATE_REMOVED && i.Instance.Status.PipelineVersion != "" {
-		connectorsToKeep = append(connectorsToKeep, cyndi.ConnectorName(i.Instance.Status.PipelineVersion, i.Instance.Spec.AppName))
 		tablesToKeep = append(tablesToKeep, cyndi.TableName(i.Instance.Status.PipelineVersion))
+
+		if i.Instance.ConnectorsManaged() {
+			connectorsToKeep = append(connectorsToKeep, cyndi.ConnectorName(i.Instance.Status.PipelineVersion, i.Instance.Spec.AppName))
+		}
 	}
 
 	currentTable, err := i.AppDb.GetCurrentTable()
 	if err != nil {
 		errors = append(errors, err)
 	} else if currentTable != nil && i.Instance.GetState() != cyndi.STATE_REMOVED {
-		connectorsToKeep = append(connectorsToKeep, cyndi.TableNameToConnectorName(*currentTable, i.Instance.Spec.AppName))
 		tablesToKeep = append(tablesToKeep, *currentTable)
+
+		if i.Instance.ConnectorsManaged() {
+			connectorsToKeep = append(connectorsToKeep, cyndi.TableNameToConnectorName(*currentTable, i.Instance.Spec.AppName))
+		}
 	}
 
 	connectors, err := connect.GetConnectorsForOwner(i.Client, i.Instance.Namespace, i.Instance.GetUIDString())
@@ -348,6 +364,7 @@ func (i *ReconcileIteration) createConnector(name string, dryRun bool) (*unstruc
 		AppName:                  i.Instance.Spec.AppName,
 		AdditionalFilters:        i.Instance.Spec.AdditionalFilters,
 		InsightsOnly:             i.Instance.Spec.InsightsOnly,
+		Paused:                   i.Instance.Spec.ConnectorPaused,
 		Cluster:                  i.config.ConnectCluster,
 		Topic:                    i.config.Topic,
 		TableName:                i.Instance.Status.TableName,
@@ -396,6 +413,10 @@ func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
 		return nil, err
 	} else if dbTableExists == false {
 		return fmt.Errorf("Database table %s not found", i.Instance.Status.TableName), nil
+	}
+
+	if !i.Instance.ConnectorsManaged() {
+		return nil, nil
 	}
 
 	connector, err := connect.GetConnector(i.Client, i.Instance.Status.ConnectorName, i.Instance.Namespace)
