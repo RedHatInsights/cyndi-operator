@@ -85,6 +85,9 @@ spec:
               connectCluster:
                 minLength: 1
                 type: string
+              connectorPaused:
+                default: false
+                type: boolean
               dbSecret:
                 minLength: 1
                 type: string
@@ -97,6 +100,9 @@ spec:
               inventoryDbSecret:
                 minLength: 1
                 type: string
+              managedConnectors:
+                default: true
+                type: boolean
               maxAge:
                 format: int64
                 type: integer
