@@ -165,14 +165,14 @@ The threshold causes the validation to pass as long as the ratio of invalid reco
 
 2. Scale down the cyndi-operator deployment in kubernetes:
     ```bash
-    kubectl scale --replicas=0 deployments/cyndi-operator-controller-manager -n cyndi-operator-system   
+    kubectl scale --replicas=0 deployments/cyndi-operator-controller-manager -n cyndi-operator-system
     ```
-   
+
 3. Add the following to `/etc/hosts`
     ```
     127.0.0.1 advisor-backend-db advisor-backend-db.test.svc advisor-db inventory-db
     ```
-   
+
 4. Forward ports
     ```
     sudo -E kubefwd svc --kubeconfig ~/.kube/config -m 8080:8090 -m 8081:8091 -n test
