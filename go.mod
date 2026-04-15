@@ -5,12 +5,12 @@ go 1.25.0
 toolchain go1.25.8
 
 require (
-	github.com/go-logr/logr v0.4.0
-	github.com/google/go-cmp v0.5.9
+	github.com/go-logr/logr v1.4.3
+	github.com/google/go-cmp v0.7.0
 	github.com/jackc/pgconn v1.14.3
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/onsi/ginkgo v1.14.1
-	github.com/onsi/gomega v1.10.2
+	github.com/onsi/gomega v1.39.1
 	github.com/prometheus/client_golang v1.11.1
 	github.com/spf13/viper v1.7.0
 	k8s.io/api v0.20.2
@@ -64,16 +64,16 @@ require (
 	go.uber.org/atomic v1.6.0 // indirect
 	go.uber.org/multierr v1.5.0 // indirect
 	go.uber.org/zap v1.15.0 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/term v0.38.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/term v0.39.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.1.0 // indirect
-	google.golang.org/protobuf v1.33.0 // indirect
+	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.51.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
