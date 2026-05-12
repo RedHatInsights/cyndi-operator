@@ -1,0 +1,23 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "baseBranchPatterns": [
+        "master"
+    ],
+    "packageRules": [
+        {
+            "description": "Automerge non-major updates",
+            "matchUpdateTypes": [
+                "minor",
+                "patch"
+            ],
+            "automerge": true
+        },
+        {
+            "description": "Automerge Tekton manager updates",
+            "matchManagers": [
+                "tekton"
+            ],
+            "automerge": true
+        }
+    ]
+}
