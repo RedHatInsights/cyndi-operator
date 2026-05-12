@@ -8,8 +8,8 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/RedHatInsights/cyndi-operator/controllers/config"
 	. "github.com/RedHatInsights/cyndi-operator/controllers/config"
@@ -21,7 +21,7 @@ type BaseDatabase struct {
 	Log        logr.Logger
 }
 
-const connectionStringTemplate = "postgresql://%s:%s@%s:%s/%s?sslmode=%s&sslrootcert=%s"
+const connectionStringTemplate = "postgresql://%s:%s@%s:%s/%s?sslmode=%s"
 
 func NewBaseDatabase(config *config.DBParams, log logr.Logger) Database {
 	return &BaseDatabase{
@@ -217,8 +217,11 @@ func GetConnection(params *DBParams) (connection *pgx.Conn, err error) {
 		params.Port,
 		params.Name,
 		params.SSLMode,
-		params.SSLRootCert,
 	)
+
+	if params.SSLRootCert != "" && params.SSLRootCert != "none" {
+		connStr += "&sslrootcert=" + params.SSLRootCert
+	}
 
 	if connection, err = pgx.Connect(context.Background(), connStr); err != nil {
 		return nil, err
