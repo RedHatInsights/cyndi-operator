@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi9/go-toolset:1.25.9-1778054913 as builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.26.2-1779886993 as builder
 
 USER 0
 ENV GOTOOLCHAIN=auto
