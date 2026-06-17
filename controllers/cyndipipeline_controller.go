@@ -189,9 +189,16 @@ func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		i.Instance.TransitionToInitialSync(pipelineVersion)
 		i.probeStartingInitialSync()
 
-		err = i.AppDb.CreateTable(cyndi.TableName(pipelineVersion), i.config.DBTableInitScript+i.config.DBTableIndexSQL)
+		tableExists, err := i.AppDb.CheckIfTableExists(i.Instance.Status.TableName)
 		if err != nil {
-			return reconcile.Result{}, i.error(err, "Error creating table")
+			return reconcile.Result{}, i.error(err, "Error checking table existence")
+		}
+
+		if !tableExists {
+			err = i.AppDb.CreateTable(i.Instance.Status.TableName, i.config.DBTableInitScript+i.config.DBTableIndexSQL)
+			if err != nil {
+				return reconcile.Result{}, i.error(err, "Error creating table")
+			}
 		}
 
 		if i.Instance.ConnectorsManaged() {
@@ -199,8 +206,8 @@ func (r *CyndiPipelineReconciler) Reconcile(ctx context.Context, request ctrl.Re
 			if err != nil {
 				return reconcile.Result{}, i.error(err, "Error creating connector")
 			}
-		} else {
-			i.eventWarning("ExternalConnectorUpdate", "External connector must be updated to target new table: inventory.%s", cyndi.TableName(pipelineVersion))
+		} else if !tableExists {
+			i.eventWarning("ExternalConnectorUpdate", "External connector must be updated to target new table: inventory.%s", i.Instance.Status.TableName)
 		}
 
 		i.Log.Info("Transitioning to InitialSync")
@@ -266,6 +273,10 @@ func (i *ReconcileIteration) deleteStaleDependencies() (errors []error) {
 		if i.Instance.ConnectorsManaged() {
 			connectorsToKeep = append(connectorsToKeep, cyndi.ConnectorName(i.Instance.Status.PipelineVersion, i.Instance.Spec.AppName))
 		}
+	}
+
+	if i.Instance.GetState() != cyndi.STATE_REMOVED && !i.Instance.ConnectorsManaged() && i.Instance.Status.TableName != "" {
+		tablesToKeep = append(tablesToKeep, i.Instance.Status.TableName)
 	}
 
 	currentTable, err := i.AppDb.GetCurrentTable()
@@ -382,6 +393,10 @@ func (i *ReconcileIteration) createConnector(name string, dryRun bool) (*unstruc
 }
 
 func (i *ReconcileIteration) recreateViewIfNeeded() (bool, error) {
+	if !i.Instance.ConnectorsManaged() {
+		return false, nil
+	}
+
 	table, err := i.AppDb.GetCurrentTable()
 	if err != nil {
 		return false, err
@@ -475,6 +490,10 @@ func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
  * None of these options a good one - this is about picking lesser evil
  */
 func (i *ReconcileIteration) updateViewIfHealthier() error {
+	if !i.Instance.ConnectorsManaged() {
+		return nil
+	}
+
 	table, err := i.AppDb.GetCurrentTable()
 
 	if err != nil {
