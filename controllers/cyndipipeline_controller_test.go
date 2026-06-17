@@ -394,6 +394,40 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(viewExists).To(BeFalse())
 		})
 
+		It("Preserves table name on refresh when managedConnectors is false", func() {
+			managed := false
+			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{ManagedConnectors: &managed})
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			originalTableName := pipeline.Status.TableName
+			Expect(originalTableName).ToNot(Equal(""))
+
+			exists, err := db.CheckIfTableExists(originalTableName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exists).To(BeTrue())
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			setPipelineValid(namespacedName, false, func(pipeline *cyndi.CyndiPipeline) {
+				pipeline.Status.ValidationFailedCount = 31
+			})
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_NEW))
+
+			reconcile()
+
+			pipeline = getPipeline(namespacedName)
+			Expect(pipeline.Status.TableName).To(Equal(originalTableName))
+
+			exists, err = db.CheckIfTableExists(originalTableName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exists).To(BeTrue())
+		})
+
 		It("Cleans up owned connectors when switching to managedConnectors false", func() {
 			createPipeline(namespacedName)
 			reconcile()

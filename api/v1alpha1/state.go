@@ -54,9 +54,11 @@ func (instance *CyndiPipeline) TransitionToInitialSync(pipelineVersion string) e
 	instance.ResetValid()
 	instance.Status.InitialSyncInProgress = true
 	instance.Status.PipelineVersion = pipelineVersion
-	instance.Status.TableName = TableName(pipelineVersion)
 	if instance.ConnectorsManaged() {
+		instance.Status.TableName = TableName(pipelineVersion)
 		instance.Status.ConnectorName = ConnectorName(pipelineVersion, instance.Spec.AppName)
+	} else if instance.Status.TableName == "" {
+		instance.Status.TableName = TableName(pipelineVersion)
 	}
 
 	return nil
