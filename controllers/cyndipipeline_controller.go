@@ -382,6 +382,10 @@ func (i *ReconcileIteration) createConnector(name string, dryRun bool) (*unstruc
 }
 
 func (i *ReconcileIteration) recreateViewIfNeeded() (bool, error) {
+	if !i.Instance.ConnectorsManaged() {
+		return false, nil
+	}
+
 	table, err := i.AppDb.GetCurrentTable()
 	if err != nil {
 		return false, err
@@ -475,6 +479,10 @@ func (i *ReconcileIteration) checkForDeviation() (problem error, err error) {
  * None of these options a good one - this is about picking lesser evil
  */
 func (i *ReconcileIteration) updateViewIfHealthier() error {
+	if !i.Instance.ConnectorsManaged() {
+		return nil
+	}
+
 	table, err := i.AppDb.GetCurrentTable()
 
 	if err != nil {

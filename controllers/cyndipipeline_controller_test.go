@@ -344,6 +344,8 @@ var _ = Describe("Pipeline operations", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(exists).To(BeTrue())
 
+			Expect(pipeline.Status.ConnectorName).To(Equal(""))
+
 			connectors, err := connect.GetConnectorsForOwner(test.Client, namespacedName.Namespace, pipeline.GetUIDString())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(connectors.Items).To(BeEmpty())
@@ -374,6 +376,22 @@ var _ = Describe("Pipeline operations", func() {
 
 			pipeline = getPipeline(namespacedName)
 			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+		})
+
+		It("Does not update the hosts view when managedConnectors is false", func() {
+			managed := false
+			createPipeline(namespacedName, &cyndi.CyndiPipelineSpec{ManagedConnectors: &managed})
+			reconcile()
+
+			setPipelineValid(namespacedName, true)
+			reconcile()
+
+			pipeline := getPipeline(namespacedName)
+			Expect(pipeline.GetState()).To(Equal(cyndi.STATE_VALID))
+
+			viewExists, err := db.CheckIfTableExists("hosts")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(viewExists).To(BeFalse())
 		})
 
 		It("Cleans up owned connectors when switching to managedConnectors false", func() {
