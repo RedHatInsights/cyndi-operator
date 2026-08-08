@@ -54,11 +54,10 @@ func (r *ValidationReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 	reqLogger := r.Log.WithValues("Pipeline", request.Name, "Namespace", request.Namespace)
 
 	i, err := r.setup(reqLogger, request, ctx)
-	defer i.Close()
-
 	if err != nil {
 		return reconcile.Result{}, i.error(err)
 	}
+	defer i.Close()
 
 	// nothing to validate
 	if i.Instance == nil || i.Instance.GetState() == cyndi.STATE_REMOVED || i.Instance.GetState() == cyndi.STATE_NEW {
@@ -123,7 +122,7 @@ func eventFilterPredicate() predicate.Predicate {
 			oldPipeline, ok1 := e.ObjectOld.(*cyndi.CyndiPipeline)
 			newPipeline, ok2 := e.ObjectNew.(*cyndi.CyndiPipeline)
 
-			if ok1 && ok2 && oldPipeline.Status.InitialSyncInProgress == false && newPipeline.Status.InitialSyncInProgress == true {
+			if ok1 && ok2 && !oldPipeline.Status.InitialSyncInProgress && newPipeline.Status.InitialSyncInProgress {
 				return true // pipeline refresh happened - validate the new pipeline
 			}
 
