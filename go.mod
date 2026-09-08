@@ -1,8 +1,6 @@
 module github.com/RedHatInsights/cyndi-operator
 
-go 1.25.0
-
-toolchain go1.26.5
+go 1.27
 
 require (
 	github.com/go-logr/logr v0.4.0
