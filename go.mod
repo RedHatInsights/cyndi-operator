@@ -5,7 +5,7 @@ go 1.25.0
 toolchain go1.26.5
 
 require (
-	github.com/go-logr/logr v0.4.0
+	github.com/go-logr/logr v1.4.4
 	github.com/google/go-cmp v0.5.9
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/onsi/ginkgo v1.14.1
