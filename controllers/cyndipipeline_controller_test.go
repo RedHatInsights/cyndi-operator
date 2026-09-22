@@ -22,7 +22,7 @@ import (
 	logr "github.com/go-logr/logr/testing"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/viper"
 	ctrl "sigs.k8s.io/controller-runtime"
