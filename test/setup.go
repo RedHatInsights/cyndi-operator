@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 
 	cyndi "github.com/RedHatInsights/cyndi-operator/api/v1alpha1"
 	. "github.com/onsi/gomega"
